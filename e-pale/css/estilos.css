@@ -1,0 +1,182 @@
+/* css/estilos.css - Rediseño estilo UDG E-PALE */
+:root {
+    --bg-blue: #001a57;     /* Azul oscuro de fondo */
+    --primary: #002677;     /* Azul botón */
+    --hover: #001238;       /* Azul botón hover */
+    --white: #ffffff;
+    --gray-text: #555;
+    --border: #ced4da;
+    --light-blue: #eef4fc;  /* Fondo cajita demo */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-blue);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+}
+
+/* HEADER SUPERIOR (Logo y Título) */
+.login-header {
+    text-align: center;
+    margin-bottom: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.login-header img {
+    width: 60px;
+    height: auto;
+    margin-bottom: 10px;
+    /* Filtro para que si tu logo es negro, se vea blanco/cian */
+    filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); 
+}
+
+.login-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #00bfff; /* Un cian brillante para el texto e-PALE */
+}
+
+.login-header p {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    opacity: 0.8;
+    font-weight: 300;
+}
+
+/* TARJETA BLANCA */
+.login-card {
+    background-color: var(--white);
+    color: #333;
+    width: 100%;
+    max-width: 400px; /* Ancho máximo en PC */
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+    margin: 0 20px; /* Margen lateral para celulares */
+}
+
+.login-card h2 {
+    text-align: center;
+    color: var(--bg-blue);
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.4rem;
+}
+
+/* FORMULARIO */
+.form-group {
+    margin-bottom: 1.2rem;
+    position: relative; /* Para posicionar el ojito */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--gray-text);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ÍCONO DE OJITO (VER PASSWORD) */
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    top: 38px; /* Ajustar según altura del input */
+    cursor: pointer;
+    color: #999;
+}
+
+/* BOTÓN */
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--bg-blue);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 10px;
+}
+
+.btn-login:hover {
+    background-color: var(--hover);
+}
+
+/* CAJA DE DEMO */
+.demo-box {
+    background-color: var(--light-blue);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 25px;
+    font-size: 0.85rem;
+    color: #444;
+}
+
+.demo-title {
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* MENSAJE DE ERROR */
+.error-msg {
+    background-color: #fde8e8;
+    color: #c53030;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+    border: 1px solid #fbd5d5;
+}
+
+/* FOOTER */
+.login-footer {
+    margin-top: 3rem;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    text-align: center;
+    padding: 0 10px;
+}
+
+/* --- RESPONSIVE (MÓVIL) --- */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 1.5rem;
+        max-width: 90%; /* Ocupa casi todo el ancho */
+    }
+    
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+}
