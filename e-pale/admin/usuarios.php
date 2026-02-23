@@ -147,9 +147,46 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle">Nuevo Usuario</h2>
+                <button type="button" class="btn-primary" style="background-color: #28a745; margin-left: 10px;" onclick="openCsvModal()">
+                    <i class="fas fa-file-csv"></i> Importar CSV
+                </button>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             
+            <div id="csvModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2>Importar Usuarios Masivos</h2>
+            <button class="close-btn" onclick="closeCsvModal()">&times;</button>
+        </div>
+        
+        <form action="importar_csv.php" method="POST" enctype="multipart/form-data">
+            <div class="form-grid" style="grid-template-columns: 1fr; padding: 20px;">
+                <div style="background-color: #e9ecef; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px;">
+                    <strong>Formato requerido (Columnas):</strong><br>
+                    1. Código | 2. Nombre | 3. Apellidos | 4. Correo | 5. Teléfono | 6. Rol | 7. Carrera
+                </div>
+                
+                <div class="form-group"> 
+                    <label>Selecciona tu archivo (.csv)</label> 
+                    <input type="file" name="archivo_csv" accept=".csv" required> 
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="ignorar_cabecera" value="1" checked> 
+                        El archivo incluye fila de encabezados (Omitir fila 1)
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeCsvModal()">Cancelar</button>
+                <button type="submit" class="btn-save">Subir Archivo</button>
+            </div>
+        </form>
+    </div>
+</div>
             <form action="guardar_usuario.php" method="POST">
                 <input type="hidden" name="usuario_id" id="userId">
 
@@ -234,6 +271,15 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
         }
 
         window.onclick = function(e) { if(e.target == modal) closeModal(); }
+        const csvModal = document.getElementById('csvModal');
+        function openCsvModal() { csvModal.style.display = 'flex'; }
+        function closeCsvModal() { csvModal.style.display = 'none'; }
+
+        // Actualizamos el cierre al hacer clic fuera para que aplique a ambos modales
+        window.onclick = function(e) { 
+            if(e.target == modal) closeModal(); 
+            if(e.target == csvModal) closeCsvModal(); 
+        }
     </script>
 </body>
 </html>
