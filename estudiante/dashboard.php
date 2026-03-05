@@ -1,30 +1,25 @@
 <?php
 session_start();
-require '../db.php'; // CONEXIÓN A LA BD
+require '../db.php'; 
 
 // 1. Seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
-$nombre_completo = isset($_SESSION['nombre']) ? $_SESSION['nombre'] : "Estudiante";
-// Compatible con ambas estructuras: nueva y antigua
-if(isset($_SESSION['apellido_paterno'])) { 
-    $nombre_completo .= " " . $_SESSION['apellido_paterno']; 
-    if(isset($_SESSION['apellido_materno']) && !empty($_SESSION['apellido_materno'])) {
-        $nombre_completo .= " " . $_SESSION['apellido_materno'];
-    }
-} elseif(isset($_SESSION['apellidos'])) {
-    $nombre_completo .= " " . $_SESSION['apellidos'];
-}
 
-// 2. Obtener el alumno_id
-$stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
+// 2. Obtener el alumno_id y el nombre real desde la BD
+$stmt_al = $pdo->prepare("SELECT a.alumno_id, u.nombre, u.apellido_paterno, u.apellido_materno 
+                          FROM alumnos a 
+                          JOIN usuarios u ON a.usuario_id = u.usuario_id 
+                          WHERE a.usuario_id = ?");
 $stmt_al->execute([$_SESSION['user_id']]);
 $alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
-$alumno_id = $alumno['alumno_id'];
 
-// 3. Obtener materias inscritas del alumno
-$sql_materias = "SELECT i.inscripcion_id, m.nombre, m.nivel, g.nrc 
+$alumno_id = $alumno['alumno_id'];
+$nombre_completo = trim($alumno['nombre'] . ' ' . $alumno['apellido_paterno'] . ' ' . $alumno['apellido_materno']);
+
+// 3. Obtener materias inscritas del alumno (Traemos m.materia_id para buscar sus máximos)
+$sql_materias = "SELECT i.inscripcion_id, m.materia_id, m.nombre, m.nivel, g.nrc 
                  FROM inscripciones i
                  JOIN grupos g ON i.nrc = g.nrc
                  JOIN materias m ON g.materia_id = m.materia_id
@@ -43,15 +38,6 @@ $sql_horarios = "SELECT h.hora_inicio, h.hora_fin, h.aula, m.nombre, m.nivel
 $stmt_hor = $pdo->prepare($sql_horarios);
 $stmt_hor->execute([$alumno_id]);
 $horarios = $stmt_hor->fetchAll(PDO::FETCH_ASSOC);
-
-// 5. PLANTILLA FIJA PARA EL DASHBOARD (Asegura que siempre salgan los 5 apartados)
-$estructura_dashboard = [
-    'quizzes' => ['label' => 'Quizzes (3)', 'icon' => 'fa-pen-alt', 'max' => 30, 'keys' => ['Q1', 'Q2', 'Q3']],
-    'orales'  => ['label' => 'Quizzes Orales (2)', 'icon' => 'fa-comments', 'max' => 20, 'keys' => ['QO1', 'QO2']],
-    'writing' => ['label' => 'Writing Project', 'icon' => 'fa-file-signature', 'max' => 20, 'keys' => ['WRITING']],
-    'moodle'  => ['label' => 'Plataforma Moodle', 'icon' => 'fa-laptop-code', 'max' => 40, 'keys' => ['PLATAFORMA']],
-    'partic'  => ['label' => 'Participación', 'icon' => 'fa-hand-paper', 'max' => 10, 'keys' => ['PARTICIPACION']]
-];
 ?>
 
 <!DOCTYPE html>
@@ -65,31 +51,57 @@ $estructura_dashboard = [
 </head>
 <body>
 
-    <header class="main-header">
-        <div class="logo-container">
-            <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-            <span>e-PALE</span>
+    <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
+        <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
+            <a href="dashboard.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
+                <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
+                <span style="font-size: 1.2rem; font-weight: bold;">e-PALE</span>
+            </a>
         </div>
-        
-        <nav class="main-nav">
-            <ul>
-                <li><a href="dashboard.php" style="color:white; font-weight:bold;"><i class="fas fa-home"></i> Inicio</a></li>
-                <li><a href="#"><i class="far fa-calendar-alt"></i> Horario</a></li>
-                <li><a href="calificaciones.php"><i class="fas fa-star"></i> Calificaciones</a></li>
-                <li><a href="oferta.php"><i class="fas fa-bullhorn"></i> Oferta</a></li>
-            </ul>
-        </nav>
 
-        <div class="user-actions">
-            <a href="perfil.php" class="profile-btn">
-                <i class="fas fa-user-circle"></i>
-                <span><?php echo strtok($_SESSION['nombre'], " "); ?></span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="perfil.php" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 20px;">
+                <?php 
+                $stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
+                $stmt_foto->execute([$_SESSION['user_id']]);
+                $user_foto = $stmt_foto->fetchColumn();
+                
+                if($user_foto && file_exists("../img/perfiles/" . $user_foto)): ?>
+                    <img src="../img/perfiles/<?php echo $user_foto; ?>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white;">
+                <?php else: ?>
+                    <i class="fas fa-user-circle" style="font-size: 1.8rem;"></i>
+                <?php endif; ?>
+                <span class="profile-name" style="font-weight: 500;"><?php echo strtok($_SESSION['nombre'], " "); ?></span>
             </a>
-            <a href="../logout.php" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i> Salir
-            </a>
+
+            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0;">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </header>
+
+    <div class="menu-overlay" id="menuOverlay" onclick="toggleMobileMenu()"></div>
+
+    <aside class="yt-sidebar" id="navWrapper">
+        <div class="yt-sidebar-header">
+            <span style="color: white; font-size: 1.1rem; font-weight: bold;">Menú Principal</span>
+            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: #aaa; font-size: 2rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
+        <ul class="yt-sidebar-menu">
+            <li><a href="dashboard.php" class="active"><i class="fas fa-home"></i> Inicio</a></li>
+            <li><a href="#"><i class="far fa-calendar-alt"></i> Horario</a></li>
+            <li><a href="calificaciones.php"><i class="fas fa-star"></i> Calificaciones</a></li>
+            <li><a href="oferta.php"><i class="fas fa-bullhorn"></i> Oferta</a></li>
+        </ul>
+
+        <div class="sidebar-divider"></div>
+
+        <ul class="yt-sidebar-menu">
+            <li><a href="perfil.php"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
+            <li><a href="../logout.php" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
+        </ul>
+    </aside>
 
     <main class="main-content">
         
@@ -102,7 +114,7 @@ $estructura_dashboard = [
             
             <div class="card">
                 <h3 style="display:flex; justify-content:space-between; align-items:center;">
-                    <span><i class="fas fa-chart-line"></i> Evaluación Continua</span>
+                    <span><i class="fas fa-chart-pie"></i> Progreso General</span>
                     
                     <?php if(count($materias_inscritas) > 0): ?>
                         <select class="subject-selector" onchange="cambiarMateriaDash(this.value)">
@@ -118,59 +130,75 @@ $estructura_dashboard = [
                 </h3>
                 
                 <?php 
-                // Generar un contenedor oculto/visible por cada materia
                 foreach($materias_inscritas as $index => $mat): 
                     $insc_id = $mat['inscripcion_id'];
+                    $materia_id = $mat['materia_id'];
                     $display = ($index === 0) ? 'block' : 'none';
                     
-                    // 1. Traer todas las calificaciones de esta materia desde la BD
-                    $stmt_cal = $pdo->prepare("SELECT tipo_examen, puntaje FROM calificaciones WHERE inscripcion_id = ?");
+                    // 1. OBTENER EL MÁXIMO DINÁMICAMENTE DE LA NUEVA TABLA
+                    $stmt_max = $pdo->prepare("SELECT SUM(puntos_maximos) FROM criterios_evaluacion WHERE materia_id = ?");
+                    $stmt_max->execute([$materia_id]);
+                    $max_puntos = $stmt_max->fetchColumn();
+                    
+                    // Si el administrador aún no configura la materia, mostrar 0 en lugar de crashear
+                    if (!$max_puntos) $max_puntos = 0; 
+
+                    // 2. Sumar puntos actuales
+                    $stmt_cal = $pdo->prepare("SELECT puntaje FROM calificaciones WHERE inscripcion_id = ?");
                     $stmt_cal->execute([$insc_id]);
-                    $califs_bd = [];
+                    $suma_puntos = 0;
                     while($row = $stmt_cal->fetch(PDO::FETCH_ASSOC)){
-                        $califs_bd[$row['tipo_examen']] = $row['puntaje'];
+                        if($row['puntaje'] !== null) {
+                            $suma_puntos += floatval($row['puntaje']);
+                        }
+                    }
+
+                    // 3. Calcular porcentaje y colores (Evitando división entre cero)
+                    if ($max_puntos > 0) {
+                        $porcentaje = ($suma_puntos / $max_puntos) * 100;
+                        if ($porcentaje > 100) $porcentaje = 100;
+                    } else {
+                        $porcentaje = 0;
+                    }
+                    
+                    if ($porcentaje < 60) {
+                        $color = '#dc3545'; $mensaje = 'En riesgo'; $bg_msg = '#f8d7da'; $col_msg = '#721c24';
+                    } elseif ($porcentaje < 80) {
+                        $color = '#ffc107'; $mensaje = 'Regular'; $bg_msg = '#fff3cd'; $col_msg = '#856404';
+                    } elseif ($porcentaje < 95) {
+                        $color = '#28a745'; $mensaje = 'Buen desempeño'; $bg_msg = '#d4edda'; $col_msg = '#155724';
+                    } else {
+                        $color = 'var(--udg-blue)'; $mensaje = '¡Excelente!'; $bg_msg = '#cce5ff'; $col_msg = '#004085';
                     }
                 ?>
                 
-                <div id="eval-<?php echo $insc_id; ?>" class="grades-summary eval-container" style="display: <?php echo $display; ?>;">
-                    
-                    <?php 
-                    // 2. Recorrer la plantilla fija para dibujar siempre los 5 apartados
-                    foreach($estructura_dashboard as $id_cat => $cat): 
-                        $suma = 0;
-                        $tiene_datos = false;
+                <div id="eval-<?php echo $insc_id; ?>" class="eval-container" style="display: <?php echo $display; ?>;">
+                    <div class="chart-wrapper">
                         
-                        // Sumar los puntos si existen en la BD (ej. Q1 + Q2 + Q3)
-                        foreach($cat['keys'] as $key_examen) {
-                            if(array_key_exists($key_examen, $califs_bd) && $califs_bd[$key_examen] !== null) {
-                                $suma += floatval($califs_bd[$key_examen]);
-                                $tiene_datos = true;
-                            }
-                        }
-
-                        // Lógica visual: Si es Writing y no hay datos, mostrar "Pendiente"
-                        if($id_cat == 'writing' && !$tiene_datos) {
-                            $texto_valor = '<span style="background:#fff3cd; color:#856404; padding:2px 6px; border-radius:4px; font-size:0.8rem;">Pendiente</span>';
-                            $porcentaje = 0;
-                            $color_barra = '#eee';
-                        } else {
-                            // Mostrar la suma de puntos (quitando decimales si es exacto)
-                            $suma_fmt = floatval($suma) == intval($suma) ? intval($suma) : floatval($suma);
-                            $texto_valor = $suma_fmt . ' / ' . $cat['max'] . ' pts';
+                        <?php if($max_puntos == 0): ?>
+                            <div style="padding:30px 0; color:#999; text-align:center;">
+                                <i class="fas fa-hourglass-half" style="font-size:2rem; margin-bottom:10px;"></i><br>
+                                Criterios sin configurar
+                            </div>
+                        <?php else: ?>
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" 
+                                      stroke-dasharray="<?php echo round($porcentaje); ?>, 100" 
+                                      style="stroke: <?php echo $color; ?>;" 
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <text x="18" y="20.35" class="percentage"><?php echo round($porcentaje); ?>%</text>
+                            </svg>
                             
-                            $porcentaje = ($suma / $cat['max']) * 100;
-                            if($porcentaje == 0) $color_barra = '#eee';
-                            elseif($porcentaje >= 60) $color_barra = 'var(--success)'; // Verde
-                            else $color_barra = '#ffc107'; // Amarillo/Naranja si va bajo
-                        }
-                    ?>
-                        <div class="grade-item">
-                            <div class="grade-label"><i class="fas <?php echo $cat['icon']; ?>"></i> <?php echo $cat['label']; ?></div>
-                            <div class="grade-value"><?php echo $texto_valor; ?></div>
-                        </div>
-                        <div class="progress-mini"><div class="progress-bar" style="width: <?php echo $porcentaje; ?>%; background-color: <?php echo $color_barra; ?>;"></div></div>
-                    <?php endforeach; ?>
+                            <div class="chart-subtitle">
+                                <?php echo format_score($suma_puntos); ?> / <?php echo $max_puntos; ?> puntos
+                            </div>
+                            <div class="chart-status" style="background-color: <?php echo $bg_msg; ?>; color: <?php echo $col_msg; ?>;">
+                                <?php echo $mensaje; ?>
+                            </div>
+                        <?php endif; ?>
 
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -239,6 +267,11 @@ $estructura_dashboard = [
     </footer>
 
     <script>
+        function toggleMobileMenu() {
+            document.getElementById('navWrapper').classList.toggle('active');
+            document.getElementById('menuOverlay').classList.toggle('active');
+        }
+
         function cambiarMateriaDash(idContenedor) {
             let contenedores = document.querySelectorAll('.eval-container');
             contenedores.forEach(function(cont) {
@@ -249,3 +282,9 @@ $estructura_dashboard = [
     </script>
 </body>
 </html>
+
+<?php
+function format_score($num) {
+    return floatval($num) == intval($num) ? intval($num) : floatval($num);
+}
+?>
