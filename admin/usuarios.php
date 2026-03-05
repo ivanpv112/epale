@@ -46,36 +46,34 @@ $total_users = $pdo->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
 $total_students = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ALUMNO'")->fetchColumn();
 $total_teachers = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='PROFESOR'")->fetchColumn();
 $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->fetchColumn();
+
+// FOTO DEL ADMIN (Para el header)
+$stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
+$stmt_foto->execute([$_SESSION['user_id']]);
+$user_foto = $stmt_foto->fetchColumn();
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gestión de Usuarios | Admin</title>
+    <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="navbar-brand">
-            <img src="../img/logo-pale.png" alt="Logo" style="height: 35px;"> e-PALE
-        </div>
-        <div class="navbar-menu">
-            <a href="usuarios.php" class="active">USUARIOS</a>
-            <a href="grupos_nrc.php">GRUPOS (NRC)</a>
-            <a href="materias.php">MATERIAS</a>
-            <a href="#">REPORTES</a>
-            <a href="importar_csv.php">CARGAR</a>
-        </div>
-        <div class="user-profile">
-            <i class="fas fa-user-circle fa-lg"></i> PERFIL <i class="fas fa-sign-out-alt" onclick="window.location.href='../logout.php'" title="Salir" style="margin-left:10px; cursor:pointer;"></i>
-        </div>
-    </nav>
+    <?php include 'menu_admin.php'; ?>
 
-    <div class="main-container">
+    <main class="main-content">
         
+        <div class="page-title-center" style="margin-bottom: 30px;">
+            <h1><i class="fas fa-users"></i> Gestión de Usuarios</h1>
+            <p>Administra a los alumnos, profesores y personal del sistema.</p>
+        </div>
+
         <div class="stats-grid">
             <div class="stat-card"> <span class="stat-number"><?php echo $total_users; ?></span> <span class="stat-label">Total Usuarios</span> </div>
             <div class="stat-card"> <span class="stat-number"><?php echo $total_students; ?></span> <span class="stat-label">Alumnos</span> </div>
@@ -83,116 +81,164 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             <div class="stat-card"> <span class="stat-number"><?php echo $total_admins; ?></span> <span class="stat-label">Admins</span> </div>
         </div>
 
-        <form class="toolbar" method="GET" action="usuarios.php">
+        <form class="toolbar" method="GET" action="usuarios.php" style="margin-top: 20px;">
             <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
-            <input type="text" name="q" class="search-input" placeholder="Buscar..." value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
+            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre, correo o código..." value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
             <select name="rol" class="filter-select" onchange="this.form.submit()">
                 <option value="">Todos los roles</option>
                 <option value="ALUMNO" <?php if(isset($_GET['rol']) && $_GET['rol']=='ALUMNO') echo 'selected'; ?>>Alumnos</option>
                 <option value="PROFESOR" <?php if(isset($_GET['rol']) && $_GET['rol']=='PROFESOR') echo 'selected'; ?>>Profesores</option>
                 <option value="ADMIN" <?php if(isset($_GET['rol']) && $_GET['rol']=='ADMIN') echo 'selected'; ?>>Admins</option>
             </select>
-            <button type="button" class="btn-primary" onclick="openModal()">
+            <button type="button" class="btn-save" onclick="openModal()" style="margin-left: auto;">
                 <i class="fas fa-user-plus"></i> Nuevo Usuario
             </button>
         </form>
 
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Código</th>
-                        <th>Rol</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($usuarios as $u): ?>
-                    <tr>
-                        <td class="user-cell">
-                            <h4><?php 
-                                if (isset($u['apellido_paterno'])) {
-                                    echo $u['nombre'] . ' ' . $u['apellido_paterno'] . (isset($u['apellido_materno']) && $u['apellido_materno'] ? ' ' . $u['apellido_materno'] : '');
-                                } else {
-                                    echo $u['nombre'] . ' ' . $u['apellidos'];
-                                }
-                            ?></h4>
-                            <span><?php echo $u['correo']; ?></span>
-                        </td>
-                        <td><?php echo $u['codigo'] ? $u['codigo'] : '-'; ?></td>
-                        <td>
-                            <?php 
-                                $ico = ($u['rol']=='ALUMNO') ? 'user-graduate' : (($u['rol']=='PROFESOR') ? 'chalkboard-teacher' : 'user-shield'); 
-                                echo "<i class='fas fa-$ico'></i> " . ucfirst(strtolower($u['rol']));
-                            ?>
-                        </td>
-                        <td>
-                            <span class="status-badge <?php echo ($u['estatus']=='ACTIVO')?'status-active':'status-inactive'; ?>">
-                                <?php echo $u['estatus']; ?>
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-btn" onclick='editUser(<?php echo json_encode($u); ?>)'>
-                                <i class="fas fa-pen"></i>
-                            </button>
+        <div class="card" style="padding: 0; overflow: hidden; margin-top: 20px;">
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <table class="history-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Usuario</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Código</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Teléfono</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estado</th>
+                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($usuarios as $u): ?>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td class="user-cell" style="padding: 15px;">
+                                <h4 style="margin: 0; color: var(--udg-blue);"><?php 
+                                    if (isset($u['apellido_paterno'])) {
+                                        echo htmlspecialchars($u['nombre'] . ' ' . $u['apellido_paterno'] . (isset($u['apellido_materno']) && $u['apellido_materno'] ? ' ' . $u['apellido_materno'] : ''));
+                                    } else {
+                                        echo htmlspecialchars($u['nombre'] . ' ' . $u['apellidos']);
+                                    }
+                                ?></h4>
+                                <span style="font-size: 0.85rem; color: #666;"><?php echo htmlspecialchars($u['correo']); ?></span>
+                            </td>
+                            <td style="padding: 15px;"><?php echo $u['codigo'] ? htmlspecialchars($u['codigo']) : '-'; ?></td>
                             
-                            <?php if($u['usuario_id'] != $_SESSION['user_id']): ?>
-                                <a href="usuarios.php?borrar=<?php echo $u['usuario_id']; ?>" class="action-btn delete" onclick="return confirm('¿Borrar?');">
-                                    <i class="fas fa-trash-alt"></i>
-                                </a>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                            <td style="padding: 15px; color: #555;">
+                                <?php echo $u['telefono'] ? htmlspecialchars($u['telefono']) : '<span style="color:#aaa; font-style:italic;">No registrado</span>'; ?>
+                            </td>
 
-    <!-- Modal para crear/editar usuario -->
-    <div id="userModal" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Nuevo Usuario</h2>
+                            <td style="padding: 15px;">
+                                <?php 
+                                    $ico = ($u['rol']=='ALUMNO') ? 'user-graduate' : (($u['rol']=='PROFESOR') ? 'chalkboard-teacher' : 'user-shield'); 
+                                    echo "<i class='fas fa-$ico' style='color:#888;'></i> " . ucfirst(strtolower($u['rol']));
+                                ?>
+                            </td>
+                            <td style="padding: 15px;">
+                                <?php if($u['estatus'] == 'ACTIVO'): ?>
+                                    <span class="tag-aprobado" style="background-color: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Activo</span>
+                                <?php else: ?>
+                                    <span class="tag-aprobado" style="background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Inactivo</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding: 15px; text-align: center;">
+                                <button onclick='editUser(<?php echo json_encode($u); ?>)' style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                
+                                <?php if($u['usuario_id'] != $_SESSION['user_id']): ?>
+                                    <a href="usuarios.php?borrar=<?php echo $u['usuario_id']; ?>" onclick="return confirm('¿Estás seguro de borrar este usuario? Esta acción no se puede deshacer.');" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        
+                        <?php if(count($usuarios) == 0): ?>
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: #888;">No se encontraron usuarios.</td>
+                        </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+
+    <div id="userModal" class="modal-overlay">
+        <div class="modal-content" style="padding: 0;">
+            
+            <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
+                <h2 id="modalTitle" style="margin: 0;">Nuevo Usuario</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
-            <form action="guardar_usuario.php" method="POST">
+            
+            <form action="guardar_usuario.php" method="POST" style="margin: 0;">
                 <input type="hidden" name="usuario_id" id="userId">
-                <div class="form-grid">
-                    <div class="form-group"> <label>Nombre(s)</label> <input type="text" name="nombre" id="userName" required> </div>
-                    <div class="form-group"> <label>Apellido Paterno</label> <input type="text" name="apellido_paterno" id="userLastnameP" required> </div>
-                    <div class="form-group"> <label>Apellido Materno</label> <input type="text" name="apellido_materno" id="userLastnameM"> </div>
-                    <div class="form-group full-width"> <label>Correo Electrónico</label> <input type="email" name="correo" id="userEmail" required> </div>
-                    <div class="form-group">
-                        <label>Rol</label>
-                        <select name="rol" id="userRole" onchange="toggleFields()">
-                            <option value="ALUMNO">Alumno</option>
-                            <option value="PROFESOR">Profesor</option>
-                            <option value="ADMIN">Administrador</option>
-                        </select>
+                
+                <div style="padding: 20px 30px; max-height: 60vh; overflow-y: auto;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group" style="grid-column: span 2;"> 
+                            <label>Nombre(s)</label> <input type="text" name="nombre" id="userName" required> 
+                        </div>
+                        <div class="form-group"> 
+                            <label>Apellido Paterno</label> <input type="text" name="apellido_paterno" id="userLastnameP" required> 
+                        </div>
+                        <div class="form-group"> 
+                            <label>Apellido Materno</label> <input type="text" name="apellido_materno" id="userLastnameM"> 
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;"> 
+                            <label>Correo Electrónico</label> <input type="email" name="correo" id="userEmail" required> 
+                        </div>
+                        <div class="form-group">
+                            <label>Rol</label>
+                            <select name="rol" id="userRole" onchange="toggleFields()">
+                                <option value="ALUMNO">Alumno</option>
+                                <option value="PROFESOR">Profesor</option>
+                                <option value="ADMIN">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Estado</label>
+                            <select name="estatus" id="userStatus">
+                                <option value="ACTIVO">Activo</option>
+                                <option value="INACTIVO">Inactivo</option>
+                            </select>
+                        </div>
+                        <div class="form-group code-field"> 
+                            <label>Código</label> <input type="text" name="codigo" id="userCode"> 
+                        </div>
+                        <div class="form-group student-field"> 
+                            <label>Carrera</label> <input type="text" name="carrera" id="userCareer" placeholder="Ej. LIME"> 
+                        </div>
+                        <div class="form-group"> 
+                            <label>Teléfono</label> <input type="text" name="telefono" id="userPhone"> 
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;"> 
+                            <label>Contraseña</label> <input type="password" name="password" placeholder="(Dejar vacía para no cambiar)"> 
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Estado</label>
-                        <select name="estatus" id="userStatus">
-                            <option value="ACTIVO">Activo</option>
-                            <option value="INACTIVO">Inactivo</option>
-                        </select>
-                    </div>
-                    <div class="form-group code-field"> <label>Código</label> <input type="text" name="codigo" id="userCode"> </div>
-                    <div class="form-group student-field"> <label>Carrera</label> <input type="text" name="carrera" id="userCareer" placeholder="Ej. LIME"> </div>
-                    <div class="form-group"> <label>Teléfono</label> <input type="text" name="telefono" id="userPhone"> </div>
-                    <div class="form-group full-width"> <label>Contraseña</label> <input type="password" name="password" placeholder="(Dejar vacía para no cambiar)"> </div>
                 </div>
-                <div class="modal-footer">
+
+                <div class="modal-footer" style="padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save">Guardar</button>
+                    <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
+        function toggleMobileMenu() {
+            document.getElementById('navWrapper').classList.toggle('active');
+            document.getElementById('menuOverlay').classList.toggle('active');
+        }
+
         const modal = document.getElementById('userModal');
+        const overlayMenu = document.getElementById('menuOverlay');
+
         function openModal() {
             document.getElementById('userId').value = '';
             document.getElementById('modalTitle').innerText = 'Nuevo Usuario';
@@ -204,13 +250,16 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             document.getElementById('userCareer').value = '';
             document.getElementById('userPhone').value = '';
             document.getElementById('userRole').value = 'ALUMNO';
+            document.getElementById('userStatus').value = 'ACTIVO';
             toggleFields();
             modal.style.display = 'flex';
         }
+
         function editUser(user) {
             document.getElementById('userId').value = user.usuario_id;
             document.getElementById('modalTitle').innerText = 'Editar Usuario';
             document.getElementById('userName').value = user.nombre;
+            
             if (user.apellido_paterno !== undefined) {
                 document.getElementById('userLastnameP').value = user.apellido_paterno;
                 document.getElementById('userLastnameM').value = user.apellido_materno || '';
@@ -219,6 +268,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                 document.getElementById('userLastnameP').value = partes[0];
                 document.getElementById('userLastnameM').value = partes.slice(1).join(' ') || '';
             }
+            
             document.getElementById('userEmail').value = user.correo;
             document.getElementById('userPhone').value = user.telefono;
             document.getElementById('userRole').value = user.rol;
@@ -228,19 +278,24 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             toggleFields();
             modal.style.display = 'flex';
         }
+
         function closeModal() { modal.style.display = 'none'; }
+
         function toggleFields() {
             const role = document.getElementById('userRole').value;
-            // show carrera only for alumnos
             const studentFields = document.querySelectorAll('.student-field');
             studentFields.forEach(f => f.style.display = (role === 'ALUMNO') ? 'block' : 'none');
-            // show code for alumnos and profesores
+            
             const codeGroup = document.querySelector('.code-field');
             if (codeGroup) {
                 codeGroup.style.display = (role === 'ADMIN') ? 'none' : 'block';
             }
         }
-        window.onclick = function(e) { if(e.target == modal) closeModal(); };
+
+        window.onclick = function(e) { 
+            if(e.target == modal) closeModal(); 
+            if(e.target == overlayMenu) toggleMobileMenu();
+        };
     </script>
 
 </body>
