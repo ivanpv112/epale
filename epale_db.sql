@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 19-02-2026 a las 23:09:42
+-- Tiempo de generación: 05-03-2026 a las 23:36:36
 -- Versión del servidor: 8.0.36
 -- Versión de PHP: 8.3.14
 
@@ -31,10 +31,10 @@ DROP TABLE IF EXISTS `alumnos`;
 CREATE TABLE IF NOT EXISTS `alumnos` (
   `alumno_id` int NOT NULL AUTO_INCREMENT,
   `usuario_id` int NOT NULL,
-  `carrera` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `carrera` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`alumno_id`),
   KEY `usuario_id` (`usuario_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `alumnos`
@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS `alumnos` (
 
 INSERT INTO `alumnos` (`alumno_id`, `usuario_id`, `carrera`) VALUES
 (1, 3, 'LIME'),
-(2, 4, 'LTIN');
+(2, 4, 'LTIN'),
+(4, 7, 'LTIN');
 
 -- --------------------------------------------------------
 
@@ -54,7 +55,7 @@ DROP TABLE IF EXISTS `calificaciones`;
 CREATE TABLE IF NOT EXISTS `calificaciones` (
   `calificacion_id` int NOT NULL AUTO_INCREMENT,
   `inscripcion_id` int NOT NULL,
-  `tipo_examen` enum('DIAGNOSTICO','TOEFL','Q1','Q2','Q3','QO1','QO2','WRITING','SPEAKING','PLATAFORMA','PARTICIPACION','FINAL') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tipo_examen` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `puntaje` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`calificacion_id`),
   KEY `inscripcion_id` (`inscripcion_id`)
@@ -66,7 +67,7 @@ CREATE TABLE IF NOT EXISTS `calificaciones` (
 
 INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`, `puntaje`) VALUES
 (1, 1, 'Q1', 8.00),
-(2, 1, 'Q2', 9.00),
+(2, 1, 'Q2', 10.00),
 (3, 1, 'Q3', 8.00),
 (4, 1, 'QO1', 3.00),
 (5, 1, 'QO2', 2.00),
@@ -86,7 +87,7 @@ INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`
 DROP TABLE IF EXISTS `ciclos`;
 CREATE TABLE IF NOT EXISTS `ciclos` (
   `ciclo_id` int NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nombre` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `activo` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`ciclo_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -97,6 +98,42 @@ CREATE TABLE IF NOT EXISTS `ciclos` (
 
 INSERT INTO `ciclos` (`ciclo_id`, `nombre`, `activo`) VALUES
 (1, '2026-A', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `criterios_evaluacion`
+--
+
+DROP TABLE IF EXISTS `criterios_evaluacion`;
+CREATE TABLE IF NOT EXISTS `criterios_evaluacion` (
+  `criterio_id` int NOT NULL AUTO_INCREMENT,
+  `materia_id` int NOT NULL,
+  `categoria` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `codigo_examen` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nombre_examen` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `puntos_maximos` decimal(5,2) NOT NULL,
+  `icono` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'fa-star',
+  `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'var(--udg-light)',
+  PRIMARY KEY (`criterio_id`),
+  KEY `materia_id` (`materia_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `criterios_evaluacion`
+--
+
+INSERT INTO `criterios_evaluacion` (`criterio_id`, `materia_id`, `categoria`, `codigo_examen`, `nombre_examen`, `puntos_maximos`, `icono`, `color`) VALUES
+(1, 1, 'Quizzes', 'Q1', 'Quiz 1', 10.00, 'fa-book-open', 'var(--udg-light)'),
+(2, 1, 'Quizzes', 'Q2', 'Quiz 2', 10.00, 'fa-book-open', 'var(--udg-light)'),
+(3, 1, 'Quizzes', 'Q3', 'Quiz 3', 10.00, 'fa-book-open', 'var(--udg-light)'),
+(4, 1, 'Quizzes Orales', 'QO1', 'Quiz Oral 1', 5.00, 'fa-comments', 'var(--success)'),
+(5, 1, 'Quizzes Orales', 'QO2', 'Quiz Oral 2', 5.00, 'fa-comments', 'var(--success)'),
+(6, 1, 'Proyectos', 'WRITING', 'Writing Project', 5.00, 'fa-file-signature', 'var(--warning)'),
+(7, 1, 'Plataforma', 'PLATAFORMA', 'Actividades Moodle', 40.00, 'fa-laptop-code', '#dc3545'),
+(8, 1, 'Participación', 'PARTICIPACION', 'Participación en clase', 5.00, 'fa-hand-paper', '#17a2b8'),
+(9, 1, 'Certificación', 'TOEFL', 'Examen TOEFL', 15.00, 'fa-certificate', '#6f42c1'),
+(10, 2, 'Certificación', 'TOEFL', 'Examen TOEFL', 10.00, 'fa-certificate', '#6f42c1');
 
 -- --------------------------------------------------------
 
@@ -122,6 +159,7 @@ CREATE TABLE IF NOT EXISTS `grupos` (
 --
 
 INSERT INTO `grupos` (`nrc`, `materia_id`, `profesor_id`, `ciclo_id`, `cupo`) VALUES
+(60406, 1, 8, 1, 30),
 (60495, 1, 2, 1, 30),
 (60501, 2, 2, 1, 30);
 
@@ -135,14 +173,14 @@ DROP TABLE IF EXISTS `horarios`;
 CREATE TABLE IF NOT EXISTS `horarios` (
   `horario_id` int NOT NULL AUTO_INCREMENT,
   `nrc` int NOT NULL,
-  `dias_patron` enum('L-M','M-J','V','S') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dias_patron` enum('L-M','M-J','V','S') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `hora_inicio` time NOT NULL,
   `hora_fin` time NOT NULL,
-  `modalidad` enum('PRESENCIAL','VIRTUAL') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `aula` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `modalidad` enum('PRESENCIAL','VIRTUAL') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `aula` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`horario_id`),
   KEY `nrc` (`nrc`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `horarios`
@@ -150,7 +188,8 @@ CREATE TABLE IF NOT EXISTS `horarios` (
 
 INSERT INTO `horarios` (`horario_id`, `nrc`, `dias_patron`, `hora_inicio`, `hora_fin`, `modalidad`, `aula`) VALUES
 (1, 60495, 'L-M', '14:00:00', '16:00:00', 'PRESENCIAL', 'AULA 202'),
-(2, 60501, 'M-J', '16:00:00', '18:00:00', 'PRESENCIAL', 'AULA 101');
+(2, 60501, 'M-J', '16:00:00', '18:00:00', 'PRESENCIAL', 'AULA 101'),
+(3, 60406, 'L-M', '12:00:00', '16:00:00', 'PRESENCIAL', 'A-230');
 
 -- --------------------------------------------------------
 
@@ -163,7 +202,7 @@ CREATE TABLE IF NOT EXISTS `inscripciones` (
   `inscripcion_id` int NOT NULL AUTO_INCREMENT,
   `alumno_id` int NOT NULL,
   `nrc` int NOT NULL,
-  `estatus` enum('INSCRITO','SOLICITUD_BAJA','BAJA','SOLICITUD_ALTA') COLLATE utf8mb4_unicode_ci DEFAULT 'INSCRITO',
+  `estatus` enum('INSCRITO','SOLICITUD_BAJA','BAJA','SOLICITUD_ALTA') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'INSCRITO',
   `calificacion_final` decimal(5,2) DEFAULT '0.00',
   PRIMARY KEY (`inscripcion_id`),
   KEY `alumno_id` (`alumno_id`),
@@ -187,8 +226,8 @@ INSERT INTO `inscripciones` (`inscripcion_id`, `alumno_id`, `nrc`, `estatus`, `c
 DROP TABLE IF EXISTS `materias`;
 CREATE TABLE IF NOT EXISTS `materias` (
   `materia_id` int NOT NULL AUTO_INCREMENT,
-  `clave` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `nombre` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `clave` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nombre` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `nivel` int NOT NULL,
   PRIMARY KEY (`materia_id`),
   UNIQUE KEY `clave` (`clave`)
@@ -211,31 +250,34 @@ INSERT INTO `materias` (`materia_id`, `clave`, `nombre`, `nivel`) VALUES
 DROP TABLE IF EXISTS `usuarios`;
 CREATE TABLE IF NOT EXISTS `usuarios` (
   `usuario_id` int NOT NULL AUTO_INCREMENT,
-  `codigo` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `nombre` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `apellido_paterno` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `apellido_materno` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `correo` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `telefono` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `rol` enum('ADMIN','PROFESOR','ALUMNO') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `estatus` enum('ACTIVO','INACTIVO') COLLATE utf8mb4_unicode_ci DEFAULT 'ACTIVO',
-  `google_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `codigo` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `nombre` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `apellido_paterno` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `apellido_materno` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `correo` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `telefono` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `rol` enum('ADMIN','PROFESOR','ALUMNO') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `estatus` enum('ACTIVO','INACTIVO') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'ACTIVO',
+  `foto_perfil` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `google_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`usuario_id`),
   UNIQUE KEY `correo` (`correo`),
   UNIQUE KEY `codigo` (`codigo`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `usuarios`
 --
 
-INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `apellido_materno`, `correo`, `password`, `telefono`, `rol`, `estatus`, `google_id`, `fecha_creacion`) VALUES
-(1, 'AD01', 'Admin', 'Principal', NULL, 'admin@epale.com', '$2y$10$dd6SmtLKkEobR0p5h.ynFOkA4VoZqOUZzyO24SPEp8BbLqPGORVnC', NULL, 'ADMIN', 'ACTIVO', NULL, '2026-02-18 21:47:58'),
-(2, 'PR01', 'Juan', 'Mendez', NULL, 'profe@epale.com', '$2y$10$dd6SmtLKkEobR0p5h.ynFOkA4VoZqOUZzyO24SPEp8BbLqPGORVnC', NULL, 'PROFESOR', 'ACTIVO', NULL, '2026-02-18 21:47:58'),
-(3, '219511643', 'Luis', 'Alumno', NULL, 'alumno@epale.com', '$2y$10$dd6SmtLKkEobR0p5h.ynFOkA4VoZqOUZzyO24SPEp8BbLqPGORVnC', '3322777085', 'ALUMNO', 'ACTIVO', NULL, '2026-02-18 21:47:58'),
-(4, '222222', 'Ivan Alejandro', 'Padilla', 'Varela', 'test2@gmail.com', '$2y$10$GDGrmQFD53PEfhL3i02SY.KlJUZsfv/uejp6kWhuLKFcSe6ETNovW', '3344553322', 'ALUMNO', 'ACTIVO', NULL, '2026-02-18 21:58:25');
+INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `apellido_materno`, `correo`, `password`, `telefono`, `rol`, `estatus`, `foto_perfil`, `google_id`, `fecha_creacion`) VALUES
+(1, 'AD01', 'Admin', 'Principal', NULL, 'admin@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', NULL, 'ADMIN', 'ACTIVO', NULL, NULL, '2026-02-18 21:47:58'),
+(2, 'PR01', 'Juan', 'Mendez', NULL, 'profe@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', NULL, 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-02-18 21:47:58'),
+(3, '219511643', 'Luis', 'Alumno', 'Mendez', 'alumno@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3322777085', 'ALUMNO', 'ACTIVO', 'eab28fd4255211378f37.jpg', NULL, '2026-02-18 21:47:58'),
+(4, '222222', 'Ivan Alejandro', 'Padilla', 'Varela', 'test2@gmail.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3344553322', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-02-18 21:58:25'),
+(7, '1122334455', 'Ivan', 'test', 'test', 'test3@gmail.com', '$2y$10$WKAXb1YFEvwvBvEAFnt6GO2ujXXSOuU3YuxNvX3SJ5FZj9pDfvmGO', '222334456', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-05 20:43:36'),
+(8, '01092834', 'Martin', 'Padilla', 'Yunuem', 'test9@gmail.com', '$2y$10$O/UZX7omnuXb5xyfbQMQce4zjAeXzX8N1jmQJTpkJaXXHo2HZ7Kka', '3344222233', 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-03-05 23:03:29');
 
 --
 -- Restricciones para tablas volcadas
@@ -252,6 +294,12 @@ ALTER TABLE `alumnos`
 --
 ALTER TABLE `calificaciones`
   ADD CONSTRAINT `calificaciones_ibfk_1` FOREIGN KEY (`inscripcion_id`) REFERENCES `inscripciones` (`inscripcion_id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `criterios_evaluacion`
+--
+ALTER TABLE `criterios_evaluacion`
+  ADD CONSTRAINT `fk_criterios_materia` FOREIGN KEY (`materia_id`) REFERENCES `materias` (`materia_id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `grupos`
