@@ -580,3 +580,144 @@ body {
 }
 .tag-sistema { background: #e2e3e5; color: #383d41; }
 .tag-materia { background: #cce5ff; color: #004085; }
+
+/* =========================================
+   8. NUEVO MENÚ LATERAL (ESTILO YOUTUBE)
+   ========================================= */
+
+body { overflow-x: hidden; }
+
+/* --- CORRECCIÓN FORZADA DEL HEADER --- */
+/* Obligamos a que el header siempre sea una sola fila de izquierda a derecha */
+.main-header {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+/* Evitamos que el logo se deforme o se centre */
+.logo-container {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    margin: 0 !important;
+    width: auto !important;
+}
+
+/* --- AJUSTES PARA CELULAR --- */
+@media (max-width: 768px) {
+    /* Ocultamos el nombre ("Luis") para que solo quede la foto y ahorre mucho espacio */
+    .profile-name { display: none !important; }
+    
+    /* Reducimos un poco el padding lateral para ganar espacio */
+    .main-header { padding: 0 15px !important; }
+}
+
+/* --- CAPA OSCURA DE FONDO --- */
+.menu-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); z-index: 1999; display: none;
+    backdrop-filter: blur(2px);
+}
+.menu-overlay.active { display: block; }
+
+/* --- PANEL LATERAL --- */
+.yt-sidebar {
+    position: fixed; top: 0;
+    right: -320px; /* Se oculta a la derecha */
+    width: 280px; max-width: 85vw; height: 100vh;
+    background-color: #0f0f0f; /* Color oscuro idéntico a YouTube */
+    box-shadow: -5px 0 25px rgba(0,0,0,0.8);
+    display: flex; flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000; overflow-y: auto;
+}
+.yt-sidebar.active { right: 0; } /* Se desliza hacia la pantalla */
+
+/* Cabecera del Panel */
+.yt-sidebar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 25px; border-bottom: 1px solid #272727;
+    height: 65px; box-sizing: border-box;
+}
+
+/* Lista de Links */
+.yt-sidebar-menu { list-style: none; padding: 15px 0; margin: 0; }
+.yt-sidebar-menu li { margin-bottom: 2px; }
+.yt-sidebar-menu a {
+    display: flex; align-items: center; gap: 20px;
+    padding: 12px 25px; color: #f1f1f1; text-decoration: none;
+    font-size: 1rem; font-weight: 500;
+    transition: background 0.2s;
+}
+
+/* Efectos al pasar el mouse o estar activo */
+.yt-sidebar-menu a:hover { background-color: #272727; }
+.yt-sidebar-menu a.active { background-color: #272727; font-weight: bold; }
+.yt-sidebar-menu a i { font-size: 1.3rem; width: 24px; text-align: center; color: #aaa; }
+.yt-sidebar-menu a.active i { color: white; }
+
+/* Línea separadora */
+.sidebar-divider { height: 1px; background-color: #272727; margin: 10px 0; }
+
+/* =========================================
+   9. GRÁFICA CIRCULAR ANIMADA (DASHBOARD)
+   ========================================= */
+
+.chart-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 0 10px 0;
+}
+
+.circular-chart {
+    display: block;
+    margin: 0 auto;
+    max-width: 180px;
+    max-height: 250px;
+}
+
+.circle-bg {
+    fill: none;
+    stroke: #f0f0f0;
+    stroke-width: 2.5;
+}
+
+.circle {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    /* La animación hace que la línea "crezca" suavemente */
+    animation: progressFill 1.5s ease-out forwards;
+}
+
+@keyframes progressFill {
+    0% { stroke-dasharray: 0, 100; }
+}
+
+.percentage {
+    fill: var(--udg-blue);
+    font-family: inherit;
+    font-size: 0.55em;
+    text-anchor: middle;
+    font-weight: bold;
+}
+
+.chart-subtitle {
+    margin-top: 20px;
+    font-size: 1.1rem;
+    color: #555;
+    font-weight: 600;
+}
+
+.chart-status {
+    font-size: 0.85rem;
+    margin-top: 5px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: bold;
+}
