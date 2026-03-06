@@ -2,27 +2,50 @@
 session_start();
 require '../db.php';
 
-// SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit;
 }
 
-// LÓGICA PARA ELIMINAR GRUPO (Ambos: presencial y virtual)
 if (isset($_GET['del_mat']) && isset($_GET['del_prof']) && isset($_GET['del_ciclo'])) {
     $pdo->prepare("DELETE FROM grupos WHERE materia_id=? AND profesor_id=? AND ciclo_id=?")
         ->execute([$_GET['del_mat'], $_GET['del_prof'], $_GET['del_ciclo']]);
     header("Location: grupos_nrc.php?success_del=1"); exit;
 }
 
-// Listas para los desplegables del formulario
-$profesores = $pdo->query("SELECT usuario_id, nombre, apellido_paterno, apellido_materno FROM usuarios WHERE rol='PROFESOR' AND estatus='ACTIVO'")->fetchAll(PDO::FETCH_ASSOC);
-$materias_list = $pdo->query("SELECT materia_id, clave, nombre FROM materias ORDER BY clave")->fetchAll(PDO::FETCH_ASSOC);
-$ciclos = $pdo->query("SELECT ciclo_id, nombre FROM ciclos ORDER BY nombre DESC")->fetchAll(PDO::FETCH_ASSOC);
+// Búsqueda y Filtros
+$search = isset($_GET['q']) ? trim($_GET['q']) : '';
+$filtro_materia = isset($_GET['materia']) ? $_GET['materia'] : '';
 
-// Obtener lista de grupos "lógicos"
+$where = "1=1";
+$params = [];
+
+// Si se escribió algo en el buscador (Nombre, clave o NRC)
+if ($search !== '') {
+    $where .= " AND (m.nombre LIKE :q1 OR m.clave LIKE :q2 OR g.nrc LIKE :q3)";
+    $termino = "%" . $search . "%";
+    $params[':q1'] = $termino;
+    $params[':q2'] = $termino;
+    $params[':q3'] = $termino;
+}
+
+// Si se seleccionó una categoría (Ej. Inglés, Francés)
+if ($filtro_materia !== '') {
+    $where .= " AND m.nombre = :materia";
+    $params[':materia'] = $filtro_materia;
+}
+
+// Lista de materias únicas para armar el filtro desplegable automáticamente
+$materias_unicas = $pdo->query("SELECT DISTINCT nombre FROM materias ORDER BY nombre")->fetchAll(PDO::FETCH_COLUMN);
+
+// CONSULTA MEJORADA: Con filtros integrados
 $sql = "SELECT c.nombre AS periodo, c.ciclo_id,
                m.clave AS curso, m.materia_id, m.nombre AS materia, m.nivel AS nivel,
                u.nombre AS profesor, u.apellido_paterno AS prof_ap, u.usuario_id AS profesor_id,
+               MAX(g.cupo) AS cupo,
+               (SELECT COUNT(DISTINCT i.alumno_id) 
+                FROM inscripciones i 
+                JOIN grupos g2 ON i.nrc = g2.nrc 
+                WHERE g2.materia_id = g.materia_id AND g2.profesor_id = g.profesor_id AND g2.ciclo_id = g.ciclo_id AND i.estatus = 'INSCRITO') AS inscritos,
                MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_presencial,
                MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_virtual,
                MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.aula END) AS aula_presencial,
@@ -38,10 +61,13 @@ $sql = "SELECT c.nombre AS periodo, c.ciclo_id,
         JOIN usuarios u ON g.profesor_id = u.usuario_id AND u.rol = 'PROFESOR'
         JOIN ciclos c ON g.ciclo_id = c.ciclo_id
         JOIN horarios h ON g.nrc = h.nrc
+        WHERE $where
         GROUP BY g.materia_id, g.profesor_id, g.ciclo_id
-        ORDER BY c.nombre DESC, m.clave, u.nombre";
+        ORDER BY c.nombre DESC, m.nivel ASC, u.nombre ASC";
 
-$stmt = $pdo->query($sql);
+// Ejecutamos la consulta con seguridad PDO
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -54,35 +80,48 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .input-readonly { background-color: #e9ecef !important; color: #6c757d !important; cursor: not-allowed; }
-    </style>
 </head>
 <body>
 
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        
         <div class="page-title-center" style="margin-bottom: 30px;">
-            <h1><i class="fas fa-chalkboard"></i> Gestión de Grupos (NRC)</h1>
-            <p>Asigna profesores a las materias y define sus horarios presenciales y virtuales.</p>
+            <h1><i class="fas fa-chalkboard"></i> Gestión de Grupos y Alumnos</h1>
+            <p>Administra los horarios, aulas y el cupo de estudiantes por cada clase.</p>
         </div>
 
         <?php if(isset($_GET['success'])): ?>
-            <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡El grupo ha sido guardado correctamente!</div>
+            <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡El grupo ha sido creado correctamente!</div>
         <?php elseif(isset($_GET['success_del'])): ?>
             <div class="alert alert-success" style="margin-bottom: 20px; background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El grupo fue eliminado con éxito!</div>
-        <?php elseif(isset($_GET['error'])): ?>
-            <div class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; margin-bottom: 20px;">
-                <i class="fas fa-exclamation-triangle"></i> Error: <?php echo htmlspecialchars($_GET['error']); ?>
-            </div>
         <?php endif; ?>
 
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
-            <button type="button" class="btn-save" onclick="openModal()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            
+            <form method="GET" action="grupos_nrc.php" style="display: flex; gap: 10px; flex-grow: 1; max-width: 800px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; flex-grow: 1; border: 1px solid #ddd; border-radius: 6px; padding: 0 10px;">
+                    <i class="fas fa-search" style="color:#aaa;"></i>
+                    <input type="text" name="q" placeholder="Buscar por Nombre o NRC..." value="<?php echo htmlspecialchars($search); ?>" style="border: none; outline: none; padding: 10px; width: 100%;">
+                </div>
+                
+                <select name="materia" style="padding: 10px; border-radius: 6px; border: 1px solid #ddd; outline: none; cursor: pointer;">
+                    <option value="">Todas las Materias</option>
+                    <?php foreach($materias_unicas as $mat_name): ?>
+                        <option value="<?php echo htmlspecialchars($mat_name); ?>" <?php if($filtro_materia == $mat_name) echo 'selected'; ?>><?php echo htmlspecialchars($mat_name); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <button type="submit" class="btn-save" style="padding: 10px 20px;"><i class="fas fa-search"></i> Buscar</button>
+                
+                <?php if($search !== '' || $filtro_materia !== ''): ?>
+                    <a href="grupos_nrc.php" class="btn-cancel" style="text-decoration: none; display:flex; align-items:center; padding: 10px 15px;">Limpiar</a>
+                <?php endif; ?>
+            </form>
+
+            <a href="gestionar_grupo.php" class="btn-save" style="text-decoration: none; display: flex; align-items: center; height: 44px;">
                 <i class="fas fa-plus-circle"></i> Crear Nuevo Grupo
-            </button>
+            </a>
         </div>
 
         <div class="card" style="padding: 0; overflow: hidden;">
@@ -90,249 +129,111 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <table class="history-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Ciclo</th>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Materia</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Materia / Ciclo</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Profesor</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">NRC (P/V)</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Horario (P/V)</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Aula (P/V)</th>
+                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">NRC y Aula</th>
+                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Horario</th>
+                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estudiantes</th>
                             <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                     <?php if (count($grupos) > 0): ?>
-                        <?php foreach ($grupos as $g): ?>
+                        <?php foreach ($grupos as $g): 
+                            // Lógica de colores para el cupo
+                            $cupo = $g['cupo'];
+                            $inscritos = $g['inscritos'];
+                            if ($inscritos == 0) {
+                                $badge_bg = '#f1f3f5'; $badge_color = '#6c757d'; $txt_cupo = "Vacía";
+                            } elseif ($inscritos >= $cupo) {
+                                $badge_bg = '#f8d7da'; $badge_color = '#dc3545'; $txt_cupo = "Llena";
+                            } else {
+                                $badge_bg = '#d4edda'; $badge_color = '#28a745'; $txt_cupo = "Con cupo";
+                            }
+                        ?>
                             <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px; font-weight: bold; color: #555;"><?php echo htmlspecialchars($g['periodo']); ?></td>
                                 <td style="padding: 15px;">
-                                    <div style="color: var(--udg-blue); font-weight: bold;"><?php echo htmlspecialchars($g['materia']); ?></div>
-                                    <div style="font-size: 0.8rem; color: #888; font-family: monospace;"><?php echo htmlspecialchars($g['curso']); ?> - Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
+                                    <div style="color: var(--udg-blue); font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
+                                    <div style="font-size: 0.85rem; color: #888;">Ciclo: <?php echo htmlspecialchars($g['periodo']); ?> | Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
                                 </td>
                                 <td style="padding: 15px;">
                                     <i class="fas fa-chalkboard-teacher" style="color: #ccc; margin-right: 5px;"></i>
                                     <?php echo htmlspecialchars($g['profesor'] . ' ' . $g['prof_ap']); ?>
                                 </td>
-                                <td style="padding: 15px; text-align: center; font-family: monospace; font-size: 0.95rem;">
-                                    <div style="color: #28a745;" title="NRC Presencial"><strong>P:</strong> <?php echo $g['nrc_presencial'] ?: '---'; ?></div>
-                                    <div style="color: #17a2b8; margin-top: 4px;" title="NRC Virtual"><strong>V:</strong> <?php echo $g['nrc_virtual'] ?: '---'; ?></div>
-                                </td>
                                 
                                 <td style="padding: 15px; text-align: center; font-size: 0.85rem; white-space: nowrap;">
-                                    <?php 
-                                        $horario_p = '---';
-                                        if ($g['dias_presencial'] && $g['inicio_presencial'] && $g['fin_presencial']) {
-                                            $horario_p = htmlspecialchars($g['dias_presencial']) . ' ' . date('H:i', strtotime($g['inicio_presencial'])) . '-' . date('H:i', strtotime($g['fin_presencial']));
-                                        }
-                                        $horario_v = '---';
-                                        if ($g['dias_virtual'] && $g['inicio_virtual'] && $g['fin_virtual']) {
-                                            $horario_v = htmlspecialchars($g['dias_virtual']) . ' ' . date('H:i', strtotime($g['inicio_virtual'])) . '-' . date('H:i', strtotime($g['fin_virtual']));
-                                        }
-                                    ?>
-                                    <div style="color: #28a745;" title="Horario Presencial"><strong>P:</strong> <?php echo $horario_p; ?></div>
-                                    <div style="color: #17a2b8; margin-top: 4px;" title="Horario Virtual"><strong>V:</strong> <?php echo $horario_v; ?></div>
+                                    <div style="color: #28a745; margin-bottom: 3px;" title="Presencial">
+                                        <strong>P:</strong> 
+                                        <?php echo $g['nrc_presencial'] ? $g['nrc_presencial'] . ' | ' . htmlspecialchars($g['aula_presencial']?:'S/A') : '---'; ?>
+                                    </div>
+                                    <div style="color: #17a2b8;" title="Virtual">
+                                        <strong>V:</strong> 
+                                        <?php echo $g['nrc_virtual'] ? $g['nrc_virtual'] . ' | ' . htmlspecialchars($g['aula_virtual']?:'S/A') : '---'; ?>
+                                    </div>
                                 </td>
 
-                                <td style="padding: 15px; text-align: center; font-size: 0.85rem;">
-                                    <div style="color: #28a745;" title="Aula Presencial"><strong>P:</strong> <?php echo $g['aula_presencial'] ?: '---'; ?></div>
-                                    <div style="color: #17a2b8; margin-top: 4px;" title="Aula Virtual"><strong>V:</strong> <?php echo $g['aula_virtual'] ?: '---'; ?></div>
+                                <td style="padding: 15px; text-align: center; font-size: 0.85rem; white-space: nowrap;">
+                                    <?php 
+                                        $hp = $g['dias_presencial'] ? htmlspecialchars($g['dias_presencial']) . ' ' . date('H:i', strtotime($g['inicio_presencial'])) . '-' . date('H:i', strtotime($g['fin_presencial'])) : '---';
+                                        $hv = $g['dias_virtual'] ? htmlspecialchars($g['dias_virtual']) . ' ' . date('H:i', strtotime($g['inicio_virtual'])) . '-' . date('H:i', strtotime($g['fin_virtual'])) : '---';
+                                    ?>
+                                    <div style="color: #28a745; margin-bottom: 3px;" title="Presencial"><strong>P:</strong> <?php echo $hp; ?></div>
+                                    <div style="color: #17a2b8;" title="Virtual"><strong>V:</strong> <?php echo $hv; ?></div>
                                 </td>
+                                
                                 <td style="padding: 15px; text-align: center;">
-                                    <button class="action-btn" onclick='editGrupo(<?php echo json_encode($g); ?>)' style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" title="Editar">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-                                    <a href="grupos_nrc.php?del_mat=<?php echo $g['materia_id']; ?>&del_prof=<?php echo $g['profesor_id']; ?>&del_ciclo=<?php echo $g['ciclo_id']; ?>" class="action-btn delete" onclick="return confirm('¿Estás seguro de borrar este grupo? Se perderán los registros de ambos NRC (Presencial y Virtual).');" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                    <div style="font-weight: bold; font-size: 1.1rem; color: #333; margin-bottom: 4px;">
+                                        <?php echo $inscritos; ?> <span style="color: #999; font-weight: normal; font-size: 0.9rem;">/ <?php echo $cupo; ?></span>
+                                    </div>
+                                    <span style="background-color: <?php echo $badge_bg; ?>; color: <?php echo $badge_color; ?>; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
+                                        <?php echo $txt_cupo; ?>
+                                    </span>
+                                </td>
+
+                                <td style="padding: 15px; text-align: center;">
+                                    <a href="gestionar_grupo.php?mat=<?php echo $g['materia_id']; ?>&prof=<?php echo $g['profesor_id']; ?>&ciclo=<?php echo $g['ciclo_id']; ?>" class="btn-save" style="display: inline-flex; width: auto; font-size: 0.85rem; padding: 8px 15px; text-decoration: none; margin-right: 5px;">
+                                        <i class="fas fa-cog"></i> Gestionar
+                                    </a>
+                                    
+                                    <a href="#" onclick="confirmarBorrado('grupos_nrc.php?del_mat=<?php echo $g['materia_id']; ?>&del_prof=<?php echo $g['profesor_id']; ?>&del_ciclo=<?php echo $g['ciclo_id']; ?>')" style="color: #dc3545; font-size: 1.2rem; margin-left: 10px;" title="Eliminar Grupo Completo">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr>
-                            <td colspan="7" style="text-align:center; padding: 40px; color: var(--text-light);">
-                                <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
-                                No hay grupos registrados aún.
-                            </td>
-                        </tr>
+                        <tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-light);"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos con esa búsqueda.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
-
     </main>
-
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
-
-    <div id="grupoModal" class="modal-overlay">
-        <div class="modal-content" style="padding: 0;">
-            
-            <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
-                <h2 id="modalTitle" style="margin: 0;"><i class="fas fa-chalkboard"></i> Asignar Nuevo Grupo</h2>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
-            </div>
-            
-            <form action="guardar_grupo.php" method="POST" id="formGrupo" style="margin: 0;">
-                
-                <input type="hidden" name="action" id="formAction" value="create">
-                <input type="hidden" name="old_nrc_p" id="oldNrcP" value="">
-                <input type="hidden" name="old_nrc_v" id="oldNrcV" value="">
-
-                <div style="padding: 20px 30px; max-height: 65vh; overflow-y: auto;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        
-                        <div class="form-group" style="grid-column: span 2;">
-                            <label>Profesor Asignado</label>
-                            <select name="profesor_id" id="selProfesor" required>
-                                <option value="">Selecciona al docente...</option>
-                                <?php foreach($profesores as $p): ?>
-                                    <option value="<?php echo $p['usuario_id']; ?>"><?php echo htmlspecialchars($p['nombre'] . ' ' . $p['apellido_paterno']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Materia a Impartir</label>
-                            <select name="materia_id" id="selMateria" required>
-                                <option value="">Selecciona...</option>
-                                <?php foreach($materias_list as $m): ?>
-                                    <option value="<?php echo $m['materia_id']; ?>"><?php echo htmlspecialchars($m['clave'] . ' - ' . $m['nombre']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Ciclo Escolar</label>
-                            <select name="ciclo_id" id="selCiclo" required>
-                                <option value="">Selecciona...</option>
-                                <?php foreach($ciclos as $c): ?>
-                                    <option value="<?php echo $c['ciclo_id']; ?>"><?php echo htmlspecialchars($c['nombre']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <h3 style="grid-column: span 2; margin-top: 15px; margin-bottom: 0; color: #28a745; border-bottom: 2px solid #d4edda; padding-bottom: 5px; font-size: 1.1rem;">
-                            <i class="fas fa-building"></i> Modalidad Presencial
-                        </h3>
-                        <div class="form-group">
-                            <label>NRC Presencial</label>
-                            <input type="number" name="rnc_presencial" id="nrcPresencial" placeholder="Ej. 60495">
-                        </div>
-                        <div class="form-group">
-                            <label>Aula Presencial</label>
-                            <input type="text" name="aula_presencial" id="aulaPresencial" placeholder="Ej. A-202">
-                        </div>
-                        <div class="form-group">
-                            <label>Días de Clase (P)</label>
-                            <input type="text" name="dias_presencial" id="diasPresencial" placeholder="Ej. L-M" maxlength="5">
-                        </div>
-                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div><label>Hora Inicio</label><input type="time" name="inicio_presencial" id="iniPresencial"></div>
-                            <div><label>Hora Fin</label><input type="time" name="fin_presencial" id="finPresencial"></div>
-                        </div>
-
-                        <h3 style="grid-column: span 2; margin-top: 15px; margin-bottom: 0; color: #17a2b8; border-bottom: 2px solid #d1ecf1; padding-bottom: 5px; font-size: 1.1rem;">
-                            <i class="fas fa-laptop-house"></i> Modalidad Virtual
-                        </h3>
-                        <div class="form-group">
-                            <label>NRC Virtual</label>
-                            <input type="number" name="rnc_virtual" id="nrcVirtual" placeholder="Ej. 60501">
-                        </div>
-                        <div class="form-group">
-                            <label>Aula Virtual / Plataforma</label>
-                            <input type="text" name="aula_virtual" id="aulaVirtual" placeholder="Ej. Zoom, Meet">
-                        </div>
-                        <div class="form-group">
-                            <label>Días de Clase (V)</label>
-                            <input type="text" name="dias_virtual" id="diasVirtual" placeholder="Ej. M-J" maxlength="5">
-                        </div>
-                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div><label>Hora Inicio</label><input type="time" name="inicio_virtual" id="iniVirtual"></div>
-                            <div><label>Hora Fin</label><input type="time" name="fin_virtual" id="finVirtual"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer" style="padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save" id="btnSubmit"><i class="fas fa-save"></i> Guardar Grupo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
         function toggleMobileMenu() {
             document.getElementById('navWrapper').classList.toggle('active');
             document.getElementById('menuOverlay').classList.toggle('active');
         }
-
-        const modal = document.getElementById('grupoModal');
-        const overlayMenu = document.getElementById('menuOverlay');
-
-        function openModal() {
-            document.getElementById('formGrupo').reset();
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-chalkboard"></i> Asignar Nuevo Grupo';
-            document.getElementById('formAction').value = 'create';
-            document.getElementById('oldNrcP').value = '';
-            document.getElementById('oldNrcV').value = '';
-            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-plus"></i> Crear Grupo';
-            
-            document.getElementById('nrcPresencial').readOnly = false;
-            document.getElementById('nrcVirtual').readOnly = false;
-            document.getElementById('nrcPresencial').classList.remove('input-readonly');
-            document.getElementById('nrcVirtual').classList.remove('input-readonly');
-
-            modal.style.display = 'flex';
+        
+        // Alerta hermosa para borrar todo el grupo
+        function confirmarBorrado(url) {
+            Swal.fire({
+                title: '¿Eliminar Grupo?',
+                text: "Se borrará este grupo y todos los alumnos inscritos perderán su espacio en la clase.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
         }
-
-        function editGrupo(g) {
-            document.getElementById('formGrupo').reset();
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Grupo';
-            document.getElementById('formAction').value = 'edit';
-            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-            
-            document.getElementById('oldNrcP').value = g.nrc_presencial || '';
-            document.getElementById('oldNrcV').value = g.nrc_virtual || '';
-
-            document.getElementById('selProfesor').value = g.profesor_id;
-            document.getElementById('selMateria').value = g.materia_id;
-            document.getElementById('selCiclo').value = g.ciclo_id;
-
-            document.getElementById('nrcPresencial').value = g.nrc_presencial || '';
-            document.getElementById('aulaPresencial').value = g.aula_presencial || '';
-            document.getElementById('diasPresencial').value = g.dias_presencial || '';
-            document.getElementById('iniPresencial').value = g.inicio_presencial || '';
-            document.getElementById('finPresencial').value = g.fin_presencial || '';
-
-            if(g.nrc_presencial) {
-                document.getElementById('nrcPresencial').readOnly = true;
-                document.getElementById('nrcPresencial').classList.add('input-readonly');
-            } else {
-                document.getElementById('nrcPresencial').readOnly = false;
-                document.getElementById('nrcPresencial').classList.remove('input-readonly');
-            }
-
-            document.getElementById('nrcVirtual').value = g.nrc_virtual || '';
-            document.getElementById('aulaVirtual').value = g.aula_virtual || '';
-            document.getElementById('diasVirtual').value = g.dias_virtual || '';
-            document.getElementById('iniVirtual').value = g.inicio_virtual || '';
-            document.getElementById('finVirtual').value = g.fin_virtual || '';
-
-            if(g.nrc_virtual) {
-                document.getElementById('nrcVirtual').readOnly = true;
-                document.getElementById('nrcVirtual').classList.add('input-readonly');
-            } else {
-                document.getElementById('nrcVirtual').readOnly = false;
-                document.getElementById('nrcVirtual').classList.remove('input-readonly');
-            }
-
-            modal.style.display = 'flex';
-        }
-
-        function closeModal() { modal.style.display = 'none'; }
-
-        window.onclick = function(e) { 
-            if(e.target == modal) closeModal(); 
-            if(e.target == overlayMenu) toggleMobileMenu();
-        };
     </script>
 </body>
 </html>
