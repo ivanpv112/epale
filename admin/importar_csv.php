@@ -160,8 +160,8 @@ if ($mensaje === 'import_ok') {
 
     <main class="main-content">
         
-        <a href="usuarios.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver a Usuarios
+        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+            <i class="fas fa-arrow-left"></i> Volver a la página anterior
         </a>
 
         <div class="page-title-center" style="margin-bottom: 30px;">
