@@ -140,8 +140,8 @@ if ($es_profesor) {
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        <a href="expedientes.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver al Buscador
+        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+            <i class="fas fa-arrow-left"></i> Volver a la página anterior
         </a>
 
         <?php if(isset($_GET['exito'])): ?>
