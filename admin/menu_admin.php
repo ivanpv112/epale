@@ -1,4 +1,28 @@
 <?php
+// ==========================================
+// MOTOR DE "VOLVER INTELIGENTE"
+// ==========================================
+if (!isset($_SESSION['smart_back'])) {
+    $_SESSION['smart_back'] = [];
+}
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+$pagina_actual = basename($_SERVER['PHP_SELF']);
+
+if (!empty($referer)) {
+    $referer_path = basename(parse_url($referer, PHP_URL_PATH));
+    // Scripts silenciosos que no deben borrar la memoria del botón volver
+    $scripts_excluidos = ['guardar_usuario.php', 'guardar_grupo.php', 'guardar_materia.php', 'login.php', 'logout.php'];
+    
+    // Si venimos de una página diferente, la memorizamos para esta sección
+    if ($referer_path !== '' && $referer_path !== $pagina_actual && !in_array($referer_path, $scripts_excluidos)) {
+        $_SESSION['smart_back'][$pagina_actual] = $referer;
+    }
+}
+// Creamos la variable mágica $url_volver para usarla en todos nuestros botones
+$url_volver = $_SESSION['smart_back'][$pagina_actual] ?? 'usuarios.php';
+// ==========================================
+
+
 // Obtenemos la foto del admin para la barra superior
 $stmt_foto_menu = $pdo->prepare("SELECT foto_perfil, nombre FROM usuarios WHERE usuario_id = ?");
 $stmt_foto_menu->execute([$_SESSION['user_id']]);
@@ -8,10 +32,9 @@ $foto_menu = "../img/avatar-default.png";
 if($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['foto_perfil'])) {
     $foto_menu = "../img/perfiles/" . $admin_menu['foto_perfil'];
 }
-
-// Detectar en qué página estamos actualmente
-$pagina_actual = basename($_SERVER['PHP_SELF']);
 ?>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
     <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
@@ -47,7 +70,7 @@ $pagina_actual = basename($_SERVER['PHP_SELF']);
         
         <li><a href="materias.php" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Materias y Criterios</a></li>
         
-        <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos y NRC</a></li>
+        <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos y NRC</a></li>
         
         <li><a href="importar_csv.php" class="<?php echo ($pagina_actual == 'importar_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
         
@@ -58,6 +81,31 @@ $pagina_actual = basename($_SERVER['PHP_SELF']);
 
     <ul class="yt-sidebar-menu">
         <li><a href="perfil.php" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
-        <li><a href="../logout.php" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
+        <li><a href="#" onclick="confirmarSalida(event)" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
     </ul>
 </aside>
+
+<script>
+    function confirmarSalida(event) {
+        event.preventDefault(); 
+        document.getElementById('navWrapper').classList.remove('active');
+        document.getElementById('menuOverlay').classList.remove('active');
+
+        Swal.fire({
+            title: '¿Cerrar Sesión?',
+            text: "Saldrás de tu cuenta de Administrador.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Sí, salir',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            backdrop: `rgba(0,0,123,0.4)`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '../logout.php';
+            }
+        });
+    }
+</script>
