@@ -13,7 +13,7 @@ if (isset($_GET['borrar'])) {
     if ($id != $_SESSION['user_id']) {
         // Al borrar el usuario, la BD borra automáticamente al alumno por el "ON DELETE CASCADE"
         $pdo->prepare("DELETE FROM usuarios WHERE usuario_id = ?")->execute([$id]);
-        header("Location: usuarios.php"); exit;
+        header("Location: usuarios.php?msg=deleted"); exit;
     }
 }
 
@@ -22,8 +22,13 @@ $where = "1=1";
 $params = [];
 
 if (isset($_GET['q']) && !empty($_GET['q'])) {
-    $where .= " AND (nombre LIKE :q OR apellido_paterno LIKE :q OR apellido_materno LIKE :q OR correo LIKE :q OR codigo LIKE :q)";
-    $params[':q'] = "%".$_GET['q']."%";
+    $where .= " AND (nombre LIKE :q1 OR apellido_paterno LIKE :q2 OR apellido_materno LIKE :q3 OR correo LIKE :q4 OR codigo LIKE :q5)";
+    $termino = "%" . $_GET['q'] . "%";
+    $params[':q1'] = $termino;
+    $params[':q2'] = $termino;
+    $params[':q3'] = $termino;
+    $params[':q4'] = $termino;
+    $params[':q5'] = $termino;
 }
 if (isset($_GET['rol']) && !empty($_GET['rol'])) {
     $where .= " AND rol = :rol";
@@ -46,11 +51,6 @@ $total_users = $pdo->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
 $total_students = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ALUMNO'")->fetchColumn();
 $total_teachers = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='PROFESOR'")->fetchColumn();
 $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->fetchColumn();
-
-// FOTO DEL ADMIN (Para el header)
-$stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
-$stmt_foto->execute([$_SESSION['user_id']]);
-$user_foto = $stmt_foto->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -73,6 +73,12 @@ $user_foto = $stmt_foto->fetchColumn();
             <h1><i class="fas fa-users"></i> Gestión de Usuarios</h1>
             <p>Administra a los alumnos, profesores y personal del sistema.</p>
         </div>
+
+        <?php if(isset($_GET['msg']) && $_GET['msg'] == 'ok'): ?>
+            <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡Usuario guardado correctamente!</div>
+        <?php elseif(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
+            <div class="alert alert-success" style="margin-bottom: 20px; background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El usuario fue eliminado con éxito!</div>
+        <?php endif; ?>
 
         <div class="stats-grid">
             <div class="stat-card"> <span class="stat-number"><?php echo $total_users; ?></span> <span class="stat-label">Total Usuarios</span> </div>
@@ -146,7 +152,7 @@ $user_foto = $stmt_foto->fetchColumn();
                                 </button>
                                 
                                 <?php if($u['usuario_id'] != $_SESSION['user_id']): ?>
-                                    <a href="usuarios.php?borrar=<?php echo $u['usuario_id']; ?>" onclick="return confirm('¿Estás seguro de borrar este usuario? Esta acción no se puede deshacer.');" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                    <a href="#" onclick="confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo htmlspecialchars($u['nombre'] . ' ' . $u['apellido_paterno']); ?>'); return false;" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 <?php endif; ?>
@@ -167,7 +173,7 @@ $user_foto = $stmt_foto->fetchColumn();
 
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
-    <div id="userModal" class="modal-overlay">
+    <div id="userModal" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="padding: 0;">
             
             <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
@@ -231,13 +237,14 @@ $user_foto = $stmt_foto->fetchColumn();
     </div>
 
     <script>
+        const modal = document.getElementById('userModal');
+        const overlayMenu = document.getElementById('menuOverlay'); // Añadimos esto para poder cerrarlo haciendo clic fuera
+
+        // Función que abre y cierra el menú lateral
         function toggleMobileMenu() {
             document.getElementById('navWrapper').classList.toggle('active');
             document.getElementById('menuOverlay').classList.toggle('active');
         }
-
-        const modal = document.getElementById('userModal');
-        const overlayMenu = document.getElementById('menuOverlay');
 
         function openModal() {
             document.getElementById('userId').value = '';
@@ -292,9 +299,29 @@ $user_foto = $stmt_foto->fetchColumn();
             }
         }
 
+        // FUNCIÓN SWEETALERT PARA BORRAR USUARIO
+        function confirmarBorradoUsuario(url, nombre) {
+            Swal.fire({
+                title: '¿Eliminar Usuario?',
+                html: `Estás a punto de borrar a <b>${nombre}</b> del sistema.<br><br><small style="color:#dc3545;">⚠️ Esta acción es irreversible y eliminará toda su información.</small>`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+
+        // Detecta clics fuera de los modales y el menú para cerrarlos
         window.onclick = function(e) { 
             if(e.target == modal) closeModal(); 
-            if(e.target == overlayMenu) toggleMobileMenu();
+            if(e.target == overlayMenu) toggleMobileMenu(); 
         };
     </script>
 
