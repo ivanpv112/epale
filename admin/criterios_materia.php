@@ -83,56 +83,12 @@ $user_foto = $stmt_foto->fetchColumn();
 </head>
 <body>
 
-    <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
-        <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
-            <a href="dashboard.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
-                <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-                <span style="font-size: 1.2rem; font-weight: bold;">e-PALE</span>
-            </a>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <a href="perfil.php" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 20px;">
-                <?php if($user_foto && file_exists("../img/perfiles/" . $user_foto)): ?>
-                    <img src="../img/perfiles/<?php echo $user_foto; ?>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white; background:white;">
-                <?php else: ?>
-                    <i class="fas fa-user-circle" style="font-size: 1.8rem;"></i>
-                <?php endif; ?>
-                <span class="profile-name" style="font-weight: 500;"><?php echo strtok($_SESSION['nombre'], " "); ?></span>
-            </a>
-            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0;">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-    </header>
-
-    <div class="menu-overlay" id="menuOverlay" onclick="toggleMobileMenu()"></div>
-
-    <aside class="yt-sidebar" id="navWrapper">
-        <div class="yt-sidebar-header">
-            <span style="color: white; font-size: 1.1rem; font-weight: bold;">Panel Admin</span>
-            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: #aaa; font-size: 2rem; cursor: pointer; line-height: 1;">&times;</button>
-        </div>
-
-        <ul class="yt-sidebar-menu">
-            <li><a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-            <li><a href="usuarios.php"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
-            <li><a href="materias.php" class="active"><i class="fas fa-book"></i> Materias y Criterios</a></li>
-            <li><a href="reportes.php"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
-        </ul>
-
-        <div class="sidebar-divider"></div>
-
-        <ul class="yt-sidebar-menu">
-            <li><a href="perfil.php"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
-            <li><a href="../logout.php" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
-        </ul>
-    </aside>
+    <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
         
-        <a href="materias.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver a Materias
+        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+            <i class="fas fa-arrow-left"></i> Volver a la página anterior
         </a>
 
         <div class="page-title-center" style="margin-bottom: 30px;">
