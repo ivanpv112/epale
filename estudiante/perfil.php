@@ -125,55 +125,13 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
 </head>
 <body>
 
-    <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
-        
-        <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
-            <a href="dashboard.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
-                <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-                <span style="font-size: 1.2rem; font-weight: bold;">e-PALE</span>
-            </a>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <a href="perfil.php" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 20px;">
-                <?php if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/perfiles/" . $user['foto_perfil'])): ?>
-                    <img src="../img/perfiles/<?php echo $user['foto_perfil']; ?>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white;">
-                <?php else: ?>
-                    <i class="fas fa-user-circle" style="font-size: 1.8rem;"></i>
-                <?php endif; ?>
-                <span class="profile-name" style="font-weight: 500;"><?php echo strtok($_SESSION['nombre'], " "); ?></span>
-            </a>
-
-            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0;">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-    </header>
-
-    <div class="menu-overlay" id="menuOverlay" onclick="toggleMobileMenu()"></div>
-
-    <aside class="yt-sidebar" id="navWrapper">
-        <div class="yt-sidebar-header">
-            <span style="color: white; font-size: 1.1rem; font-weight: bold;">Menú Principal</span>
-            <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: #aaa; font-size: 2rem; cursor: pointer; line-height: 1;">&times;</button>
-        </div>
-
-        <ul class="yt-sidebar-menu">
-            <li><a href="dashboard.php"><i class="fas fa-home"></i> Inicio</a></li>
-            <li><a href="#"><i class="far fa-calendar-alt"></i> Horario</a></li>
-            <li><a href="calificaciones.php"><i class="fas fa-star"></i> Calificaciones</a></li>
-            <li><a href="oferta.php"><i class="fas fa-bullhorn"></i> Oferta</a></li>
-        </ul>
-
-        <div class="sidebar-divider"></div>
-
-        <ul class="yt-sidebar-menu">
-            <li><a href="perfil.php" class="active"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
-            <li><a href="../logout.php" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
-        </ul>
-    </aside>
+    <?php include 'menu_estudiante.php'; ?>
 
     <main class="main-content">
+
+        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+            <i class="fas fa-arrow-left"></i> Volver a la página anterior
+        </a>
         
         <div class="profile-header-card">
             <div class="profile-photo-wrapper">
