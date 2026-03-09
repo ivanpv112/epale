@@ -44,10 +44,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     header("Location: admin/usuarios.php");
                     break;
                 case 'PROFESOR':
-                    header("Location: profesor/dashboard.php");
+                    header("Location: profesor/index.php");
                     break;
                 case 'ALUMNO':
-                    header("Location: estudiante/dashboard.php");
+                    header("Location: estudiante/index.php");
                     break;
                 default:
                     $mensaje = "Rol no identificado.";
@@ -108,4 +108,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     </script>
 </body>
+
 </html>
