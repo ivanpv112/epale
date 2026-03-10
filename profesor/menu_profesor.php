@@ -62,6 +62,8 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
     <ul class="yt-sidebar-menu">
         <li><a href="index.php" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
         <li><a href="mis_grupos.php" class="<?php echo ($pagina_actual == 'mis_grupos.php' || $pagina_actual == 'detalle_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard-teacher"></i> Mis Grupos</a></li>
+        
+        <li><a href="horario.php" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Mi Horario</a></li>
     </ul>
 
     <div class="sidebar-divider"></div>
