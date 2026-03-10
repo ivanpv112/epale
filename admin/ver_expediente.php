@@ -153,7 +153,7 @@ if ($es_profesor) {
             <div class="profile-info">
                 <h2><?php echo htmlspecialchars($nombre_completo); ?></h2>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
-                    <p><i class="fas fa-id-card" style="color:#aaa;"></i> Código/No. Emp: <strong><?php echo htmlspecialchars($perfil['codigo']); ?></strong></p>
+                    <p><i class="fas fa-id-card" style="color:#aaa;"></i> Código: <strong><?php echo htmlspecialchars($perfil['codigo']); ?></strong></p>
                     
                     <?php if($es_alumno): ?>
                         <p><i class="fas fa-graduation-cap" style="color:#aaa;"></i> Carrera: <strong><?php echo $perfil['carrera'] ? htmlspecialchars($perfil['carrera']) : 'N/A'; ?></strong></p>
@@ -161,8 +161,8 @@ if ($es_profesor) {
                         <p><i class="fas fa-chalkboard-teacher" style="color:#aaa;"></i> Rol: <strong style="color:#856404;">Docente de Idiomas</strong></p>
                     <?php endif; ?>
 
-                    <p><i class="fas fa-envelope" style="color:#aaa;"></i> <?php echo htmlspecialchars($perfil['correo']); ?></p>
-                    <p><i class="fas fa-phone" style="color:#aaa;"></i> <?php echo $perfil['telefono'] ? htmlspecialchars($perfil['telefono']) : 'No registrado'; ?></p>
+                    <p><i class="fas fa-envelope" style="color:#aaa;"></i> Correo: <?php echo htmlspecialchars($perfil['correo']); ?></p>
+                    <p><i class="fas fa-phone" style="color:#aaa;"></i> Teléfono: <?php echo $perfil['telefono'] ? htmlspecialchars($perfil['telefono']) : 'No registrado'; ?></p>
                 </div>
             </div>
         </div>
