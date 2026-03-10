@@ -106,20 +106,6 @@ if (count($alumnos) > 0) {
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/profesor.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .excel-table-wrapper { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
-        .excel-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        .excel-table th:first-child { text-align: left; left: 0; z-index: 20; background-color: #f8f9fa; min-width: 260px; }
-        .excel-table td:first-child { text-align: left; padding: 12px 15px; background-color: white; position: sticky; left: 0; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.02); white-space: nowrap; }
-        .excel-table th { background-color: #f8f9fa; border-bottom: 2px solid #ddd; border-right: 1px solid #eee; padding: 15px 10px; text-align: center; font-size: 0.85rem; color: #555; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-        .excel-table td { border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f1f3f5; padding: 8px; text-align: center; vertical-align: middle; }
-        .excel-table tr:hover td { background-color: #fbfcff; } .excel-table tr:hover td:first-child { background-color: #fbfcff; }
-        .grade-input { width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1rem; font-weight: 500; color: #333; transition: all 0.2s; background: #fff; }
-        .grade-input:focus { border-color: var(--udg-blue); outline: none; box-shadow: 0 0 0 3px rgba(0, 26, 87, 0.1); background: #fff; }
-        .grade-input::-webkit-outer-spin-button, .grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .grade-locked { background-color: #f1f3f5 !important; border-color: #e2e6ea; color: #aaa; cursor: not-allowed; }
-        .total-cell { font-weight: bold; font-size: 1.1rem; width: 80px; text-align: center; } .total-aprobado { color: #28a745; } .total-reprobado { color: #dc3545; }
-    </style>
 </head>
 <body>
 
