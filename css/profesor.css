@@ -172,3 +172,121 @@
     font-weight: bold; 
     color: #333; 
 }
+
+/* ==========================================================================
+   ESTILOS DEL PERFIL DEL PROFESOR (Aislados anti-choques)
+   ========================================================================== */
+.teacher-header-card { 
+    background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%); 
+    padding: 40px 20px; 
+    border-radius: 12px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;    
+    justify-content: center; 
+    gap: 15px; 
+    box-shadow: 0 8px 25px rgba(0,26,87,0.15); 
+    margin-bottom: 30px; 
+    text-align: center; 
+}
+
+/* Forzamos el centrado anulando cualquier posición absoluta previa */
+.teacher-avatar-wrapper { 
+    position: relative !important; 
+    width: 140px !important; 
+    height: 140px !important; 
+    margin: 0 auto !important; 
+    float: none !important;
+    inset: auto !important;
+}
+
+.teacher-avatar-img { 
+    width: 100%; 
+    height: 100%; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 5px solid white; 
+    background: white; 
+    display: block; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+}
+
+.teacher-upload-btn { 
+    position: absolute; 
+    bottom: 5px; 
+    right: 5px; 
+    background: var(--udg-light); 
+    color: white; 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 50%; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    cursor: pointer; 
+    border: 3px solid white; 
+    transition: all 0.2s ease; 
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2); 
+}
+
+.teacher-upload-btn:hover { 
+    transform: scale(1.1); 
+    background: #28a745; 
+}
+
+.teacher-info-wrapper { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+}
+
+.teacher-info-wrapper h1 { 
+    margin: 0; 
+    font-size: 2.2rem; 
+    color: white; 
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3); 
+    font-weight: bold; 
+}
+
+.teacher-info-wrapper p { 
+    margin: 10px 0 0 0; 
+    font-size: 0.95rem; 
+    color: white; 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 15px; 
+    background: rgba(0, 0, 0, 0.25); 
+    padding: 8px 25px; 
+    border-radius: 20px; 
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ==========================================================================
+   ESTILOS DEL HORARIO (CSS GRID)
+   ========================================================================== */
+.schedule-wrapper { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 20px; overflow-x: auto; }
+.schedule-grid { display: grid; grid-template-columns: 70px repeat(5, minmax(180px, 1fr)); grid-template-rows: 50px repeat(13, 65px); min-width: 900px; position: relative; }
+.grid-header { background-color: var(--udg-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.1); }
+.grid-header:first-child { border-top-left-radius: 8px; } .grid-header:last-child { border-top-right-radius: 8px; border-right: none; }
+.time-label { grid-column: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; font-size: 0.85rem; color: #888; border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
+.grid-line { grid-column: 2 / -1; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f9f9f9; }
+.class-block { margin: 4px; padding: 10px 12px; border-radius: 8px; border-left: 5px solid; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; cursor: pointer; text-decoration: none; }
+.class-block:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 6px 15px rgba(0,0,0,0.1); z-index: 20; }
+.class-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+.class-details { opacity: 0.9; font-family: monospace; display: flex; align-items: center; gap: 5px; margin-top: 3px; font-weight: bold; }
+
+/* ==========================================================================
+   ESTILOS DE LA HOJA DE CALIFICACIONES (TIPO EXCEL)
+   ========================================================================== */
+.excel-table-wrapper { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
+.excel-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.excel-table th:first-child { text-align: left; left: 0; z-index: 20; background-color: #f8f9fa; min-width: 260px; }
+.excel-table td:first-child { text-align: left; padding: 12px 15px; background-color: white; position: sticky; left: 0; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.02); white-space: nowrap; }
+.excel-table th { background-color: #f8f9fa; border-bottom: 2px solid #ddd; border-right: 1px solid #eee; padding: 15px 10px; text-align: center; font-size: 0.85rem; color: #555; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+.excel-table td { border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f1f3f5; padding: 8px; text-align: center; vertical-align: middle; }
+.excel-table tr:hover td { background-color: #fbfcff; } .excel-table tr:hover td:first-child { background-color: #fbfcff; }
+.grade-input { width: 70px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1rem; font-weight: 500; color: #333; transition: all 0.2s; background: #fff; }
+.grade-input:focus { border-color: var(--udg-blue); outline: none; box-shadow: 0 0 0 3px rgba(0, 26, 87, 0.1); background: #fff; }
+.grade-input::-webkit-outer-spin-button, .grade-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.grade-locked { background-color: #f1f3f5 !important; border-color: #e2e6ea; color: #aaa; cursor: not-allowed; }
+.total-cell { font-weight: bold; font-size: 1.1rem; width: 80px; text-align: center; } .total-aprobado { color: #28a745; } .total-reprobado { color: #dc3545; }
