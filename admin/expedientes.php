@@ -40,12 +40,12 @@ $total_estudiantes = $stmt_count->fetchColumn();
 
 $total_paginas = ceil($total_estudiantes / $limite_por_pagina);
 
-// OBTENER RESULTADOS (Usamos usuario_id como llave maestra)
+// OBTENER RESULTADOS
 $sql = "SELECT u.*, a.carrera 
         FROM usuarios u 
         LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
         WHERE $where 
-        ORDER BY u.rol ASC, u.apellido_paterno ASC, u.nombre ASC 
+        ORDER BY u.rol ASC, u.nombre ASC, u.apellido_paterno ASC 
         LIMIT $limite_por_pagina OFFSET $offset";
 
 $stmt = $pdo->prepare($sql);
@@ -81,19 +81,20 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <p>Consulta el historial de los alumnos y las asignaciones de los profesores.</p>
         </div>
 
-        <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px; display: flex; gap: 10px;">
+        <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px;">
             <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
-            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre o código..." value="<?php echo htmlspecialchars($search); ?>" style="flex-grow: 1;">
+            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre, correo o código..." value="<?php echo htmlspecialchars($search); ?>">
             
-            <select name="rol" style="padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
-                <option value="">Ambos (Alumnos y Profesores)</option>
-                <option value="ALUMNO" <?php if($rol_filter=='ALUMNO') echo 'selected'; ?>>Solo Alumnos</option>
-                <option value="PROFESOR" <?php if($rol_filter=='PROFESOR') echo 'selected'; ?>>Solo Profesores</option>
+            <select name="rol" class="filter-select" onchange="this.form.submit()">
+                <option value="">Ambos roles</option>
+                <option value="ALUMNO" <?php if($rol_filter=='ALUMNO') echo 'selected'; ?>>Alumnos</option>
+                <option value="PROFESOR" <?php if($rol_filter=='PROFESOR') echo 'selected'; ?>>Profesores</option>
             </select>
 
-            <button type="submit" class="btn-save"><i class="fas fa-search"></i> Buscar</button>
             <?php if($search !== '' || $rol_filter !== ''): ?>
-                <a href="expedientes.php" class="btn-cancel" style="text-decoration: none; display:flex; align-items:center;">Limpiar</a>
+                <a href="expedientes.php" class="btn-cancel" style="margin-left: auto; text-decoration: none; padding: 10px 15px; border-radius: 6px;">Limpiar Filtros</a>
+            <?php else: ?>
+                <button type="submit" style="display:none;"></button>
             <?php endif; ?>
         </form>
 
@@ -102,43 +103,57 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <table class="history-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Perfil / Usuario</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Código</th>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Nombre Completo</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estado</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acción</th>
+                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (count($estudiantes) > 0): ?>
                             <?php foreach ($estudiantes as $e): ?>
                             <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px; font-family: monospace; font-weight: bold; color: #555;">
-                                    <?php echo $e['codigo'] ? htmlspecialchars($e['codigo']) : '---'; ?>
-                                </td>
-                                <td style="padding: 15px;">
+                                
+                                <td class="user-cell" style="padding: 15px;">
                                     <h4 style="margin: 0; color: var(--udg-blue);">
-                                        <?php echo htmlspecialchars($e['apellido_paterno'] . ' ' . $e['apellido_materno'] . ' ' . $e['nombre']); ?>
+                                        <?php 
+                                            if (isset($e['apellido_paterno'])) {
+                                                echo htmlspecialchars($e['nombre'] . ' ' . $e['apellido_paterno'] . (isset($e['apellido_materno']) && $e['apellido_materno'] ? ' ' . $e['apellido_materno'] : ''));
+                                            } else {
+                                                echo htmlspecialchars($e['nombre'] . ' ' . $e['apellidos']);
+                                            }
+                                        ?>
                                     </h4>
                                     <span style="font-size: 0.85rem; color: #666;"><?php echo htmlspecialchars($e['correo']); ?></span>
                                 </td>
-                                <td style="padding: 15px;">
+
+                                <td style="padding: 15px; color: #555;">
+                                    <?php echo $e['codigo'] ? htmlspecialchars($e['codigo']) : '-'; ?>
+                                </td>
+
+                                <td style="padding: 15px; color: #555;">
                                     <?php if($e['rol'] == 'ALUMNO'): ?>
-                                        <span style="background: #e7f3ff; color: var(--udg-blue); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-user-graduate"></i> <?php echo $e['carrera'] ?: 'Alumno'; ?></span>
+                                        <i class="fas fa-user-graduate" style="color:#888;"></i> Alumno
+                                        <?php if($e['carrera']): ?>
+                                            <br><span style="font-size: 0.8rem; color: #aaa;"><?php echo htmlspecialchars($e['carrera']); ?></span>
+                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <span style="background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-chalkboard-teacher"></i> Profesor</span>
+                                        <i class="fas fa-chalkboard-teacher" style="color:#888;"></i> Profesor
                                     <?php endif; ?>
                                 </td>
+
                                 <td style="padding: 15px;">
                                     <?php if($e['estatus'] == 'ACTIVO'): ?>
-                                        <span style="color: #28a745; font-size: 0.9rem; font-weight: bold;"><i class="fas fa-check-circle"></i> Activo</span>
+                                        <span class="tag-aprobado" style="background-color: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Activo</span>
                                     <?php else: ?>
-                                        <span style="color: #dc3545; font-size: 0.9rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Inactivo</span>
+                                        <span class="tag-aprobado" style="background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Inactivo</span>
                                     <?php endif; ?>
                                 </td>
+
                                 <td style="padding: 15px; text-align: center;">
-                                    <a href="ver_expediente.php?id=<?php echo $e['usuario_id']; ?>" class="btn-save" style="display: inline-flex; width: auto; font-size: 0.85rem; padding: 8px 15px;">
-                                        <i class="fas fa-eye"></i> Perfil
+                                    <a href="ver_expediente.php?id=<?php echo $e['usuario_id']; ?>" style="color: var(--udg-blue); font-size: 1.2rem; margin-right: 5px;" title="Ver Expediente Completo">
+                                        <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
                             </tr>
