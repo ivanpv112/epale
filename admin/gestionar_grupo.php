@@ -219,27 +219,6 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .readonly-input { background-color: #f1f3f5 !important; cursor: not-allowed; color: #666; }
-        .hover-lift { transition: transform 0.2s ease; text-decoration: none; color: inherit; display: block; }
-        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-color: var(--udg-light) !important; }
-        .student-row { display: flex; justify-content: space-between; align-items: stretch; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; transition: transform 0.2s ease; }
-        .student-row:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: var(--udg-light); }
-        .student-link { flex-grow: 1; padding: 12px 15px; text-decoration: none; color: inherit; }
-        .student-action { padding: 12px 15px; display: flex; align-items: center; justify-content: center; background: #fafafa; border-left: 1px solid #eee; }
-        .custom-select-wrapper { position: relative; flex-grow: 1; }
-        .custom-options { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 6px; max-height: 250px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); margin-top: 4px; }
-        .custom-option { padding: 12px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; }
-        .custom-option:hover { background: #e7f3ff; }
-        .opt-name { font-weight: bold; color: var(--udg-blue); font-size: 0.95rem; margin-bottom: 3px; }
-        .opt-details { font-size: 0.8rem; color: #666; font-family: monospace; display: flex; justify-content: space-between;}
-        .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #28a745; }
-        input:checked + .slider:before { transform: translateX(22px); }
-    </style>
 </head>
 <body>
 
@@ -435,3 +414,4 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
     </script>
 </body>
 </html>
+
