@@ -226,7 +226,6 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
     <main class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <a href="grupos_nrc.php" style="color: var(--udg-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-arrow-left"></i> Volver al listado</a>
             <?php if($es_edicion): ?><span style="font-weight: bold; color: #555;">Gestionando: <span style="color: var(--udg-blue);"><?php echo htmlspecialchars($g['materia']); ?></span></span>
             <?php else: ?><span style="font-weight: bold; color: #28a745;">Creando Nuevo Grupo</span><?php endif; ?>
         </div>
@@ -414,4 +413,3 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
     </script>
 </body>
 </html>
-
