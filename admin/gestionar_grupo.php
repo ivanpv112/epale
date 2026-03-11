@@ -4,7 +4,7 @@ require '../db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
-// Ampliar silenciosamente la columna de días para evitar el error "Data truncated" de MySQL
+// Ampliar silenciosamente la columna de días para evitar el error "Data truncated"
 try { $pdo->exec("ALTER TABLE horarios MODIFY dias_patron VARCHAR(50)"); } catch (Exception $e) { }
 
 $clave = $_GET['clave'] ?? '';
@@ -12,18 +12,18 @@ $es_edicion = !empty($clave);
 
 $mensaje = ''; $tipo_mensaje = '';
 
-// Si venimos de una creación exitosa, mostramos el mensaje
 if (isset($_GET['msg']) && $_GET['msg'] == 'created') {
     $mensaje = "¡Grupo creado exitosamente! Ahora puedes comenzar a añadir estudiantes."; $tipo_mensaje = "success";
 }
 
 // ==========================================
-// FUNCIÓN INTELIGENTE DE DETECCIÓN DE CHOQUES
+// FUNCIONES INTELIGENTES DE DETECCIÓN DE CHOQUES
 // ==========================================
-function checkCollision($nrc, $aula, $dias, $inicio, $fin, $ciclo_id, $pdo) {
+
+// 1. Validar que el AULA no esté ocupada
+function checkAulaCollision($nrc, $aula, $dias, $inicio, $fin, $ciclo_id, $pdo) {
     if (empty($aula) || empty($dias) || empty($inicio) || empty($fin)) return false;
 
-    // Buscar clases en la misma aula y mismo ciclo (ignorando a sí mismo)
     $sql = "SELECT h.nrc, h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre 
             FROM horarios h JOIN grupos g ON h.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id 
             WHERE g.ciclo_id = ? AND h.aula = ? AND h.nrc != ?";
@@ -34,17 +34,42 @@ function checkCollision($nrc, $aula, $dias, $inicio, $fin, $ciclo_id, $pdo) {
 
     foreach ($matches as $m) {
         if (empty($m['hora_inicio']) || empty($m['hora_fin']) || empty($m['dias_patron'])) continue;
-        
         $start2 = strtotime($m['hora_inicio']); $end2 = strtotime($m['hora_fin']);
         
-        // 1. Verificar si las horas se cruzan
         if ($start1 < $end2 && $end1 > $start2) {
-            // 2. Verificar si los días se cruzan (Ej. "L-M" choca con "M-J" por la "M")
             $d1 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($dias)));
             $d2 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($m['dias_patron'])));
             
             if (count(array_intersect($d1, $d2)) > 0) {
-                return "¡Choque de Horario! El aula '{$aula}' ya está ocupada por '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en esos días y horas.";
+                return "¡Choque de Aula! El aula '{$aula}' ya está ocupada por '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en esos días y horas.";
+            }
+        }
+    }
+    return false;
+}
+
+// 2. Validar que el PROFESOR no esté ocupado
+function checkProfesorCollision($nrc, $profesor_id, $dias, $inicio, $fin, $ciclo_id, $pdo) {
+    if (empty($profesor_id) || empty($dias) || empty($inicio) || empty($fin)) return false;
+
+    $sql = "SELECT h.nrc, h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre 
+            FROM horarios h JOIN grupos g ON h.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id 
+            WHERE g.ciclo_id = ? AND g.profesor_id = ? AND h.nrc != ?";
+    $stmt = $pdo->prepare($sql); $stmt->execute([$ciclo_id, $profesor_id, $nrc]);
+    $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $start1 = strtotime($inicio); $end1 = strtotime($fin);
+
+    foreach ($matches as $m) {
+        if (empty($m['hora_inicio']) || empty($m['hora_fin']) || empty($m['dias_patron'])) continue;
+        $start2 = strtotime($m['hora_inicio']); $end2 = strtotime($m['hora_fin']);
+        
+        if ($start1 < $end2 && $end1 > $start2) {
+            $d1 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($dias)));
+            $d2 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($m['dias_patron'])));
+            
+            if (count(array_intersect($d1, $d2)) > 0) {
+                return "¡Cruce de Docente! El profesor seleccionado ya imparte '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en ese mismo horario.";
             }
         }
     }
@@ -52,7 +77,7 @@ function checkCollision($nrc, $aula, $dias, $inicio, $fin, $ciclo_id, $pdo) {
 }
 
 // ==========================================
-// PROCESAMIENTO DE FORMULARIOS EN LA MISMA PÁGINA
+// PROCESAMIENTO DE FORMULARIOS 
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
@@ -83,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // --- GUARDAR O CREAR GRUPO (NUEVA LÓGICA BLINDADA) ---
+    // --- GUARDAR O CREAR GRUPO (LÓGICA BLINDADA) ---
     if (isset($_POST['action']) && $_POST['action'] === 'save_group') {
         try {
             $n_prof = $_POST['profesor_id'] ?? ''; $n_mat = $_POST['materia_id'] ?? ''; $n_ciclo = $_POST['ciclo_id'] ?? '';
@@ -99,8 +124,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($_POST['dias_presencial']) || empty($_POST['inicio_presencial']) || empty($_POST['fin_presencial'])) {
                     throw new Exception("Si ingresas un NRC Presencial, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
                 }
-                $choque = checkCollision($nrc_p, $_POST['aula_presencial'], $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
-                if ($choque) throw new Exception($choque);
+                $choque_aula = checkAulaCollision($nrc_p, $_POST['aula_presencial'], $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
+                if ($choque_aula) throw new Exception($choque_aula);
+
+                $choque_prof = checkProfesorCollision($nrc_p, $n_prof, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
+                if ($choque_prof) throw new Exception($choque_prof);
             }
 
             // 3. Validaciones Virtuales
@@ -108,11 +136,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($_POST['dias_virtual']) || empty($_POST['inicio_virtual']) || empty($_POST['fin_virtual'])) {
                     throw new Exception("Si ingresas un NRC Virtual, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
                 }
-                $choque_v = checkCollision($nrc_v, $_POST['aula_virtual'], $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
-                if ($choque_v) throw new Exception($choque_v);
+                $choque_v_aula = checkAulaCollision($nrc_v, $_POST['aula_virtual'], $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
+                if ($choque_v_aula) throw new Exception($choque_v_aula);
+
+                $choque_v_prof = checkProfesorCollision($nrc_v, $n_prof, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
+                if ($choque_v_prof) throw new Exception($choque_v_prof);
             }
 
-            // 4. Ejecución en Base de Datos
+            // 4. Auto-choque Presencial vs Virtual
+            if (!empty($nrc_p) && !empty($nrc_v) && !empty($_POST['dias_presencial']) && !empty($_POST['dias_virtual'])) {
+                $start_p = strtotime($_POST['inicio_presencial']); $end_p = strtotime($_POST['fin_presencial']);
+                $start_v = strtotime($_POST['inicio_virtual']); $end_v = strtotime($_POST['fin_virtual']);
+                if ($start_p < $end_v && $end_p > $start_v) {
+                    $d_p = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($_POST['dias_presencial'])));
+                    $d_v = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($_POST['dias_virtual'])));
+                    if (count(array_intersect($d_p, $d_v)) > 0) {
+                        throw new Exception("¡Choque interno! Los horarios Presencial y Virtual que ingresaste se cruzan entre sí.");
+                    }
+                }
+            }
+
+            // 5. Ejecución en Base de Datos
             $pdo->beginTransaction();
 
             if ($es_edicion) {
@@ -145,7 +189,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insertHorario->execute([$nrc_v, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], 'VIRTUAL', $_POST['aula_virtual']]);
                 }
                 $pdo->commit();
-                // Redirigir a sí mismo en modo edición para no perder la vista
                 header("Location: gestionar_grupo.php?clave=$nueva_clave&msg=created"); exit;
             }
 
@@ -157,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Obtener catálogos para los selects
-$list_profesores = $pdo->query("SELECT usuario_id, nombre, apellido_paterno FROM usuarios WHERE rol='PROFESOR' AND estatus='ACTIVO'")->fetchAll(PDO::FETCH_ASSOC);
+$list_profesores = $pdo->query("SELECT usuario_id, codigo, nombre, apellido_paterno, apellido_materno FROM usuarios WHERE rol='PROFESOR' AND estatus='ACTIVO' ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
 $list_materias = $pdo->query("SELECT materia_id, clave, nombre FROM materias ORDER BY clave")->fetchAll(PDO::FETCH_ASSOC);
 $list_ciclos = $pdo->query("SELECT ciclo_id, nombre FROM ciclos ORDER BY nombre DESC")->fetchAll(PDO::FETCH_ASSOC);
 $list_alumnos = $pdo->query("SELECT a.alumno_id, u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, a.carrera FROM alumnos a JOIN usuarios u ON a.usuario_id = u.usuario_id WHERE u.estatus='ACTIVO' ORDER BY u.nombre")->fetchAll(PDO::FETCH_ASSOC);
@@ -190,7 +233,7 @@ if ($es_edicion) {
     $foto_profesor = "../img/avatar-default.png"; if($g['prof_foto'] && file_exists("../img/perfiles/" . $g['prof_foto'])) { $foto_profesor = "../img/perfiles/" . $g['prof_foto']; }
 }
 
-// INYECCIÓN DE VALORES AL FORMULARIO (Si hubo un error, recuperamos lo que el usuario escribió)
+// INYECCIÓN DE VALORES AL FORMULARIO
 $v_prof = ($tipo_mensaje == 'error' && isset($_POST['profesor_id'])) ? $_POST['profesor_id'] : ($g['profesor_id'] ?? '');
 $v_mat = ($tipo_mensaje == 'error' && isset($_POST['materia_id'])) ? $_POST['materia_id'] : ($g['materia_id'] ?? '');
 $v_ciclo = ($tipo_mensaje == 'error' && isset($_POST['ciclo_id'])) ? $_POST['ciclo_id'] : ($g['ciclo_id'] ?? '');
@@ -226,6 +269,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
     <main class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <a href="grupos_nrc.php" style="color: var(--udg-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-arrow-left"></i> Volver al listado</a>
             <?php if($es_edicion): ?><span style="font-weight: bold; color: #555;">Gestionando: <span style="color: var(--udg-blue);"><?php echo htmlspecialchars($g['materia']); ?></span></span>
             <?php else: ?><span style="font-weight: bold; color: #28a745;">Creando Nuevo Grupo</span><?php endif; ?>
         </div>
@@ -330,12 +374,21 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                             
                             <div class="form-group">
                                 <label>Profesor Asignado <span style="color:red;">*</span></label>
-                                <select name="profesor_id" required>
-                                    <option value="">Selecciona al docente...</option>
-                                    <?php foreach($list_profesores as $p): ?>
-                                        <option value="<?php echo $p['usuario_id']; ?>" <?php if($v_prof == $p['usuario_id']) echo 'selected'; ?>><?php echo htmlspecialchars($p['nombre'] . ' ' . $p['apellido_paterno']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <?php
+                                $nombre_profesor_actual = '';
+                                foreach($list_profesores as $p) {
+                                    if($v_prof == $p['usuario_id']) {
+                                        $nombre_profesor_actual = trim($p['nombre'] . ' ' . $p['apellido_paterno'] . ' ' . ($p['apellido_materno'] ?? ''));
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <input type="hidden" name="profesor_id" id="hiddenProfesorId" value="<?php echo htmlspecialchars($v_prof); ?>">
+                                
+                                <div class="custom-select-wrapper">
+                                    <input type="text" id="searchProfInput" placeholder="Buscar docente por nombre o código..." value="<?php echo htmlspecialchars($nombre_profesor_actual); ?>" style="width: 100%; padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-family: inherit; font-size: 1rem;" autocomplete="off">
+                                    <div class="custom-options" id="optionsProfContainer"></div>
+                                </div>
                             </div>
                             
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -377,6 +430,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
     <script>
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
+        
         function confirmarBajaAlumno(btn, nombreAlumno) {
             Swal.fire({ title: '¿Dar de baja?', html: `Estás a punto de dar de baja a <b>${nombreAlumno}</b>.`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, dar de baja', reverseButtons: true
             }).then((result) => { if (result.isConfirmed) { btn.closest('form').submit(); } });
@@ -402,7 +456,52 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
         document.addEventListener('click', (e) => { if (!searchInput.contains(e.target) && !optionsContainer.contains(e.target)) optionsContainer.style.display = 'none'; });
         <?php endif; ?>
 
-        // Limpiar parámetros de éxito de la URL después de cargar
+        const profesData = <?php echo json_encode($list_profesores, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const searchProfInput = document.getElementById('searchProfInput');
+        const optionsProfContainer = document.getElementById('optionsProfContainer');
+        const hiddenProfInput = document.getElementById('hiddenProfesorId');
+
+        function renderProfOptions(filterText = '') {
+            optionsProfContainer.innerHTML = '';
+            const lowerFilter = filterText.toLowerCase();
+
+            const filteredProf = profesData.filter(p => {
+                const fullName = `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno || ''}`.toLowerCase();
+                const code = (p.codigo || '').toLowerCase();
+                return fullName.includes(lowerFilter) || code.includes(lowerFilter);
+            });
+
+            if (filteredProf.length === 0) {
+                optionsProfContainer.innerHTML = '<div style="padding:15px; color:#888; text-align:center;">No se encontró ningún docente</div>';
+                optionsProfContainer.style.display = 'block'; return;
+            }
+
+            filteredProf.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'custom-option';
+                const fullName = `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno || ''}`;
+                div.innerHTML = `<div class="opt-name">${fullName}</div><div class="opt-details"><span>Cód: ${p.codigo || 'N/A'}</span></div>`;
+                div.onclick = () => {
+                    searchProfInput.value = fullName; 
+                    hiddenProfInput.value = p.usuario_id; 
+                    optionsProfContainer.style.display = 'none';
+                };
+                optionsProfContainer.appendChild(div);
+            });
+            optionsProfContainer.style.display = 'block';
+        }
+
+        searchProfInput.addEventListener('input', (e) => { hiddenProfInput.value = ''; renderProfOptions(e.target.value); });
+        searchProfInput.addEventListener('focus', () => { renderProfOptions(searchProfInput.value); });
+        document.addEventListener('click', (e) => { if (!searchProfInput.contains(e.target) && !optionsProfContainer.contains(e.target)) optionsProfContainer.style.display = 'none'; });
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            if (!hiddenProfInput.value) {
+                e.preventDefault();
+                Swal.fire({ title: 'Profesor Inválido', text: 'Debes buscar y seleccionar un profesor de la lista desplegable.', icon: 'warning', confirmButtonColor: '#001a57' });
+            }
+        });
+
         if (window.history.replaceState) {
             const url = new URL(window.location);
             if (url.searchParams.has('msg')) {
