@@ -58,7 +58,7 @@ $es_alumno = ($perfil['rol'] === 'ALUMNO');
 $es_profesor = ($perfil['rol'] === 'PROFESOR');
 
 // ============================================
-// LÓGICA SI ES ALUMNO
+// LÓGICA SI ES ALUMNO (TU CÓDIGO ORIGINAL INTACTO)
 // ============================================
 if ($es_alumno) {
     $alumno_id = $perfil['alumno_id'];
@@ -88,29 +88,22 @@ if ($es_alumno) {
 }
 
 // ============================================
-// LÓGICA SI ES PROFESOR
+// LÓGICA SI ES PROFESOR (NUEVA VERSIÓN BLINDADA WAMP STRICT MODE)
 // ============================================
+$grupos_profesor = [];
 if ($es_profesor) {
-    // Obtenemos los grupos agrupados lógicamente (igual que en grupos_nrc)
-    $sql_grupos = "SELECT c.nombre AS periodo, c.activo,
-                   m.clave AS curso, m.nombre AS materia, m.nivel AS nivel,
-                   MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_presencial,
-                   MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_virtual,
-                   MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.aula END) AS aula_presencial,
-                   MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.aula END) AS aula_virtual,
-                   MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.dias_patron END) AS dias_presencial,
-                   MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.dias_patron END) AS dias_virtual,
-                   MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.hora_inicio END) AS inicio_presencial,
-                   MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.hora_inicio END) AS inicio_virtual,
-                   MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.hora_fin END) AS fin_presencial,
-                   MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.hora_fin END) AS fin_virtual
-            FROM grupos g
-            JOIN materias m ON g.materia_id = m.materia_id
-            JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-            JOIN horarios h ON g.nrc = h.nrc
-            WHERE g.profesor_id = ?
-            GROUP BY g.materia_id, c.ciclo_id
-            ORDER BY c.activo DESC, c.nombre DESC, m.nivel ASC";
+    // Usamos clave_grupo y agregamos TODAS las columnas no agrupadas al GROUP BY para evitar el error 1055
+    $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo,
+                          MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
+                          MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
+                          (SELECT COUNT(DISTINCT i.alumno_id) FROM inscripciones i JOIN grupos g2 ON i.nrc = g2.nrc WHERE g2.clave_grupo = g.clave_grupo AND i.estatus = 'INSCRITO') AS inscritos
+                   FROM grupos g
+                   JOIN materias m ON g.materia_id = m.materia_id
+                   JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                   LEFT JOIN horarios h ON g.nrc = h.nrc
+                   WHERE g.profesor_id = ?
+                   GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo
+                   ORDER BY c.activo DESC, c.nombre DESC, m.nivel ASC";
     $stmt_g = $pdo->prepare($sql_grupos);
     $stmt_g->execute([$usuario_id]);
     $grupos_profesor = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
@@ -122,7 +115,7 @@ if ($es_profesor) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil de <?php echo htmlspecialchars($perfil['nombre']); ?> | Admin</title>
+    <title>Expediente | <?php echo htmlspecialchars($nombre_completo); ?></title>
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -140,29 +133,52 @@ if ($es_profesor) {
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver a la página anterior
+        <a href="expedientes.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+            <i class="fas fa-arrow-left"></i> Volver al buscador
         </a>
 
         <?php if(isset($_GET['exito'])): ?>
             <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡Cambios guardados correctamente!</div>
         <?php endif; ?>
 
-        <div class="profile-card">
-            <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="profile-pic">
-            <div class="profile-info">
-                <h2><?php echo htmlspecialchars($nombre_completo); ?></h2>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
-                    <p><i class="fas fa-id-card" style="color:#aaa;"></i> Código: <strong><?php echo htmlspecialchars($perfil['codigo']); ?></strong></p>
-                    
+        <div class="expediente-header">
+            <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
+            <div>
+                <h1 style="margin: 0 0 10px 0; font-size: 2.2rem;"><?php echo htmlspecialchars($nombre_completo); ?></h1>
+                <p style="margin: 0; font-size: 1.1rem; opacity: 0.9; display: flex; align-items: center; gap: 15px;">
                     <?php if($es_alumno): ?>
-                        <p><i class="fas fa-graduation-cap" style="color:#aaa;"></i> Carrera: <strong><?php echo $perfil['carrera'] ? htmlspecialchars($perfil['carrera']) : 'N/A'; ?></strong></p>
+                        <span><i class="fas fa-user-graduate"></i> Alumno</span> | 
+                        <span><i class="fas fa-book"></i> <?php echo htmlspecialchars($perfil['carrera'] ?? 'Sin Carrera'); ?></span>
                     <?php else: ?>
-                        <p><i class="fas fa-chalkboard-teacher" style="color:#aaa;"></i> Rol: <strong style="color:#856404;">Docente de Idiomas</strong></p>
+                        <span><i class="fas fa-chalkboard-teacher"></i> Docente</span>
                     <?php endif; ?>
+                    | <span><i class="fas fa-id-badge"></i> Código: <?php echo htmlspecialchars($perfil['codigo'] ?: 'N/A'); ?></span>
+                </p>
+            </div>
+        </div>
 
-                    <p><i class="fas fa-envelope" style="color:#aaa;"></i> Correo: <?php echo htmlspecialchars($perfil['correo']); ?></p>
-                    <p><i class="fas fa-phone" style="color:#aaa;"></i> Teléfono: <?php echo $perfil['telefono'] ? htmlspecialchars($perfil['telefono']) : 'No registrado'; ?></p>
+        <div class="card" style="margin-bottom: 20px;">
+            <h3 style="color: var(--udg-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">
+                <i class="fas fa-info-circle"></i> Información de Contacto
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 15px;">
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">Correo Electrónico</label>
+                    <div style="font-size: 1.1rem; color: #333;"><i class="fas fa-envelope" style="color:#ccc;"></i> <?php echo htmlspecialchars($perfil['correo']); ?></div>
+                </div>
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">Teléfono</label>
+                    <div style="font-size: 1.1rem; color: #333;"><i class="fas fa-phone" style="color:#ccc;"></i> <?php echo htmlspecialchars($perfil['telefono'] ?: 'No registrado'); ?></div>
+                </div>
+                <div>
+                    <label style="color: #888; font-size: 0.85rem; text-transform: uppercase; font-weight: bold;">Estado del Usuario</label>
+                    <div style="margin-top: 5px;">
+                        <?php if($perfil['estatus'] == 'ACTIVO'): ?>
+                            <span style="background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;"><i class="fas fa-check-circle"></i> Activo</span>
+                        <?php else: ?>
+                            <span style="background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;"><i class="fas fa-times-circle"></i> Inactivo</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -308,72 +324,55 @@ if ($es_profesor) {
             </div>
         </div>
         <?php endforeach; ?>
+        <?php endif; // FIN LÓGICA ALUMNO ?>
 
-        <?php endif; // Fin lógica alumno ?>
 
-        <?php if($es_profesor): ?>
-            <div class="card" style="margin-top: 0;">
-                <h3 style="color: var(--udg-blue); margin-bottom: 15px;"><i class="fas fa-chalkboard"></i> Grupos y Horarios Asignados</h3>
+        <?php if ($es_profesor): ?>
+            <div class="card" style="margin-top: 20px;">
+                <h3 style="color: var(--udg-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">
+                    <i class="fas fa-chalkboard"></i> Grupos Asignados (<?php echo count($grupos_profesor); ?>)
+                </h3>
                 
-                <div class="table-wrapper" style="overflow-x:auto;">
-                    <table class="history-table" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Ciclo</th>
-                                <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Materia Asignada</th>
-                                <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Horario (Presencial / Virtual)</th>
-                                <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Aula</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <?php if (count($grupos_profesor) > 0): ?>
-                            <?php foreach ($grupos_profesor as $g): 
-                                // Pintamos de un color ligeramente distinto si el ciclo ya pasó (inactivo)
-                                $opacidad = ($g['activo'] == 1) ? '1' : '0.6';
-                            ?>
-                                <tr style="border-bottom: 1px solid #eee; opacity: <?php echo $opacidad; ?>;">
-                                    <td style="padding: 15px; font-weight: bold; color: #555;">
-                                        <?php echo htmlspecialchars($g['periodo']); ?>
-                                        <?php if($g['activo'] == 0) echo '<br><span style="font-size: 0.75rem; color: #aaa; font-weight: normal;">(Finalizado)</span>'; ?>
-                                    </td>
-                                    <td style="padding: 15px;">
-                                        <div style="color: var(--udg-blue); font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
-                                        <div style="font-size: 0.85rem; color: #888; margin-top: 4px;">
-                                            <span class="tag-aprobado" style="background-color: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-weight: bold;">Nivel <?php echo htmlspecialchars($g['nivel']); ?></span>
-                                        </div>
-                                    </td>
-                                    
-                                    <td style="padding: 15px; text-align: center; font-size: 0.9rem; white-space: nowrap;">
-                                        <?php 
-                                            $hp = '---';
-                                            if ($g['dias_presencial']) $hp = htmlspecialchars($g['dias_presencial']) . ' ' . date('H:i', strtotime($g['inicio_presencial'])) . '-' . date('H:i', strtotime($g['fin_presencial']));
-                                            
-                                            $hv = '---';
-                                            if ($g['dias_virtual']) $hv = htmlspecialchars($g['dias_virtual']) . ' ' . date('H:i', strtotime($g['inicio_virtual'])) . '-' . date('H:i', strtotime($g['fin_virtual']));
-                                        ?>
-                                        <div style="color: #28a745; margin-bottom: 5px;"><strong>P:</strong> <?php echo $hp; ?></div>
-                                        <div style="color: #17a2b8;"><strong>V:</strong> <?php echo $hv; ?></div>
-                                    </td>
+                <?php if (count($grupos_profesor) > 0): ?>
+                    <div class="prof-classes-grid">
+                        <?php foreach ($grupos_profesor as $g): 
+                            $color_estado = ($g['activo'] == 1) ? '#28a745' : '#6c757d';
+                            $texto_estado = ($g['activo'] == 1) ? 'En Curso' : 'Finalizado';
+                        ?>
+                            <a href="gestionar_grupo.php?clave=<?php echo urlencode($g['clave_grupo']); ?>" class="class-click-card" title="Haz clic para gestionar este grupo">
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <h4 class="class-title"><?php echo htmlspecialchars($g['materia'] . ' ' . $g['nivel']); ?></h4>
+                                    <span class="class-status" style="color: <?php echo $color_estado; ?>;">
+                                        <i class="fas fa-circle" style="font-size: 0.6rem;"></i> <?php echo $texto_estado; ?>
+                                    </span>
+                                </div>
+                                
+                                <div style="font-size: 0.85rem; color: #666;">
+                                    <i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; 
+                                    <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos
+                                </div>
+                                
+                                <div style="margin-top: 5px;">
+                                    <?php if($g['nrc_p']): ?>
+                                        <span class="class-nrc"><strong style="color:#28a745;">P:</strong> <?php echo $g['nrc_p']; ?></span>
+                                    <?php endif; ?>
+                                    <?php if($g['nrc_v']): ?>
+                                        <span class="class-nrc"><strong style="color:#17a2b8;">V:</strong> <?php echo $g['nrc_v']; ?></span>
+                                    <?php endif; ?>
+                                </div>
 
-                                    <td style="padding: 15px; text-align: center; font-size: 0.9rem;">
-                                        <div style="color: #28a745; margin-bottom: 5px;"><strong>P:</strong> <?php echo $g['aula_presencial'] ?: '---'; ?></div>
-                                        <div style="color: #17a2b8;"><strong>V:</strong> <?php echo $g['aula_virtual'] ?: '---'; ?></div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4" style="text-align:center; padding: 40px; color: var(--text-light);">
-                                    <i class="fas fa-bed" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
-                                    Este profesor no tiene grupos asignados.
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                                <div style="margin-top: 10px; text-align: right; color: var(--udg-blue); font-size: 0.85rem; font-weight: bold;">
+                                    Gestionar Grupo <i class="fas fa-arrow-right"></i>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>Este profesor no tiene grupos asignados actualmente.</p>
+                <?php endif; ?>
             </div>
-        <?php endif; // Fin lógica Profesor ?>
+        <?php endif; // FIN LÓGICA PROFESOR ?>
 
     </main>
 
