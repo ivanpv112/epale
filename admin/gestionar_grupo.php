@@ -76,6 +76,60 @@ function checkProfesorCollision($nrc, $profesor_id, $dias, $inicio, $fin, $ciclo
     return false;
 }
 
+// 3. NUEVA FUNCIÓN: Validar que el ESTUDIANTE no esté ocupado
+function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
+    // 1. Obtener los horarios del grupo AL QUE SE LE QUIERE INSCRIBIR (Presencial y Virtual si los hay)
+    $sql_horarios_nuevo = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre AS mat_nombre
+                           FROM horarios h 
+                           JOIN grupos g ON h.nrc = g.nrc 
+                           JOIN materias m ON g.materia_id = m.materia_id
+                           WHERE g.clave_grupo = (SELECT clave_grupo FROM grupos WHERE nrc = ? LIMIT 1)";
+    $stmt_nuevo = $pdo->prepare($sql_horarios_nuevo);
+    $stmt_nuevo->execute([$nrc_nuevo]);
+    $horarios_nuevos = $stmt_nuevo->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($horarios_nuevos)) return false; // Si el grupo nuevo no tiene horario, no hay choque
+
+    // 2. Obtener los horarios de las clases QUE EL ALUMNO YA TIENE INSCRITAS en el mismo ciclo
+    $sql_horarios_actuales = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre, h.nrc 
+                              FROM inscripciones i
+                              JOIN grupos g ON i.nrc = g.nrc
+                              JOIN horarios h ON g.nrc = h.nrc
+                              JOIN materias m ON g.materia_id = m.materia_id
+                              WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.ciclo_id = ? AND h.nrc != ?";
+    $stmt_actuales = $pdo->prepare($sql_horarios_actuales);
+    $stmt_actuales->execute([$alumno_id, $ciclo_id, $nrc_nuevo]);
+    $clases_actuales = $stmt_actuales->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($clases_actuales)) return false; // Si el alumno no tiene clases, no hay choque
+
+    // 3. Comparar cada horario nuevo contra cada clase actual
+    foreach ($horarios_nuevos as $nuevo) {
+        if (empty($nuevo['hora_inicio']) || empty($nuevo['hora_fin']) || empty($nuevo['dias_patron'])) continue;
+        
+        $start_n = strtotime($nuevo['hora_inicio']); 
+        $end_n = strtotime($nuevo['hora_fin']);
+        $dias_n = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($nuevo['dias_patron'])));
+
+        foreach ($clases_actuales as $actual) {
+            if (empty($actual['hora_inicio']) || empty($actual['hora_fin']) || empty($actual['dias_patron'])) continue;
+            
+            $start_a = strtotime($actual['hora_inicio']); 
+            $end_a = strtotime($actual['hora_fin']);
+            $dias_a = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($actual['dias_patron'])));
+
+            // ¿Se cruzan las horas?
+            if ($start_n < $end_a && $end_n > $start_a) {
+                // ¿Se cruzan los días?
+                if (count(array_intersect($dias_n, $dias_a)) > 0) {
+                    return "¡Choque de Horario! El estudiante ya está cursando '{$actual['mat_nombre']}' en ese mismo horario.";
+                }
+            }
+        }
+    }
+    return false;
+}
+
 // ==========================================
 // PROCESAMIENTO DE FORMULARIOS 
 // ==========================================
@@ -90,20 +144,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- AGREGAR ALUMNO ---
     if (isset($_POST['action']) && $_POST['action'] === 'add_student') {
-        $nuevo_alumno_id = $_POST['nuevo_alumno_id']; $nrc_grupo = $_POST['nrc_base'];
-        $cupo_actual = $_POST['cupo_actual']; $inscritos_actuales = $_POST['inscritos_actuales'];
+        $nuevo_alumno_id = $_POST['nuevo_alumno_id']; 
+        $nrc_grupo = $_POST['nrc_base'];
+        $cupo_actual = $_POST['cupo_actual']; 
+        $inscritos_actuales = $_POST['inscritos_actuales'];
+        $ciclo_actual = $_POST['ciclo_actual_grupo'];
 
-        if (empty($nuevo_alumno_id) || !is_numeric($nuevo_alumno_id)) { $mensaje = "Selecciona un alumno de la lista."; $tipo_mensaje = "error"; } 
-        elseif ($inscritos_actuales >= $cupo_actual) { $mensaje = "El grupo ya está lleno. Aumenta la capacidad máxima primero."; $tipo_mensaje = "error"; } 
+        if (empty($nuevo_alumno_id) || !is_numeric($nuevo_alumno_id)) { 
+            $mensaje = "Selecciona un alumno de la lista."; $tipo_mensaje = "error"; 
+        } 
+        elseif ($inscritos_actuales >= $cupo_actual) { 
+            $mensaje = "El grupo ya está lleno. Aumenta la capacidad máxima primero."; $tipo_mensaje = "error"; 
+        } 
         else {
-            $check = $pdo->prepare("SELECT estatus FROM inscripciones WHERE alumno_id = ? AND nrc = ?"); $check->execute([$nuevo_alumno_id, $nrc_grupo]);
-            $registro = $check->fetch(PDO::FETCH_ASSOC);
-            if ($registro) {
-                if ($registro['estatus'] === 'INSCRITO') { $mensaje = "El alumno ya está inscrito en esta clase."; $tipo_mensaje = "error"; } 
-                else { $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]); $mensaje = "Alumno re-inscrito correctamente."; $tipo_mensaje = "success"; }
+            // VERIFICACIÓN DE CHOQUE DE HORARIO DEL ESTUDIANTE
+            $choque_estudiante = checkEstudianteCollision($nuevo_alumno_id, $nrc_grupo, $ciclo_actual, $pdo);
+            
+            if ($choque_estudiante) {
+                $mensaje = $choque_estudiante; 
+                $tipo_mensaje = "error";
             } else {
-                $pdo->prepare("INSERT INTO inscripciones (alumno_id, nrc, estatus) VALUES (?, ?, 'INSCRITO')")->execute([$nuevo_alumno_id, $nrc_grupo]);
-                $mensaje = "Alumno inscrito correctamente."; $tipo_mensaje = "success";
+                // Si no hay choque, verificamos si ya está inscrito
+                $check = $pdo->prepare("SELECT estatus FROM inscripciones WHERE alumno_id = ? AND nrc = ?"); 
+                $check->execute([$nuevo_alumno_id, $nrc_grupo]);
+                $registro = $check->fetch(PDO::FETCH_ASSOC);
+                
+                if ($registro) {
+                    if ($registro['estatus'] === 'INSCRITO') { 
+                        $mensaje = "El alumno ya está inscrito en esta clase."; $tipo_mensaje = "error"; 
+                    } 
+                    else { 
+                        $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]); 
+                        $mensaje = "Alumno re-inscrito correctamente."; $tipo_mensaje = "success"; 
+                    }
+                } else {
+                    $pdo->prepare("INSERT INTO inscripciones (alumno_id, nrc, estatus) VALUES (?, ?, 'INSCRITO')")->execute([$nuevo_alumno_id, $nrc_grupo]);
+                    $mensaje = "Alumno inscrito correctamente."; $tipo_mensaje = "success";
+                }
             }
         }
     }
@@ -297,7 +374,12 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                     <div class="card" style="margin-top: 0; background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%); color: white; border: none; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 10px 0; color: white;"><i class="fas fa-user-plus"></i> Inscribir Alumno</h3>
                         <form method="POST" id="formAddStudent">
-                            <input type="hidden" name="action" value="add_student"><input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>"><input type="hidden" name="cupo_actual" value="<?php echo $g['cupo']; ?>"><input type="hidden" name="inscritos_actuales" value="<?php echo $total_inscritos; ?>"><input type="hidden" name="nuevo_alumno_id" id="hiddenAlumnoId" required>
+                            <input type="hidden" name="action" value="add_student">
+                            <input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>">
+                            <input type="hidden" name="cupo_actual" value="<?php echo $g['cupo']; ?>">
+                            <input type="hidden" name="inscritos_actuales" value="<?php echo $total_inscritos; ?>">
+                            <input type="hidden" name="ciclo_actual_grupo" value="<?php echo $g['ciclo_id']; ?>">
+                            <input type="hidden" name="nuevo_alumno_id" id="hiddenAlumnoId" required>
                             <div style="display: flex; gap: 10px; align-items: stretch;">
                                 <div class="custom-select-wrapper">
                                     <input type="text" id="searchInput" placeholder="Escribe el nombre o código..." style="width: 100%; height: 42px; padding: 10px 15px; border-radius: 6px; border: none; box-sizing: border-box; font-family: inherit;" autocomplete="off">
