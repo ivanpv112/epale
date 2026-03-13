@@ -610,3 +610,42 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-weight: bold;
     text-transform: uppercase;
 }
+
+/* ==========================================================================
+   ESTILOS PARA SOLICITUDES DE BAJA (solicitudes.php)
+   ========================================================================== */
+.tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+.btn-tab { padding: 10px 20px; text-decoration: none; color: #555; border-radius: 8px 8px 0 0; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; transition: 0.2s; position: relative; top: 12px; }
+.btn-tab.active { background: var(--udg-blue); color: white; border-color: var(--udg-blue); }
+.btn-tab:hover:not(.active) { background: #e9ecef; }
+.badge-tab { background: #dc3545; color: white; border-radius: 12px; padding: 2px 6px; font-size: 0.75rem; margin-left: 8px; }
+
+/* Modales */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; }
+.modal-content { background: white; width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideDown 0.3s ease-out; }
+.modal-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; }
+.modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+.modal-footer { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; border-radius: 0 0 12px 12px; }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Cajas de información */
+.sol-box { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+.sol-box h4 { margin: 0 0 5px 0; color: #333; font-size: 0.9rem; text-transform: uppercase; }
+#txt_desc { font-size: 0.95rem; color: #555; font-style: italic; word-break: break-word; white-space: pre-wrap; max-height: 120px; overflow-y: auto; padding-right: 5px; }
+
+/* Etiquetas de Estatus */
+.tag-aprobada { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+.tag-rechazada { background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+.tag-cancelada { background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+
+/* ==========================================================================
+   ESTILOS PARA MATERIAS (materias.php)
+   ========================================================================== */
+.form-grid-materias {
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 15px;
+}
+.form-grid-materias .full-width {
+    grid-column: span 2;
+}
