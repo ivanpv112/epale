@@ -32,6 +32,14 @@ $foto_menu = "../img/avatar-default.png";
 if($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['foto_perfil'])) {
     $foto_menu = "../img/perfiles/" . $admin_menu['foto_perfil'];
 }
+
+// ==========================================
+// NUEVA LÓGICA: CONTADOR DE SOLICITUDES DE BAJA
+// ==========================================
+$stmt_notif = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'");
+$notif_bajas = $stmt_notif->fetchColumn();
+// Creamos el circulito rojo (burbuja de notificación) solo si hay solicitudes pendientes
+$badge_html = ($notif_bajas > 0) ? ' <span style="background:#dc3545; color:white; border-radius:10px; padding:2px 8px; font-size:0.7rem; margin-left:5px; font-weight:bold;">'.$notif_bajas.'</span>' : '';
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -74,6 +82,8 @@ if($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['f
         
         <li><a href="importar_csv.php" class="<?php echo ($pagina_actual == 'importar_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
         
+        <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>"><i class="fas fa-envelope-open-text"></i> Solicitudes <?php echo $badge_html; ?></a></li>
+
         <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
     </ul>
 
