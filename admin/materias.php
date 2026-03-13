@@ -7,11 +7,63 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
-// ELIMINAR
+$mensaje = ''; 
+$tipo_mensaje = '';
+
+// =======================================================
+// PROCESAR FORMULARIO DE GUARDAR/EDITAR MATERIA
+// =======================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'save_materia') {
+    $materia_id = $_POST['materia_id'] ?? null;
+    $nombre = trim($_POST['nombre']);
+    $clave = strtoupper(trim($_POST['clave']));
+    $nivel = intval($_POST['nivel']);
+
+    try {
+        // Validación 1: Campos vacíos
+        if(empty($nombre) || empty($clave) || empty($nivel)) {
+            throw new Exception("Todos los campos son obligatorios.");
+        }
+
+        // Validación 2: Clave duplicada
+        if ($materia_id) {
+            $check = $pdo->prepare("SELECT COUNT(*) FROM materias WHERE clave = ? AND materia_id != ?");
+            $check->execute([$clave, $materia_id]);
+            if ($check->fetchColumn() > 0) throw new Exception("Error: La clave '$clave' ya está asignada a otra materia.");
+            
+            $pdo->prepare("UPDATE materias SET clave = ?, nombre = ?, nivel = ? WHERE materia_id = ?")
+                ->execute([$clave, $nombre, $nivel, $materia_id]);
+            $mensaje = "Materia actualizada correctamente.";
+            $tipo_mensaje = "success";
+        } else {
+            $check = $pdo->prepare("SELECT COUNT(*) FROM materias WHERE clave = ?");
+            $check->execute([$clave]);
+            if ($check->fetchColumn() > 0) throw new Exception("Error: Ya existe una materia con la clave '$clave'.");
+            
+            $pdo->prepare("INSERT INTO materias (clave, nombre, nivel) VALUES (?, ?, ?)")
+                ->execute([$clave, $nombre, $nivel]);
+            $mensaje = "Materia creada exitosamente.";
+            $tipo_mensaje = "success";
+        }
+    } catch (Exception $e) {
+        $mensaje = $e->getMessage();
+        $tipo_mensaje = "error";
+    }
+}
+
+// =======================================================
+// ELIMINAR MATERIA
+// =======================================================
 if (isset($_GET['borrar'])) {
     $id = $_GET['borrar'];
-    $pdo->prepare("DELETE FROM materias WHERE materia_id = ?")->execute([$id]);
-    header("Location: materias.php"); exit;
+    try {
+        $pdo->prepare("DELETE FROM materias WHERE materia_id = ?")->execute([$id]);
+        $mensaje = "Materia eliminada correctamente.";
+        $tipo_mensaje = "success";
+    } catch(PDOException $e) {
+        $mensaje = "No se puede eliminar la materia porque ya tiene grupos o calificaciones asignadas.";
+        $tipo_mensaje = "error";
+    }
 }
 
 // CONSULTAS Y FILTROS
@@ -23,7 +75,6 @@ if (isset($_GET['q']) && !empty($_GET['q'])) {
     $params[':q'] = "%".$_GET['q']."%";
 }
 
-// Definir idiomas posibles y detectar los que existen
 $idiomas = ['Inglés','Francés','Italiano','Español','B-learning'];
 $idiomas_present = [];
 foreach ($idiomas as $idioma) {
@@ -44,15 +95,9 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ESTADÍSTICAS
 $total_materias = $pdo->query("SELECT COUNT(*) FROM materias")->fetchColumn();
 $total_grupos = $pdo->query("SELECT COUNT(*) FROM grupos")->fetchColumn();
 $total_idiomas = count($idiomas_present);
-
-// FOTO DEL ADMIN (Para el header)
-$stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
-$stmt_foto->execute([$_SESSION['user_id']]);
-$user_foto = $stmt_foto->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -64,6 +109,7 @@ $user_foto = $stmt_foto->fetchColumn();
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -75,6 +121,22 @@ $user_foto = $stmt_foto->fetchColumn();
             <h1><i class="fas fa-book"></i> Materias y Criterios</h1>
             <p>Administra el catálogo de idiomas y configura cómo se evalúa cada nivel.</p>
         </div>
+
+        <?php if($mensaje): ?>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>',
+                        text: '<?php echo htmlspecialchars($mensaje); ?>',
+                        icon: '<?php echo $tipo_mensaje; ?>',
+                        confirmButtonColor: 'var(--udg-blue)'
+                    });
+                    if(window.location.search.includes('borrar=')){
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                });
+            </script>
+        <?php endif; ?>
 
         <div class="stats-grid">
             <div class="stat-card"> <span class="stat-number"><?php echo $total_materias; ?></span> <span class="stat-label">Total Materias</span> </div>
@@ -111,12 +173,10 @@ $user_foto = $stmt_foto->fetchColumn();
                     <tbody>
                         <?php if (count($materias) > 0): ?>
                             <?php foreach ($materias as $m): 
-                                // 1. Contar Grupos
                                 $count_grupos = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE materia_id = ?");
                                 $count_grupos->execute([$m['materia_id']]);
                                 $num_grupos = $count_grupos->fetchColumn();
 
-                                // 2. Revisar Criterios de Evaluación
                                 $stmt_crit = $pdo->prepare("SELECT SUM(puntos_maximos) as total_puntos, COUNT(*) as qty FROM criterios_evaluacion WHERE materia_id = ?");
                                 $stmt_crit->execute([$m['materia_id']]);
                                 $criterios = $stmt_crit->fetch(PDO::FETCH_ASSOC);
@@ -148,12 +208,21 @@ $user_foto = $stmt_foto->fetchColumn();
                                     <a href="criterios_materia.php?id=<?php echo $m['materia_id']; ?>" class="action-btn" style="color: #17a2b8; font-size: 1.2rem; margin-right: 12px;" title="Configurar Criterios de Evaluación">
                                         <i class="fas fa-cogs"></i>
                                     </a>
-                                    <button class="action-btn" onclick='editMateria(<?php echo json_encode($m); ?>)' style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" title="Editar Info Básica">
+                                    
+                                    <button class="action-btn" 
+                                            data-id="<?php echo $m['materia_id']; ?>"
+                                            data-clave="<?php echo htmlspecialchars($m['clave']); ?>"
+                                            data-nombre="<?php echo htmlspecialchars($m['nombre']); ?>"
+                                            data-nivel="<?php echo $m['nivel']; ?>"
+                                            onclick="editMateria(this)" 
+                                            style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" 
+                                            title="Editar Info Básica">
                                         <i class="fas fa-pen"></i>
                                     </button>
-                                    <a href="materias.php?borrar=<?php echo $m['materia_id']; ?>" class="action-btn delete" onclick="return confirm('¿Está seguro de que desea eliminar esta materia? Se perderán los grupos vinculados.');" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar Materia">
+                                    
+                                    <button class="action-btn delete" onclick="confirmDelete(<?php echo $m['materia_id']; ?>)" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1rem;" title="Eliminar Materia">
                                         <i class="fas fa-trash-alt"></i>
-                                    </a>
+                                    </button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -180,20 +249,23 @@ $user_foto = $stmt_foto->fetchColumn();
                 <h2 id="modalTitle">Nueva Materia</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
-            <form action="guardar_materia.php" method="POST">
+            <form action="materias.php" method="POST">
+                <input type="hidden" name="action" value="save_materia">
                 <input type="hidden" name="materia_id" id="materiaId">
-                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group" style="grid-column: span 2;"> 
-                        <label>Nombre de la Materia</label> 
-                        <input type="text" name="nombre" id="materiaNombre" required placeholder="Ej. Inglés, Francés, etc."> 
-                    </div>
-                    <div class="form-group"> 
-                        <label>Clave</label> 
-                        <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101"> 
-                    </div>
-                    <div class="form-group"> 
-                        <label>Nivel</label> 
-                        <input type="number" name="nivel" id="materiaLevel" required min="1" max="10" placeholder="Ej. 1"> 
+                <div class="modal-body">
+                    <div class="form-grid-materias">
+                        <div class="form-group full-width"> 
+                            <label>Nombre de la Materia</label> 
+                            <input type="text" name="nombre" id="materiaNombre" required placeholder="Ej. Inglés, Francés, etc."> 
+                        </div>
+                        <div class="form-group"> 
+                            <label>Clave</label> 
+                            <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101"> 
+                        </div>
+                        <div class="form-group"> 
+                            <label>Nivel</label> 
+                            <input type="number" name="nivel" id="materiaLevel" required min="1" max="10" placeholder="Ej. 1"> 
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -215,24 +287,42 @@ $user_foto = $stmt_foto->fetchColumn();
         
         function openModal() {
             document.getElementById('materiaId').value = '';
-            document.getElementById('modalTitle').innerText = 'Nueva Materia';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-book-medical"></i> Nueva Materia';
             document.getElementById('materiaclave').value = '';
             document.getElementById('materiaNombre').value = '';
             document.getElementById('materiaLevel').value = '';
             modal.style.display = 'flex';
         }
         
-        function editMateria(materia) {
-            document.getElementById('materiaId').value = materia.materia_id;
-            document.getElementById('modalTitle').innerText = 'Editar Materia';
-            document.getElementById('materiaclave').value = materia.clave;
-            document.getElementById('materiaNombre').value = materia.nombre;
-            document.getElementById('materiaLevel').value = materia.nivel;
+        // Función limpia que atrapa los datos uno por uno
+        function editMateria(btn) {
+            document.getElementById('materiaId').value = btn.getAttribute('data-id');
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> Editar Materia';
+            document.getElementById('materiaclave').value = btn.getAttribute('data-clave');
+            document.getElementById('materiaNombre').value = btn.getAttribute('data-nombre');
+            document.getElementById('materiaLevel').value = btn.getAttribute('data-nivel');
             modal.style.display = 'flex';
         }
         
         function closeModal() { 
             modal.style.display = 'none'; 
+        }
+
+        function confirmDelete(id) {
+            Swal.fire({
+                title: '¿Eliminar materia?',
+                text: "Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `materias.php?borrar=${id}`;
+                }
+            })
         }
         
         window.onclick = function(e) { 
