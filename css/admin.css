@@ -649,3 +649,22 @@ input:checked + .slider:before { transform: translateX(22px); }
 .form-grid-materias .full-width {
     grid-column: span 2;
 }
+
+/* ==========================================================================
+   ESTILOS PARA LA TABLA DE EXPEDIENTES Y PAGINACIÓN
+   ========================================================================== */
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.clickable-row:hover {
+    background-color: #f1f8ff !important; /* Un azulito muy tenue */
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
+}
+
+.google-pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 5px; font-family: Arial, sans-serif; }
+.google-pagination a { color: var(--udg-blue); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 1rem; transition: background-color 0.2s; }
+.google-pagination a:hover { background-color: #f1f3f4; }
+.google-pagination a.active { color: #202124; font-weight: bold; background-color: transparent; pointer-events: none; }
+.google-pagination .btn-nav { font-weight: 500; margin: 0 10px; }
+.google-pagination .btn-nav:hover { text-decoration: underline; background-color: transparent; }
