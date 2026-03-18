@@ -62,9 +62,29 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        /* ==========================================================
+           ANIMACIÓN DE LA FILA AL PASAR EL MOUSE (HOVER EFFECT)
+           ========================================================== */
+        .clickable-row {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .clickable-row:hover {
+            background-color: #eaf4fc !important; /* Fondo azul muy claro */
+            box-shadow: inset 4px 0 0 0 var(--udg-blue); /* Barra indicadora azul a la izquierda */
+        }
+        
+        /* Evita que el fondo de las celdas tape el color de la fila */
+        .clickable-row:hover td {
+            background-color: transparent !important;
+        }
+
+        /* PAGINACIÓN */
         .google-pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 5px; font-family: Arial, sans-serif; }
-        .google-pagination a { color: #1a0dab; text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 1rem; transition: background-color 0.2s; }
+        .google-pagination a { color: var(--udg-blue); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 1rem; transition: background-color 0.2s; }
         .google-pagination a:hover { background-color: #f1f3f4; }
         .google-pagination a.active { color: #202124; font-weight: bold; background-color: transparent; pointer-events: none; }
         .google-pagination .btn-nav { font-weight: 500; margin: 0 10px; }
@@ -78,7 +98,7 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <main class="main-content">
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-folder-open"></i> Perfiles y Expedientes</h1>
-            <p>Consulta el historial de los alumnos y las asignaciones de los profesores.</p>
+            <p>Consulta el historial de los alumnos y las asignaciones de los profesores. <strong>Haz clic sobre cualquier usuario para abrir su expediente.</strong></p>
         </div>
 
         <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px;">
@@ -107,13 +127,12 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Código</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estado</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (count($estudiantes) > 0): ?>
                             <?php foreach ($estudiantes as $e): ?>
-                            <tr style="border-bottom: 1px solid #eee;">
+                            <tr class="clickable-row" style="border-bottom: 1px solid #eee;" onclick="window.location.href='ver_expediente.php?id=<?php echo $e['usuario_id']; ?>'">
                                 
                                 <td class="user-cell" style="padding: 15px;">
                                     <h4 style="margin: 0; color: var(--udg-blue);">
@@ -150,17 +169,11 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <span class="tag-aprobado" style="background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Inactivo</span>
                                     <?php endif; ?>
                                 </td>
-
-                                <td style="padding: 15px; text-align: center;">
-                                    <a href="ver_expediente.php?id=<?php echo $e['usuario_id']; ?>" style="color: var(--udg-blue); font-size: 1.2rem; margin-right: 5px;" title="Ver Expediente Completo">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
                             </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-light);">
+                                <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-light);">
                                     <i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
                                     No se encontraron perfiles con esa búsqueda.
                                 </td>
