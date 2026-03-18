@@ -7,13 +7,39 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
+$mensaje = ''; 
+$tipo_mensaje = '';
+
 // ELIMINAR
 if (isset($_GET['borrar'])) {
     $id = $_GET['borrar'];
     if ($id != $_SESSION['user_id']) {
-        // Al borrar el usuario, la BD borra automáticamente al alumno por el "ON DELETE CASCADE"
-        $pdo->prepare("DELETE FROM usuarios WHERE usuario_id = ?")->execute([$id]);
-        header("Location: usuarios.php?msg=deleted"); exit;
+        try {
+            // Al borrar el usuario, la BD borra automáticamente al alumno por el "ON DELETE CASCADE"
+            $pdo->prepare("DELETE FROM usuarios WHERE usuario_id = ?")->execute([$id]);
+            $mensaje = "El usuario ha sido eliminado con éxito.";
+            $tipo_mensaje = "success";
+        } catch(PDOException $e) {
+            $mensaje = "No se pudo eliminar el usuario. Es posible que tenga registros dependientes en otras tablas.";
+            $tipo_mensaje = "error";
+        }
+    } else {
+        $mensaje = "No puedes eliminar tu propio usuario.";
+        $tipo_mensaje = "error";
+    }
+}
+
+// Capturar mensajes que vengan por GET (ej. de guardar_usuario.php)
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'ok') {
+        $mensaje = "¡Usuario guardado correctamente!";
+        $tipo_mensaje = "success";
+    } elseif ($_GET['msg'] === 'error') {
+        $mensaje = "Hubo un error al intentar guardar el usuario.";
+        $tipo_mensaje = "error";
+    } elseif ($_GET['msg'] === 'dup') {
+        $mensaje = "El correo o el código ya están registrados.";
+        $tipo_mensaje = "error";
     }
 }
 
@@ -62,6 +88,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -74,10 +101,23 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             <p>Administra a los alumnos, profesores y personal del sistema.</p>
         </div>
 
-        <?php if(isset($_GET['msg']) && $_GET['msg'] == 'ok'): ?>
-            <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡Usuario guardado correctamente!</div>
-        <?php elseif(isset($_GET['msg']) && $_GET['msg'] == 'deleted'): ?>
-            <div class="alert alert-success" style="margin-bottom: 20px; background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El usuario fue eliminado con éxito!</div>
+        <?php if($mensaje): ?>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>',
+                        text: '<?php echo addslashes($mensaje); ?>',
+                        icon: '<?php echo $tipo_mensaje; ?>',
+                        confirmButtonColor: 'var(--udg-blue)'
+                    });
+                    
+                    // Limpiar la URL para evitar que el mensaje reaparezca al recargar
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.delete('borrar');
+                    currentUrl.searchParams.delete('msg');
+                    window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
+                });
+            </script>
         <?php endif; ?>
 
         <div class="stats-grid">
@@ -147,12 +187,30 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                                 <?php endif; ?>
                             </td>
                             <td style="padding: 15px; text-align: center;">
-                                <button onclick='editUser(<?php echo json_encode($u); ?>)' style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" title="Editar">
+                                <button class="action-btn"
+                                        data-id="<?php echo $u['usuario_id']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($u['nombre']); ?>"
+                                        data-ap="<?php echo htmlspecialchars($u['apellido_paterno'] ?? ''); ?>"
+                                        data-am="<?php echo htmlspecialchars($u['apellido_materno'] ?? ''); ?>"
+                                        data-apellidos="<?php echo htmlspecialchars($u['apellidos'] ?? ''); ?>"
+                                        data-correo="<?php echo htmlspecialchars($u['correo']); ?>"
+                                        data-tel="<?php echo htmlspecialchars($u['telefono'] ?? ''); ?>"
+                                        data-rol="<?php echo $u['rol']; ?>"
+                                        data-estatus="<?php echo $u['estatus']; ?>"
+                                        data-codigo="<?php echo htmlspecialchars($u['codigo'] ?? ''); ?>"
+                                        data-carrera="<?php echo htmlspecialchars($u['carrera'] ?? ''); ?>"
+                                        onclick="editUser(this)" 
+                                        style="background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 1.1rem; margin-right: 10px;" 
+                                        title="Editar">
                                     <i class="fas fa-pen"></i>
                                 </button>
                                 
                                 <?php if($u['usuario_id'] != $_SESSION['user_id']): ?>
-                                    <a href="#" onclick="confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo htmlspecialchars($u['nombre'] . ' ' . $u['apellido_paterno']); ?>'); return false;" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                    <?php 
+                                        // Preparar nombre para alerta
+                                        $nombre_completo_u = htmlspecialchars($u['nombre'] . ' ' . ($u['apellido_paterno'] ?? ''));
+                                    ?>
+                                    <a href="#" onclick="confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo addslashes($nombre_completo_u); ?>'); return false;" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 <?php endif; ?>
@@ -238,9 +296,8 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
 
     <script>
         const modal = document.getElementById('userModal');
-        const overlayMenu = document.getElementById('menuOverlay'); // Añadimos esto para poder cerrarlo haciendo clic fuera
+        const overlayMenu = document.getElementById('menuOverlay');
 
-        // Función que abre y cierra el menú lateral
         function toggleMobileMenu() {
             document.getElementById('navWrapper').classList.toggle('active');
             document.getElementById('menuOverlay').classList.toggle('active');
@@ -262,26 +319,34 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             modal.style.display = 'flex';
         }
 
-        function editUser(user) {
-            document.getElementById('userId').value = user.usuario_id;
+        // Nueva función editUser leyendo atributos data
+        function editUser(btn) {
+            document.getElementById('userId').value = btn.getAttribute('data-id');
             document.getElementById('modalTitle').innerText = 'Editar Usuario';
-            document.getElementById('userName').value = user.nombre;
+            document.getElementById('userName').value = btn.getAttribute('data-nombre');
             
-            if (user.apellido_paterno !== undefined) {
-                document.getElementById('userLastnameP').value = user.apellido_paterno;
-                document.getElementById('userLastnameM').value = user.apellido_materno || '';
-            } else if (user.apellidos !== undefined) {
-                const partes = user.apellidos.split(' ');
+            const ap = btn.getAttribute('data-ap');
+            const am = btn.getAttribute('data-am');
+            const apellidos = btn.getAttribute('data-apellidos');
+            
+            if (ap || am) {
+                document.getElementById('userLastnameP').value = ap;
+                document.getElementById('userLastnameM').value = am;
+            } else if (apellidos) {
+                const partes = apellidos.split(' ');
                 document.getElementById('userLastnameP').value = partes[0];
                 document.getElementById('userLastnameM').value = partes.slice(1).join(' ') || '';
+            } else {
+                 document.getElementById('userLastnameP').value = '';
+                 document.getElementById('userLastnameM').value = '';
             }
             
-            document.getElementById('userEmail').value = user.correo;
-            document.getElementById('userPhone').value = user.telefono;
-            document.getElementById('userRole').value = user.rol;
-            document.getElementById('userStatus').value = user.estatus;
-            document.getElementById('userCode').value = user.codigo || '';
-            document.getElementById('userCareer').value = user.carrera || '';
+            document.getElementById('userEmail').value = btn.getAttribute('data-correo');
+            document.getElementById('userPhone').value = btn.getAttribute('data-tel');
+            document.getElementById('userRole').value = btn.getAttribute('data-rol');
+            document.getElementById('userStatus').value = btn.getAttribute('data-estatus');
+            document.getElementById('userCode').value = btn.getAttribute('data-codigo');
+            document.getElementById('userCareer').value = btn.getAttribute('data-carrera');
             toggleFields();
             modal.style.display = 'flex';
         }
@@ -299,7 +364,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             }
         }
 
-        // FUNCIÓN SWEETALERT PARA BORRAR USUARIO
+        // SWEETALERT PARA BORRAR USUARIO
         function confirmarBorradoUsuario(url, nombre) {
             Swal.fire({
                 title: '¿Eliminar Usuario?',
@@ -318,7 +383,6 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             });
         }
 
-        // Detecta clics fuera de los modales y el menú para cerrarlos
         window.onclick = function(e) { 
             if(e.target == modal) closeModal(); 
             if(e.target == overlayMenu) toggleMobileMenu(); 
