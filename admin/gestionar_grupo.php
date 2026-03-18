@@ -78,7 +78,7 @@ function checkProfesorCollision($nrc, $profesor_id, $dias, $inicio, $fin, $ciclo
 
 // 3. NUEVA FUNCIÓN: Validar que el ESTUDIANTE no esté ocupado
 function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
-    // 1. Obtener los horarios del grupo AL QUE SE LE QUIERE INSCRIBIR (Presencial y Virtual si los hay)
+    // 1. Obtener los horarios del grupo AL QUE SE LE QUIERE INSCRIBIR
     $sql_horarios_nuevo = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre AS mat_nombre
                            FROM horarios h 
                            JOIN grupos g ON h.nrc = g.nrc 
@@ -88,9 +88,9 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
     $stmt_nuevo->execute([$nrc_nuevo]);
     $horarios_nuevos = $stmt_nuevo->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($horarios_nuevos)) return false; // Si el grupo nuevo no tiene horario, no hay choque
+    if (empty($horarios_nuevos)) return false; 
 
-    // 2. Obtener los horarios de las clases QUE EL ALUMNO YA TIENE INSCRITAS en el mismo ciclo
+    // 2. Obtener los horarios de las clases QUE EL ALUMNO YA TIENE INSCRITAS
     $sql_horarios_actuales = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre, h.nrc 
                               FROM inscripciones i
                               JOIN grupos g ON i.nrc = g.nrc
@@ -101,7 +101,7 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
     $stmt_actuales->execute([$alumno_id, $ciclo_id, $nrc_nuevo]);
     $clases_actuales = $stmt_actuales->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($clases_actuales)) return false; // Si el alumno no tiene clases, no hay choque
+    if (empty($clases_actuales)) return false; 
 
     // 3. Comparar cada horario nuevo contra cada clase actual
     foreach ($horarios_nuevos as $nuevo) {
@@ -118,9 +118,7 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
             $end_a = strtotime($actual['hora_fin']);
             $dias_a = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($actual['dias_patron'])));
 
-            // ¿Se cruzan las horas?
             if ($start_n < $end_a && $end_n > $start_a) {
-                // ¿Se cruzan los días?
                 if (count(array_intersect($dias_n, $dias_a)) > 0) {
                     return "¡Choque de Horario! El estudiante ya está cursando '{$actual['mat_nombre']}' en ese mismo horario.";
                 }
@@ -164,7 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mensaje = $choque_estudiante; 
                 $tipo_mensaje = "error";
             } else {
-                // Si no hay choque, verificamos si ya está inscrito
                 $check = $pdo->prepare("SELECT estatus FROM inscripciones WHERE alumno_id = ? AND nrc = ?"); 
                 $check->execute([$nuevo_alumno_id, $nrc_grupo]);
                 $registro = $check->fetch(PDO::FETCH_ASSOC);
@@ -185,18 +182,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // --- GUARDAR O CREAR GRUPO (LÓGICA BLINDADA) ---
+    // --- GUARDAR O CREAR GRUPO ---
     if (isset($_POST['action']) && $_POST['action'] === 'save_group') {
         try {
             $n_prof = $_POST['profesor_id'] ?? ''; $n_mat = $_POST['materia_id'] ?? ''; $n_ciclo = $_POST['ciclo_id'] ?? '';
             $n_cupo = intval($_POST['cupo'] ?? 30); $n_edicion_total = isset($_POST['edicion_total']) ? 1 : 0;
             $nrc_p = trim($_POST['rnc_presencial']); $nrc_v = trim($_POST['rnc_virtual']);
 
-            // 1. Validaciones Básicas
             if (empty($n_prof) || empty($n_mat) || empty($n_ciclo)) throw new Exception("Faltan campos obligatorios en la configuración (Profesor, Materia o Ciclo).");
             if (empty($nrc_p) && empty($nrc_v)) throw new Exception("Debes ingresar al menos un número de NRC (Presencial o Virtual).");
 
-            // 2. Validaciones Presencial
             if (!empty($nrc_p)) {
                 if (empty($_POST['dias_presencial']) || empty($_POST['inicio_presencial']) || empty($_POST['fin_presencial'])) {
                     throw new Exception("Si ingresas un NRC Presencial, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
@@ -208,7 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($choque_prof) throw new Exception($choque_prof);
             }
 
-            // 3. Validaciones Virtuales
             if (!empty($nrc_v)) {
                 if (empty($_POST['dias_virtual']) || empty($_POST['inicio_virtual']) || empty($_POST['fin_virtual'])) {
                     throw new Exception("Si ingresas un NRC Virtual, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
@@ -220,7 +214,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($choque_v_prof) throw new Exception($choque_v_prof);
             }
 
-            // 4. Auto-choque Presencial vs Virtual
             if (!empty($nrc_p) && !empty($nrc_v) && !empty($_POST['dias_presencial']) && !empty($_POST['dias_virtual'])) {
                 $start_p = strtotime($_POST['inicio_presencial']); $end_p = strtotime($_POST['fin_presencial']);
                 $start_v = strtotime($_POST['inicio_virtual']); $end_v = strtotime($_POST['fin_virtual']);
@@ -233,11 +226,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // 5. Ejecución en Base de Datos
             $pdo->beginTransaction();
 
             if ($es_edicion) {
-                // MODO EDICIÓN
                 $inscritos_actuales = $_POST['inscritos_actuales'] ?? 0;
                 if ($n_cupo < $inscritos_actuales) throw new Exception("No puedes reducir la capacidad a {$n_cupo}. Ya tienes {$inscritos_actuales} alumnos inscritos.");
                 
@@ -248,7 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
                 $mensaje = "Datos del grupo actualizados correctamente."; $tipo_mensaje = "success";
             } else {
-                // MODO CREACIÓN
                 $nueva_clave = uniqid('grp_');
                 $insertGrupo = $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $insertHorario = $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)");
@@ -339,6 +329,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -352,10 +343,23 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
         </div>
 
         <?php if($mensaje): ?>
-            <div class="alert <?php echo ($tipo_mensaje == 'success') ? 'alert-success' : 'alert-error'; ?>" style="margin-bottom: 20px; <?php echo ($tipo_mensaje == 'error') ? 'background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; padding:15px; border-radius:8px;' : ''; ?>">
-                <i class="fas <?php echo ($tipo_mensaje == 'success') ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i> 
-                <strong><?php echo ($tipo_mensaje == 'error') ? 'Atención:' : 'Éxito:'; ?></strong> <?php echo $mensaje; ?>
-            </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>',
+                        text: '<?php echo addslashes($mensaje); ?>',
+                        icon: '<?php echo $tipo_mensaje; ?>',
+                        confirmButtonColor: 'var(--udg-blue)'
+                    });
+                    
+                    // Limpiamos la URL para que no vuelva a saltar si refrescan la página
+                    const currentUrl = new URL(window.location.href);
+                    if (currentUrl.searchParams.has('msg')) {
+                        currentUrl.searchParams.delete('msg');
+                        window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
+                    }
+                });
+            </script>
         <?php endif; ?>
 
         <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px; align-items: start;">
@@ -401,7 +405,14 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                             <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px;">Cod: <?php echo htmlspecialchars($alum['codigo']); ?></div>
                                         </a>
                                         <div class="student-action">
-                                            <form method="POST" style="margin: 0;"><input type="hidden" name="action" value="remove_student"><input type="hidden" name="alumno_id" value="<?php echo $alum['alumno_id']; ?>"><input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>"><button type="button" onclick="confirmarBajaAlumno(this, '<?php echo htmlspecialchars($alum['nombre']); ?>')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.2rem; padding: 5px;" title="Expulsar"><i class="fas fa-user-minus"></i></button></form>
+                                            <form method="POST" style="margin: 0;">
+                                                <input type="hidden" name="action" value="remove_student">
+                                                <input type="hidden" name="alumno_id" value="<?php echo $alum['alumno_id']; ?>">
+                                                <input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>">
+                                                <button type="button" onclick="confirmarBajaAlumno(this, '<?php echo addslashes(htmlspecialchars($alum['nombre'])); ?>')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.2rem; padding: 5px;" title="Expulsar">
+                                                    <i class="fas fa-user-minus"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -514,8 +525,18 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
         
         function confirmarBajaAlumno(btn, nombreAlumno) {
-            Swal.fire({ title: '¿Dar de baja?', html: `Estás a punto de dar de baja a <b>${nombreAlumno}</b>.`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, dar de baja', reverseButtons: true
-            }).then((result) => { if (result.isConfirmed) { btn.closest('form').submit(); } });
+            Swal.fire({ 
+                title: '¿Dar de baja?', 
+                html: `Estás a punto de dar de baja a <b>${nombreAlumno}</b>.`, 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#dc3545', 
+                cancelButtonColor: '#6c757d', 
+                confirmButtonText: 'Sí, dar de baja', 
+                reverseButtons: true
+            }).then((result) => { 
+                if (result.isConfirmed) { btn.closest('form').submit(); } 
+            });
         }
 
         <?php if($es_edicion): ?>
@@ -584,13 +605,6 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
             }
         });
 
-        if (window.history.replaceState) {
-            const url = new URL(window.location);
-            if (url.searchParams.has('msg')) {
-                url.searchParams.delete('msg');
-                window.history.replaceState({path:url.href}, '', url.href);
-            }
-        }
     </script>
 </body>
 </html>
