@@ -127,7 +127,8 @@ $total_idiomas = count($idiomas_present);
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({
                         title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>',
-                        text: '<?php echo htmlspecialchars($mensaje); ?>',
+                        // SOLUCIÓN: Usamos addslashes para que el JS entienda las comillas normales sin romper el código
+                        text: '<?php echo addslashes($mensaje); ?>',
                         icon: '<?php echo $tipo_mensaje; ?>',
                         confirmButtonColor: 'var(--udg-blue)'
                     });
@@ -294,7 +295,6 @@ $total_idiomas = count($idiomas_present);
             modal.style.display = 'flex';
         }
         
-        // Función limpia que atrapa los datos uno por uno
         function editMateria(btn) {
             document.getElementById('materiaId').value = btn.getAttribute('data-id');
             document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> Editar Materia';
