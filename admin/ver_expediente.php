@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
-// VERIFICAR ID (AQUÍ AHORA RECIBIMOS EL usuario_id, NO EL alumno_id)
+// VERIFICAR ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header("Location: expedientes.php"); exit;
 }
@@ -58,7 +58,7 @@ $es_alumno = ($perfil['rol'] === 'ALUMNO');
 $es_profesor = ($perfil['rol'] === 'PROFESOR');
 
 // ============================================
-// LÓGICA SI ES ALUMNO (TU CÓDIGO ORIGINAL INTACTO)
+// LÓGICA SI ES ALUMNO
 // ============================================
 if ($es_alumno) {
     $alumno_id = $perfil['alumno_id'];
@@ -88,11 +88,10 @@ if ($es_alumno) {
 }
 
 // ============================================
-// LÓGICA SI ES PROFESOR (NUEVA VERSIÓN BLINDADA WAMP STRICT MODE)
+// LÓGICA SI ES PROFESOR
 // ============================================
 $grupos_profesor = [];
 if ($es_profesor) {
-    // Usamos clave_grupo y agregamos TODAS las columnas no agrupadas al GROUP BY para evitar el error 1055
     $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo,
                           MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                           MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -119,14 +118,7 @@ if ($es_profesor) {
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .profile-card { display: flex; gap: 20px; align-items: center; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .profile-pic { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--udg-light); }
-        .profile-info h2 { margin: 0 0 5px 0; color: var(--udg-blue); }
-        .profile-info p { margin: 2px 0; color: #666; font-size: 0.95rem; }
-        .progress-container { width: 100%; background-color: #eee; border-radius: 10px; height: 12px; margin-top: 8px; overflow: hidden; }
-        .progress-bar { height: 100%; background-color: var(--udg-light); transition: width 0.4s; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -135,7 +127,20 @@ if ($es_profesor) {
     <main class="main-content">
 
         <?php if(isset($_GET['exito'])): ?>
-            <div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡Cambios guardados correctamente!</div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: 'Los cambios fueron guardados correctamente.',
+                        icon: 'success',
+                        confirmButtonColor: 'var(--udg-blue)'
+                    });
+                    
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.delete('exito');
+                    window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
+                });
+            </script>
         <?php endif; ?>
 
         <div class="expediente-header">
@@ -209,8 +214,8 @@ if ($es_profesor) {
                                     </div>
                                 </div>
                                 <span style="font-size: 0.8rem; color: #888;">Ciclo: <?php echo htmlspecialchars($mat['ciclo']); ?> | NRC: <?php echo $mat['nrc']; ?></span>
-                                <div class="progress-container">
-                                    <div class="progress-bar" style="width: <?php echo min($porcentaje, 100); ?>%; background-color: <?php echo $color_bar; ?>;"></div>
+                                <div style="width: 100%; background-color: #eee; border-radius: 10px; height: 12px; margin-top: 8px; overflow: hidden;">
+                                    <div style="height: 100%; transition: width 0.4s; background-color: <?php echo $color_bar; ?>; width: <?php echo min($porcentaje, 100); ?>%;"></div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
