@@ -1,523 +1,44 @@
-/* css/admin.css - Rediseño Total Panel Admin */
-:root {
-    --udg-blue: #001a57;     /* Azul oscuro header */
-    --udg-light: #002677;    /* Azul brillante */
-    --bg-gray: #f4f6f9;      /* Fondo general */
-    --white: #ffffff;
-    --text-dark: #333;
-    --text-light: #6c757d;
-    --border: #e9ecef;
-    --success: #28a745;      /* Verde activo */
-    --danger: #dc3545;       /* Rojo inactivo */
-}
+/* css/admin.css - VERSIÓN MAESTRA OPTIMIZADA */
+/* Nota: Este archivo trabaja en conjunto con estudiante.css. 
+   Aquí solo van los estilos exclusivos del panel de administrador. */
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg-gray);
-    margin: 0;
-    min-height: 100vh;
-}
+/* =========================================
+   1. TARJETAS DE ESTADÍSTICAS (Stats Cards)
+   ========================================= */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.stat-card { background: var(--white); padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }
+.stat-number { display: block; font-size: 2.5rem; font-weight: bold; color: var(--udg-light); margin-bottom: 5px; }
+.stat-label { color: #6c757d; font-size: 0.9rem; }
 
-/* 1. NAVBAR SUPERIOR */
-.navbar {
-    background-color: var(--udg-blue);
-    color: var(--white);
-    padding: 0 2rem;
-    height: 70px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
+/* =========================================
+   2. BARRA DE HERRAMIENTAS (Buscador y Filtros)
+   ========================================= */
+.toolbar { background: var(--white); padding: 15px; border-radius: 12px; display: flex; gap: 15px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
+.search-input { flex: 1; padding: 10px 15px; border: 1px solid #ced4da; border-radius: 6px; min-width: 200px; font-family: inherit; font-size: 0.95rem; }
+.filter-select { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; background-color: var(--white); font-family: inherit; font-size: 0.95rem; cursor: pointer; }
 
-.navbar-brand {
-    font-size: 1.4rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.navbar-menu a {
-    color: rgba(255,255,255,0.8);
-    text-decoration: none;
-    margin: 0 15px;
-    font-weight: 500;
-    font-size: 0.95rem;
-    transition: color 0.3s;
-}
-
-.navbar-menu a:hover, .navbar-menu a.active {
-    color: var(--white);
-    font-weight: 700;
-}
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    cursor: pointer;
-}
-
-/* 2. CONTENEDOR PRINCIPAL */
-.main-container {
-    max-width: 1200px;
-    margin: 30px auto;
-    padding: 0 20px;
-}
-
-.page-header {
-    text-align: center;
-    margin-bottom: 40px;
-}
-
-.page-header h1 {
-    margin: 0;
-    color: var(--udg-blue);
-    font-size: 1.8rem;
-}
-
-.page-header p {
-    color: var(--text-light);
-    margin: 5px 0 0;
-}
-
-/* 3. TARJETAS DE ESTADÍSTICAS (Stats Cards) */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    background: var(--white);
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border: 1px solid var(--border);
-}
-
-.stat-number {
-    display: block;
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: var(--udg-light);
-    margin-bottom: 5px;
-}
-
-.stat-label {
-    color: var(--text-light);
-    font-size: 0.9rem;
-}
-
-/* 4. BARRA DE HERRAMIENTAS (Buscador y Filtros) */
-.toolbar {
-    background: var(--white);
-    padding: 15px;
-    border-radius: 12px;
-    display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    flex-wrap: wrap;
-}
-
-.search-input {
-    flex: 1;
-    padding: 10px 15px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    min-width: 200px;
-}
-
-.filter-select {
-    padding: 10px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    background-color: var(--white);
-}
-
-.btn-primary {
-    background-color: var(--udg-blue);
-    color: var(--white);
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.btn-primary:hover {
-    background-color: var(--udg-light);
-}
-
-/* 5. TABLA ESTILIZADA */
-.table-wrapper {
-    background: var(--white);
-    border-radius: 12px;
-    overflow: hidden; /* Para las esquinas redondeadas */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-thead {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid var(--border);
-}
-
-th {
-    text-align: left;
-    padding: 15px 20px;
-    color: var(--text-light);
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-}
-
-td {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-}
-
-/* Celda de Usuario (Nombre + Email) */
-.user-cell h4 {
-    margin: 0;
-    font-size: 0.95rem;
-    color: var(--text-dark);
-}
-.user-cell span {
-    font-size: 0.8rem;
-    color: var(--text-light);
-}
-
-/* Badges de Estado */
-.status-badge {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    display: inline-block;
-}
-.status-active { background-color: #d4edda; color: #155724; }
-.status-inactive { background-color: #f8d7da; color: #721c24; }
-.status-pending { background-color: #fff3cd; color: #856404; }
-
-/* Botones de acción */
-.action-btn {
-    color: var(--text-light);
-    margin-right: 10px;
-    text-decoration: none;
-    font-size: 1rem;
-    transition: color 0.2s;
-}
+/* =========================================
+   3. TABLAS DE ADMINISTRACIÓN
+   ========================================= */
+.table-wrapper { background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.user-cell h4 { margin: 0; font-size: 0.95rem; color: var(--text-dark); }
+.user-cell span { font-size: 0.8rem; color: #6c757d; }
+.action-btn { color: #6c757d; margin-right: 10px; text-decoration: none; font-size: 1.1rem; transition: color 0.2s; cursor: pointer; background: none; border: none; padding: 0; }
 .action-btn:hover { color: var(--udg-blue); }
-.action-btn.delete:hover { color: var(--danger); }
-
-/* --- ESTILOS DEL MODAL (CORREGIDO CON SCROLL INTERNO) --- */
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 26, 87, 0.6);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(2px);
-}
-
-.modal-content {
-    background-color: white;
-    width: 95%;          /* Mejor ancho en móviles */
-    max-width: 600px;
-    border-radius: 12px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-    position: relative;
-    animation: slideDown 0.3s ease-out;
-
-    /* --- MAGIA PARA QUE NO SE SALGA DE LA PANTALLA --- */
-    max-height: 90vh;       /* Nunca más alto que el 90% de la pantalla */
-    display: flex;          /* Usamos Flexbox vertical */
-    flex-direction: column; 
-    padding: 0;             /* Quitamos padding global */
-}
-
-@keyframes slideDown {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* 1. CABECERA FIJA */
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #eee;
-    padding: 20px 30px;     /* Padding solo para la cabecera */
-    flex-shrink: 0;         /* No permitimos que se aplaste */
-}
-
-.modal-header h2 {
-    margin: 0;
-    color: var(--udg-blue);
-    font-size: 1.4rem;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    color: #999;
-    cursor: pointer;
-    line-height: 1;
-}
-.close-btn:hover { color: var(--danger); }
-
-/* Contenedor del formulario flexible */
-.modal-content form {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Para que el contenido no desborde al padre */
-    flex: 1;          /* Ocupa todo el espacio disponible */
-}
-
-/* 2. CUERPO CON SCROLL (GRID) */
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    padding: 25px 30px;     /* Padding interno del formulario */
-    overflow-y: auto;       /* ¡AQUÍ ESTÁ EL TRUCO! Scroll solo si es necesario */
-}
-
-/* 3. PIE FIJO (BOTONES) */
-.modal-footer {
-    padding: 15px 30px 20px;
-    border-top: 1px solid #eee;
-    background-color: white; /* Fondo blanco para tapar el scroll */
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    flex-shrink: 0;          /* Siempre visible, no se aplasta */
-    border-radius: 0 0 12px 12px;
-}
-
-/* Estilos de inputs (igual que antes) */
-.form-group { margin-bottom: 5px; } /* Reduje un poco el margen para que quepan más */
-.form-group.full-width { grid-column: span 2; }
-.form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #555; font-size: 0.85rem; }
-.form-group input, .form-group select {
-    width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box;
-}
-.form-group input:focus, .form-group select:focus { border-color: var(--udg-light); outline: none; }
-
-/* Botones */
-.btn-cancel {
-    background-color: white; border: 1px solid #ddd; color: #666; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;
-}
-.btn-save {
-    background-color: var(--udg-blue); color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: 600;
-}
-.btn-save:hover { background-color: var(--udg-light); }
-
-/* Ajuste para móvil: 1 sola columna */
-@media (max-width: 600px) {
-    .form-grid { grid-template-columns: 1fr; }
-    .form-group.full-width { grid-column: span 1; }
-}
-/* =========================================
-   ESTILOS GLOBALES DE FORMULARIOS (ADMIN)
-   ========================================= */
-
-/* 1. Base para Inputs y Selects */
-.form-group input, 
-.form-group select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    box-sizing: border-box; /* Evita que se salgan de los bordes */
-    font-size: 0.95rem;
-    font-family: inherit;
-    background-color: white;
-    color: #333;
-}
-
-/* 2. MAGIA PARA LOS DESPLEGABLES (SELECTS) */
-.form-group select {
-    appearance: none; /* Borra la flecha fea por defecto del navegador */
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-    /* Dibujamos una flechita moderna y minimalista de color gris oscuro */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    padding-right: 40px; /* Espacio para que el texto no pise la flechita */
-}
-
-/* 3. Efecto al hacer clic (Foco) */
-.form-group input:focus, 
-.form-group select:focus {
-    border-color: var(--udg-light);
-    outline: none;
-    box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
-}
-
-/* 4. Previsualización de colores en la tabla de criterios */
-.color-preview { 
-    display: inline-block; 
-    width: 15px; 
-    height: 15px; 
-    border-radius: 50%; 
-    margin-right: 5px; 
-    vertical-align: middle; 
-}
+.action-btn.delete:hover { color: #dc3545; }
 
 /* =========================================
-   DISEÑO MÁSTER DE MODALES (CUADROS EMERGENTES)
+   4. GESTIÓN DE GRUPOS (gestionar_grupo.php)
    ========================================= */
-
-/* 1. Capa oscura de fondo */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 26, 87, 0.7); /* Azul oscuro transparente */
-    display: none; justify-content: center; align-items: center; z-index: 3000;
-    backdrop-filter: blur(3px);
-}
-
-/* 2. El cuadro blanco principal (CORREGIDO PARA SCROLL) */
-.modal-content {
-    background-color: white; 
-    width: 90%; 
-    max-width: 600px !important; 
-    
-    /* --- LAS 2 LÍNEAS MÁGICAS --- */
-    max-height: 90vh; /* El cuadro nunca medirá más del 90% de la altura de tu pantalla */
-    overflow-y: auto; /* Le pone una barra de scroll lateral si el contenido no cabe */
-    
-    padding: 35px; 
-    border-radius: 12px; 
-    box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
-    animation: slideDown 0.3s ease-out;
-    box-sizing: border-box;
-}
-
-/* 2. El cuadro blanco principal (Sintaxis corregida) */
-.modal-content {
-    background-color: white; 
-    width: 90%; 
-    max-width: 600px !important; /* CORREGIDO: Sin punto y coma intermedio */
-    padding: 25px 35px; 
-    border-radius: 12px; 
-    box-shadow: 0 15px 40px rgba(0,0,0,0.3); 
-    animation: slideDown 0.3s ease-out;
-    box-sizing: border-box;
-}
-
-/* Opcional: Para que la barra de scroll se vea bonita en el formulario */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--udg-light); }
-
-@keyframes slideDown { 
-    from { transform: translateY(-30px); opacity: 0; } 
-    to { transform: translateY(0); opacity: 1; } 
-}
-
-/* 3. Cabecera y Título */
-.modal-header { 
-    display: flex; justify-content: space-between; align-items: center; 
-    margin-bottom: 25px; 
-    border-bottom: 1px solid #eee; 
-    padding-bottom: 15px; 
-}
-.modal-header h2 { margin: 0; color: var(--udg-blue); font-size: 1.4rem; }
-
-.close-btn { background: none; border: none; font-size: 1.6rem; color: #999; cursor: pointer; line-height: 1;}
-.close-btn:hover { color: #dc3545; }
-
-/* 4. Estilos de los inputs dentro del modal */
-.form-group { margin-bottom: 15px; }
-.form-group label { 
-    display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 0.9rem; 
-}
-
-/* Inputs y Selects rediseñados */
-.form-group input, 
-.form-group select {
-    width: 100%;
-    padding: 12px 10px; /* Un poco más "gorditos" para verse modernos */
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    box-sizing: border-box; /* Evita que se salgan de su caja */
-    font-size: 0.95rem;
-    font-family: inherit;
-    background-color: white;
-    color: #333;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.form-group input:focus, 
-.form-group select:focus {
-    border-color: var(--udg-light); outline: none; box-shadow: 0 0 5px rgba(0, 123, 255, 0.2);
-}
-
-/* Flechita moderna para los selectores (lo que te pasé en el mensaje anterior) */
-.form-group select {
-    appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
-    padding-right: 40px;
-}
-
-/* 5. Botones del Footer */
-.modal-footer { 
-    margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; 
-}
-.btn-cancel { 
-    background: white; border: 1px solid #ddd; padding: 10px 18px; border-radius: 6px; cursor: pointer; color: #666; font-weight: 600; transition: background 0.2s;
-}
-.btn-cancel:hover { background: #f8f9fa; }
-
-.btn-save { 
-    background: var(--udg-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: background 0.2s;
-}
-.btn-save:hover { background: var(--udg-light); }
-
-/* ==========================================================================
-   ESTILOS PARA GESTIONAR GRUPOS (gestionar_grupo.php)
-   ========================================================================== */
-
-/* Entradas bloqueadas y tarjetas de profesores */
 .readonly-input { background-color: #f1f3f5 !important; cursor: not-allowed; color: #666; }
-.hover-lift { transition: transform 0.2s ease; text-decoration: none; color: inherit; display: block; }
+.hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; text-decoration: none; color: inherit; display: block; }
 .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-color: var(--udg-light) !important; }
 
-/* Lista de alumnos inscritos en el grupo */
-.student-row { display: flex; justify-content: space-between; align-items: stretch; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; transition: transform 0.2s ease; }
+.student-row { display: flex; justify-content: space-between; align-items: stretch; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .student-row:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: var(--udg-light); }
 .student-link { flex-grow: 1; padding: 12px 15px; text-decoration: none; color: inherit; }
 .student-action { padding: 12px 15px; display: flex; align-items: center; justify-content: center; background: #fafafa; border-left: 1px solid #eee; }
 
-/* Buscador autocompletable de alumnos (Select Personalizado) */
 .custom-select-wrapper { position: relative; flex-grow: 1; }
 .custom-options { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 6px; max-height: 250px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.15); margin-top: 4px; }
 .custom-option { padding: 12px 15px; border-bottom: 1px solid #f1f3f5; cursor: pointer; }
@@ -525,142 +46,45 @@ td {
 .opt-name { font-weight: bold; color: var(--udg-blue); font-size: 0.95rem; margin-bottom: 3px; }
 .opt-details { font-size: 0.8rem; color: #666; font-family: monospace; display: flex; justify-content: space-between;}
 
-/* Switch / Interruptor para Habilitar Edición Total */
 .switch { position: relative; display: inline-block; width: 46px; height: 24px; margin: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
 .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .slider { background-color: #28a745; }
-input:checked + .slider:before { transform: translateX(22px); }
+.switch input:checked + .slider { background-color: #28a745; }
+.switch input:checked + .slider:before { transform: translateX(22px); }
 
-/* ==========================================================================
-   ESTILOS PARA VER EXPEDIENTE (ver_expediente.php)
-   ========================================================================== */
+/* =========================================
+   5. VER EXPEDIENTE (ver_expediente.php)
+   ========================================= */
+.expediente-header { background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%); padding: 40px 30px; border-radius: 12px; display: flex; align-items: center; gap: 30px; color: white; margin-bottom: 30px; box-shadow: 0 8px 25px rgba(0,26,87,0.15); }
+.expediente-avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); background: white; }
 
-/* Cabecera del expediente */
-.expediente-header {
-    background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%);
-    padding: 40px 30px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    color: white;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 25px rgba(0,26,87,0.15);
-}
+.prof-classes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 15px; }
+.class-click-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; transition: all 0.2s ease; border-left: 4px solid var(--udg-blue); }
+.class-click-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-left-color: #28a745; }
+.class-click-card .class-title { font-size: 1.1rem; font-weight: bold; color: var(--udg-blue); margin: 0; }
+.class-click-card .class-nrc { font-family: monospace; color: #555; background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; display: inline-block; }
+.class-click-card .class-status { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
 
-.expediente-avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    background: white;
-}
-
-/* Tarjetas clickeables de las clases del profesor */
-.prof-classes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.class-click-card {
-    background: white;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-    border-left: 4px solid var(--udg-blue);
-}
-
-.class-click-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    border-left-color: #28a745; /* Se pone verde al pasar el mouse */
-}
-
-.class-click-card .class-title {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: var(--udg-blue);
-    margin: 0;
-}
-
-.class-click-card .class-nrc {
-    font-family: monospace;
-    color: #555;
-    background: #f8f9fa;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    display: inline-block;
-}
-
-.class-click-card .class-status {
-    font-size: 0.8rem;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-/* ==========================================================================
-   ESTILOS PARA SOLICITUDES DE BAJA (solicitudes.php)
-   ========================================================================== */
-.tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-.btn-tab { padding: 10px 20px; text-decoration: none; color: #555; border-radius: 8px 8px 0 0; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; transition: 0.2s; position: relative; top: 12px; }
-.btn-tab.active { background: var(--udg-blue); color: white; border-color: var(--udg-blue); }
-.btn-tab:hover:not(.active) { background: #e9ecef; }
-.badge-tab { background: #dc3545; color: white; border-radius: 12px; padding: 2px 6px; font-size: 0.75rem; margin-left: 8px; }
-
-/* Modales */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; }
-.modal-content { background: white; width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideDown 0.3s ease-out; }
-.modal-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; }
-.modal-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
-.modal-footer { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; border-radius: 0 0 12px 12px; }
-@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* Cajas de información */
+/* =========================================
+   6. SOLICITUDES DE BAJA (solicitudes.php)
+   ========================================= */
 .sol-box { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
 .sol-box h4 { margin: 0 0 5px 0; color: #333; font-size: 0.9rem; text-transform: uppercase; }
 #txt_desc { font-size: 0.95rem; color: #555; font-style: italic; word-break: break-word; white-space: pre-wrap; max-height: 120px; overflow-y: auto; padding-right: 5px; }
 
-/* Etiquetas de Estatus */
-.tag-aprobada { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
-.tag-rechazada { background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
-.tag-cancelada { background: #e2e3e5; color: #383d41; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+/* =========================================
+   7. MATERIAS (materias.php)
+   ========================================= */
+.form-grid-materias { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.form-grid-materias .full-width { grid-column: span 2; }
 
-/* ==========================================================================
-   ESTILOS PARA MATERIAS (materias.php)
-   ========================================================================== */
-.form-grid-materias {
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 15px;
-}
-.form-grid-materias .full-width {
-    grid-column: span 2;
-}
-
-/* ==========================================================================
-   ESTILOS PARA LA TABLA DE EXPEDIENTES Y PAGINACIÓN
-   ========================================================================== */
-.clickable-row {
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-.clickable-row:hover {
-    background-color: #f1f8ff !important; /* Un azulito muy tenue */
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.03);
-}
+/* =========================================
+   8. EXPEDIENTES Y PAGINACIÓN (expedientes.php)
+   ========================================= */
+.clickable-row { cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease; }
+.clickable-row:hover { background-color: #f1f8ff !important; box-shadow: inset 4px 0 0 0 var(--udg-blue); }
+.clickable-row:hover td { background-color: transparent !important; }
 
 .google-pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 5px; font-family: Arial, sans-serif; }
 .google-pagination a { color: var(--udg-blue); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 1rem; transition: background-color 0.2s; }
@@ -668,3 +92,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 .google-pagination a.active { color: #202124; font-weight: bold; background-color: transparent; pointer-events: none; }
 .google-pagination .btn-nav { font-weight: 500; margin: 0 10px; }
 .google-pagination .btn-nav:hover { text-decoration: underline; background-color: transparent; }
+
+/* Etiqueta Admin en Perfil */
+.admin-badge { background-color: #dc3545; color: white; padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
