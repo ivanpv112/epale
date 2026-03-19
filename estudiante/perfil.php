@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// 2. PROCESAR ACTUALIZACIÓN DE DATOS (Si el alumno envía el formulario)
+// 2. PROCESAR ACTUALIZACIÓN DE DATOS
 $mensaje_exito = "";
 $mensaje_error = "";
 
@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['actualizar_perfil'])) 
             $pdo->prepare($sql_update)->execute([$nuevo_correo, $nuevo_telefono, $_SESSION['user_id']]);
             $mensaje_exito = "¡Tu información se ha actualizado correctamente!";
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) { // Código de error para datos duplicados
+            if ($e->getCode() == 23000) { 
                 $mensaje_error = "Error: Ese correo electrónico ya está registrado en otra cuenta.";
             } else {
                 $mensaje_error = "Ocurrió un error al actualizar los datos.";
@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['actualizar_perfil'])) 
     }
 }
 
-// Mensajes de éxito o error al subir la foto (recibidos por GET)
+// Mensajes por GET
 if(isset($_GET['exito']) && $_GET['exito'] == 'foto') {
     $mensaje_exito = "¡Tu foto de perfil ha sido actualizada!";
 }
@@ -43,7 +43,7 @@ if(isset($_GET['error'])) {
     else $mensaje_error = "Ocurrió un error al guardar la foto.";
 }
 
-// 3. Obtener datos frescos de la BD (Se ejecuta DESPUÉS de actualizar para mostrar los datos nuevos)
+// 3. Obtener datos
 $stmt = $pdo->prepare("
     SELECT u.*, a.carrera 
     FROM usuarios u 
@@ -53,10 +53,8 @@ $stmt = $pdo->prepare("
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Tu lógica robusta para el nombre
 $nombre_completo = $user['nombre'] . " " . (isset($user['apellido_paterno']) ? $user['apellido_paterno'] : $user['apellidos']) . (isset($user['apellido_materno']) && $user['apellido_materno'] ? ' ' . $user['apellido_materno'] : '');
 
-// Definir la foto de perfil principal (usar default si no tiene)
 $foto_perfil = "../img/avatar-default.png"; 
 if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/perfiles/" . $user['foto_perfil'])) {
     $foto_perfil = "../img/perfiles/" . $user['foto_perfil'];
@@ -71,67 +69,12 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
     <title>Perfil | E-Pale</title>
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* ESTILOS DE LOS MODALES (Tus estilos originales) */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 26, 87, 0.7); display: none;
-            justify-content: center; align-items: center; z-index: 3000;
-            backdrop-filter: blur(3px);
-        }
-        .modal-content {
-            background-color: white; width: 90%; max-width: 450px;
-            padding: 30px; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-            animation: slideDown 0.3s ease-out;
-        }
-        @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .modal-header h2 { margin: 0; color: var(--udg-blue); font-size: 1.3rem; }
-        .close-btn { background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; }
-        .close-btn:hover { color: #dc3545; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 0.9rem; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem;}
-        .form-group input:focus { border-color: var(--udg-light); outline: none; }
-        .modal-footer { margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
-        .btn-cancel { background: white; border: 1px solid #ddd; padding: 10px 15px; border-radius: 6px; cursor: pointer; color: #666; font-weight: 600;}
-        .btn-save { background: var(--udg-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;}
-        .btn-save:hover { background: var(--udg-light); }
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; font-weight: 500;}
-        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
-        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
-
-        /* NUEVOS ESTILOS PARA LA FOTO DE PERFIL GRANDE */
-        .profile-header-card {
-            height: auto; padding: 40px 0; display: flex; justify-content: center; align-items: center;
-            background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%);
-        }
-        .profile-photo-wrapper {
-            position: relative; width: 180px; height: 180px; border-radius: 50%;
-            border: 5px solid white; box-shadow: 0 5px 25px rgba(0,0,0,0.3); overflow: visible;
-        }
-        .profile-photo-img {
-            width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background-color: white;
-        }
-        .edit-photo-btn {
-            position: absolute; bottom: 5px; right: 5px; background-color: var(--udg-light); color: white;
-            width: 45px; height: 45px; border-radius: 50%; border: 4px solid white; display: flex;
-            align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer;
-            transition: transform 0.2s; box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        }
-        .edit-photo-btn:hover { transform: scale(1.1); background-color: white; color: var(--udg-light); }
-    </style>
 </head>
 <body>
 
     <?php include 'menu_estudiante.php'; ?>
 
     <main class="main-content">
-
-        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver a la página anterior
-        </a>
         
         <div class="profile-header-card">
             <div class="profile-photo-wrapper">
@@ -244,14 +187,16 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
             <form method="POST" action="perfil.php">
                 <input type="hidden" name="actualizar_perfil" value="1">
                 
-                <div class="form-group">
-                    <label>Correo Electrónico</label>
-                    <input type="email" name="correo" value="<?php echo htmlspecialchars($user['correo']); ?>" required>
-                </div>
+                <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" name="correo" value="<?php echo htmlspecialchars($user['correo']); ?>" required>
+                    </div>
 
-                <div class="form-group">
-                    <label>Teléfono</label>
-                    <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 33 1234 5678">
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 33 1234 5678">
+                    </div>
                 </div>
 
                 <div class="modal-footer">
@@ -269,28 +214,28 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                 <button class="close-btn" onclick="cerrarModalFoto()">&times;</button>
             </div>
             
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
-            
-            <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem;">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="cerrarModalFoto()">Cancelar</button>
-                    <button type="submit" class="btn-save" style="display:flex; align-items:center; gap:8px;"><i class="fas fa-upload"></i> Subir Foto</button>
-                </div>
-            </form>
+            <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
+                
+                <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none;">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-cancel" onclick="cerrarModalFoto()">Cancelar</button>
+                        <button type="submit" class="btn-save" style="display:flex; align-items:center; gap:8px;"><i class="fas fa-upload"></i> Subir Foto</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // 1. Script para el menú lateral
         function toggleMobileMenu() {
             document.getElementById('navWrapper').classList.toggle('active');
             document.getElementById('menuOverlay').classList.toggle('active');
         }
 
-        // 2. Scripts para los Modales
         const modalEditar = document.getElementById('modalEditar');
         const modalFoto = document.getElementById('modalFoto');
         const overlayMenu = document.getElementById('menuOverlay');
@@ -301,11 +246,9 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
         function abrirModalFoto() { modalFoto.style.display = 'flex'; }
         function cerrarModalFoto() { modalFoto.style.display = 'none'; }
 
-        // Cerrar haciendo clic afuera
         window.onclick = function(e) { 
             if(e.target == modalEditar) cerrarModalEditar(); 
             if(e.target == modalFoto) cerrarModalFoto(); 
-            // Esto asegura que si haces clic fuera del menú lateral, también se cierre
             if(e.target == overlayMenu) toggleMobileMenu(); 
         }
     </script>
