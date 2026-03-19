@@ -104,10 +104,6 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        
-        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
-            <i class="fas fa-arrow-left"></i> Volver a la página anterior
-        </a>
 
         <div class="profile-header-card">
             <div class="profile-photo-wrapper">
