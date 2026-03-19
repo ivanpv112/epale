@@ -1,14 +1,14 @@
-/* css/estudiante.css - VERSIÓN MAESTRA (Header Nuevo + Dashboard + Perfil) */
+/* css/estudiante.css - VERSIÓN MAESTRA OPTIMIZADA */
 
 :root {
-    --udg-blue: #001a57;     /* Azul oscuro */
-    --udg-light: #002677;    /* Azul brillante */
-    --bg-gray: #f4f6f9;      /* Fondo gris */
+    --udg-blue: #001a57;     
+    --udg-light: #002677;    
+    --bg-gray: #f4f6f9;      
     --white: #ffffff;
     --text-dark: #333;
     --text-muted: #666;
-    --success: #28a745;      /* Verde */
-    --warning: #ffc107;      /* Amarillo */
+    --success: #28a745;      
+    --warning: #ffc107;      
 }
 
 body {
@@ -18,764 +18,252 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 /* =========================================
-   1. HEADER
+   1. HEADER Y NAVEGACIÓN
    ========================================= */
 .main-header {
     background-color: var(--udg-blue);
     color: var(--white);
     padding: 0 2rem;
     height: 70px;
-    display: flex;
-    justify-content: space-between; /* Izquierda - Centro - Derecha */
-    align-items: center;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
     z-index: 100;
 }
 
-/* Izquierda: Logo */
 .logo-container {
-    display: flex;
-    align-items: center;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 10px;
     font-weight: 700;
     font-size: 1.3rem;
-    min-width: 150px;
+    margin: 0 !important;
+    width: auto !important;
 }
 .logo-img { height: 40px; width: auto; }
 
-/* Centro: Navegación */
-.main-nav {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-}
-
-.main-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    gap: 30px;
-}
-
-.main-nav a {
-    text-decoration: none;
-    color: rgba(255,255,255,0.8);
-    font-weight: 500;
-    font-size: 0.95rem;
-    text-transform: uppercase;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+.main-nav { flex: 1; display: flex; justify-content: center; }
+.main-nav ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 30px; }
+.main-nav a { text-decoration: none; color: rgba(255,255,255,0.8); font-weight: 500; font-size: 0.95rem; text-transform: uppercase; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
 .main-nav a:hover { color: var(--white); }
 
-/* Derecha: Usuario y Salir */
-.user-actions {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    min-width: 150px;
-    justify-content: flex-end;
-}
-
-.profile-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,0.15);
-    padding: 6px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.3s;
-    text-decoration: none;
-    color: white;
-}
+.user-actions { display: flex; align-items: center; gap: 15px; justify-content: flex-end; }
+.profile-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: background 0.3s; text-decoration: none; color: white; }
 .profile-btn:hover { background: rgba(255,255,255,0.25); }
-
-.logout-btn {
-    color: #ffc107;
-    text-decoration: none;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-weight: 600;
-    transition: opacity 0.3s;
-}
+.logout-btn { color: #ffc107; text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; font-weight: 600; transition: opacity 0.3s; }
 .logout-btn:hover { opacity: 0.8; }
 
-
 /* =========================================
-   2. CONTENIDO PRINCIPAL (DASHBOARD)
+   2. CONTENIDO PRINCIPAL Y TARJETAS
    ========================================= */
-.main-content {
-    flex: 1;
-    padding: 30px 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-}
+.main-content { flex: 1; padding: 30px 20px; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.page-title-center { text-align: center; color: var(--udg-blue); margin-bottom: 30px; }
+.page-title-center h1 { margin: 0; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.page-title-center p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem; }
 
-/* Banner Bienvenida */
-.welcome-banner {
-    text-align: center;
-    margin-bottom: 40px;
-}
+.welcome-banner { text-align: center; margin-bottom: 40px; }
 .welcome-banner h2 { margin: 0; font-weight: 400; color: var(--text-muted); font-size: 1.1rem; }
 .welcome-banner h1 { margin: 5px 0 0; color: var(--udg-blue); font-size: 2rem; }
 
-/* Grid de Tarjetas */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 25px;
-}
+.dashboard-grid, .profile-grid, .oferta-grid { display: grid; gap: 25px; }
+.dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.profile-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-bottom: 25px; }
+.oferta-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 
-/* Estilo Tarjeta */
-.card {
-    background-color: var(--white);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    transition: transform 0.2s;
-    border-top: 4px solid transparent;
-}
+.card { background-color: var(--white); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.2s; border-top: 4px solid transparent; }
 .card:hover { transform: translateY(-5px); }
+.card h3 { margin-top: 0; color: var(--udg-blue); display: flex; align-items: center; gap: 10px; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
 
-/* Colores top tarjeta */
-.card:nth-child(1) { border-top-color: var(--udg-light); }
-.card:nth-child(2) { border-top-color: var(--success); }
-.card:nth-child(3) { border-top-color: var(--warning); }
-
-.card h3 {
-    margin-top: 0;
-    color: var(--udg-blue);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.1rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-}
-
-/* Listas internas */
-.grade-item, .next-classes-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f4f6f9;
-    font-size: 0.95rem;
-}
-.grade-label i { color: var(--text-muted); width: 20px; margin-right: 5px; }
-.grade-value { font-weight: bold; color: var(--udg-blue); }
-
-.progress-mini {
-    height: 6px; background-color: #eee; border-radius: 3px; margin-top: 6px; width: 100%; overflow: hidden;
-}
-.progress-bar { height: 100%; background-color: var(--success); }
-
+/* Dashboard Card Colors */
+.dashboard-grid .card:nth-child(1) { border-top-color: var(--udg-light); }
+.dashboard-grid .card:nth-child(2) { border-top-color: var(--success); }
+.dashboard-grid .card:nth-child(3) { border-top-color: var(--warning); }
 
 /* =========================================
-   3. PÁGINA DE PERFIL
+   3. PERFIL DEL ALUMNO
    ========================================= */
 .profile-header-card {
-    background-color: var(--udg-blue);
-    color: white;
-    border-radius: 12px 12px 0 0;
-    padding: 30px;
-    text-align: center;
-    position: relative;
-    margin-bottom: 50px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    height: auto; padding: 40px 0; display: flex; justify-content: center; align-items: center;
+    background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%);
+    border-radius: 12px 12px 0 0; position: relative; margin-bottom: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
-
-.profile-avatar-container {
-    background-color: white;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto;
-    border: 4px solid white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    position: absolute;
-    bottom: -50px; 
-    left: 50%;
-    transform: translateX(-50%);
+.profile-photo-wrapper {
+    position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%);
+    width: 140px; height: 140px; border-radius: 50%;
+    border: 5px solid white; box-shadow: 0 5px 25px rgba(0,0,0,0.2); overflow: visible; background: white; z-index: 10;
 }
-.profile-avatar-icon { font-size: 3rem; color: var(--udg-blue); }
-
-.profile-basic-info {
-    background-color: white;
-    border-radius: 0 0 12px 12px;
-    padding: 60px 20px 20px;
-    text-align: center;
-    margin-top: -50px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+.profile-photo-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background-color: white; }
+.edit-photo-btn {
+    position: absolute; bottom: 5px; right: 5px; background-color: var(--udg-light); color: white;
+    width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; display: flex;
+    align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer;
+    transition: transform 0.2s; box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
+.edit-photo-btn:hover { transform: scale(1.1); background-color: white; color: var(--udg-light); }
 
-.profile-role-badge {
-    background-color: #e3f2fd;
-    color: var(--udg-light);
-    padding: 4px 12px;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    display: inline-block;
-    margin: 5px 0;
-}
-
-.profile-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-    margin-bottom: 25px;
-}
-
+.profile-basic-info { background-color: white; border-radius: 0 0 12px 12px; padding: 70px 20px 20px; text-align: center; margin-top: -50px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.profile-role-badge { background-color: #e3f2fd; color: var(--udg-light); padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin: 5px 0; }
 .info-section { margin-bottom: 15px; }
 .info-label { display: block; font-size: 0.8rem; color: #888; margin-bottom: 2px; }
 .info-value { font-size: 0.95rem; color: #333; font-weight: 500; }
 
-.history-table {
-    width: 100%; border-collapse: collapse; margin-top: 15px;
-}
+.history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 .history-table th { text-align: left; color: #888; font-size: 0.85rem; padding: 10px; border-bottom: 1px solid #eee; }
 .history-table td { padding: 12px 10px; border-bottom: 1px solid #f9f9f9; font-size: 0.9rem; }
 .tag-aprobado { background-color: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
 
-
 /* =========================================
-   4. FOOTER
+   4. MODALES, ALERTAS Y FORMULARIOS GLOBALES
    ========================================= */
-.main-footer {
-    background-color: var(--udg-blue);
-    color: var(--white);
-    padding: 40px 20px 20px;
-    margin-top: auto;
-}
-.footer-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto 30px;
-    flex-wrap: wrap;
-    gap: 20px;
-    text-align: center;
-}
-.footer-section { flex: 1; min-width: 250px; }
-/* Logo UDG */
-.footer-logo-img { height: 100px; width: auto; margin-bottom: 10px; }
-.address-bar { text-align: center; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; opacity: 0.7; }
-
-
-/* =========================================
-   5. MEDIA QUERIES (MÓVIL)
-   ========================================= */
-@media (max-width: 900px) {
-    .main-header {
-        height: auto;
-        padding: 10px 15px;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .logo-container, .user-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    /* En móvil ocultamos la barra derecha estándar y el perfil se mueve */
-    .user-actions { display: none; }
-    
-    /* Menú Scroll Horizontal */
-    .main-nav { width: 100%; overflow-x: auto; justify-content: flex-start; }
-    .main-nav ul { padding-bottom: 5px; gap: 15px; }
-    .main-nav a {
-        white-space: nowrap;
-        background: rgba(255,255,255,0.1);
-        padding: 8px 15px;
-        border-radius: 15px;
-    }
-    
-    /* Contenido */
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .footer-content { flex-direction: column; }
-}
-
-/* =========================================
-   6. PÁGINA DE CALIFICACIONES DETALLADA
-   ========================================= */
-
-/* Título de la página */
-.page-title-center {
-    text-align: center;
-    color: var(--udg-blue);
-    margin-bottom: 30px;
-}
-.page-title-center h1 { 
-    margin: 0; 
-    font-size: 1.8rem; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 10px; 
-}
-.page-title-center p { 
-    margin: 5px 0 0; 
-    color: var(--text-muted); 
-    font-size: 0.95rem; 
-}
-
-/* Banner Azul de Calificación Total */
-.total-score-banner {
-    background-color: var(--udg-blue);
-    color: white;
-    border-radius: 12px;
-    padding: 30px 20px;
-    text-align: center;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-.total-score-banner h3 { 
-    margin: 0; 
-    font-weight: 500; 
-    font-size: 1rem; 
-    opacity: 0.9; 
-}
-.total-score-banner .big-score { 
-    font-size: 3.5rem; 
-    font-weight: bold; 
-    margin: 5px 0; 
-    display: block;
-}
-.total-score-banner p { 
-    margin: 0 0 20px 0; 
-    font-size: 0.9rem; 
-    opacity: 0.8; 
-}
-.total-progress-bg { 
-    background-color: rgba(255,255,255,0.2); 
-    height: 8px; 
-    border-radius: 4px; 
-    max-width: 500px; 
-    margin: 0 auto; 
-    overflow: hidden;
-}
-.total-progress-fill { 
-    background-color: #00bfff; /* Un cian brillante */
-    height: 100%; 
-    border-radius: 4px; 
-}
-
-/* Tarjetas de Categorías (Quizzes, Proyectos, etc) */
-.grade-category-card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Sombra un poco más pronunciada */
-    
-    /* MAGIA DEL BORDE SUPERIOR */
-    border-top: 5px solid transparent; 
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-/* Efecto al pasar el mouse (igual que en el dashboard) */
-.grade-category-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-
-.grade-category-card h4 {
-    color: var(--udg-blue);
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 15px;
-}
-
-/* Ítem individual de calificación */
-.detailed-grade-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid #f9f9f9;
-}
-.detailed-grade-item:last-child { 
-    border-bottom: none; 
-    padding-bottom: 0; 
-}
-
-.dg-info strong { 
-    display: block; 
-    color: var(--text-dark); 
-    font-size: 0.95rem; 
-    margin-bottom: 3px;
-}
-.dg-info span { 
-    color: var(--text-muted); 
-    font-size: 0.8rem; 
-}
-
-.dg-score { 
-    text-align: right; 
-    min-width: 120px; 
-}
-.dg-score .score-text { 
-    display: block; 
-    font-weight: bold; 
-    color: #555; 
-    font-size: 0.9rem; 
-    margin-bottom: 6px; 
-}
-.dg-score .progress-mini { 
-    margin-top: 0; 
-    height: 5px; 
-    background-color: #eee;
-}
-
-/* Etiquetas especiales */
-.badge-pending {
-    background-color: #fff3cd;
-    color: #856404;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-/* =========================================
-   7. OFERTA ACADÉMICA Y SELECTORES
-   ========================================= */
-
-/* Barra de Búsqueda y Filtros (Oferta) */
-.search-filter-bar {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-}
-
-.search-input-wrapper {
-    flex: 1;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.search-input-wrapper i {
-    position: absolute;
-    left: 15px;
-    color: #aaa;
-}
-
-.search-input-wrapper input {
-    width: 100%;
-    padding: 12px 15px 12px 40px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    box-sizing: border-box;
-}
-
-.filter-select {
-    padding: 12px 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    background-color: white;
-    cursor: pointer;
-    min-width: 180px;
-}
-
-/* Grid de Oferta Académica */
-.oferta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 20px;
-}
-
-/* Tarjeta de Grupo (Oferta) */
-.grupo-card {
-    background: white;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-}
-.grupo-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-}
-.grupo-card.full { border-color: #f5c6cb; background-color: #fffcfc; }
-
-/* Cabecera de la Tarjeta */
-.grupo-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-.grupo-header h3 { margin: 0; color: var(--udg-blue); font-size: 1.15rem; }
-.grupo-header span.grupo-id { display: block; font-size: 0.8rem; color: #888; font-weight: normal; margin-top: 2px;}
-
-/* Etiquetas de cupo */
-.cupo-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-.cupo-badge.disponible { background: #d4edda; color: #155724; }
-.cupo-badge.pocos { background: #fff3cd; color: #856404; }
-.cupo-badge.lleno { background: #f8d7da; color: #721c24; }
-
-/* Detalles de clase (Profe, Horario) */
-.grupo-details p { margin: 5px 0; font-size: 0.9rem; color: #555; display: flex; align-items: center; gap: 8px;}
-.grupo-details i { color: #aaa; width: 16px; }
-
-/* Barra de inscritos */
-.inscritos-container { margin-top: 20px; }
-.inscritos-text { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 5px;}
-.progress-oferta { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
-.progress-oferta .fill { height: 100%; background: var(--udg-blue); border-radius: 3px; }
-.grupo-card.full .progress-oferta .fill { background: #dc3545; }
-
-/* Selector de Materia (Para Dashboard y Calificaciones) */
-.subject-selector {
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    color: var(--udg-blue);
-    font-weight: 600;
-    background-color: #f8f9fa;
-    cursor: pointer;
-    margin-left: auto; /* Empuja el selector a la derecha si está en flex */
-}
-.subject-selector:focus { outline: none; border-color: var(--udg-light); }
-
-/* Etiquetas de Avisos */
-.tag-aviso {
-    font-size: 0.75rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: bold;
-    margin-right: 5px;
-}
-.tag-sistema { background: #e2e3e5; color: #383d41; }
-.tag-materia { background: #cce5ff; color: #004085; }
-
-/* =========================================
-   8. NUEVO MENÚ LATERAL (ESTILO YOUTUBE)
-   ========================================= */
-
-body { overflow-x: hidden; }
-
-/* --- CORRECCIÓN FORZADA DEL HEADER --- */
-/* Obligamos a que el header siempre sea una sola fila de izquierda a derecha */
-.main-header {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-}
-
-/* Evitamos que el logo se deforme o se centre */
-.logo-container {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    margin: 0 !important;
-    width: auto !important;
-}
-
-/* --- AJUSTES PARA CELULAR --- */
-@media (max-width: 768px) {
-    /* Ocultamos el nombre ("Luis") para que solo quede la foto y ahorre mucho espacio */
-    .profile-name { display: none !important; }
-    
-    /* Reducimos un poco el padding lateral para ganar espacio */
-    .main-header { padding: 0 15px !important; }
-}
-
-/* --- CAPA OSCURA DE FONDO --- */
-.menu-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6); z-index: 1999; display: none;
-    backdrop-filter: blur(2px);
-}
-.menu-overlay.active { display: block; }
-
-/* --- PANEL LATERAL --- */
-.yt-sidebar {
-    position: fixed; top: 0;
-    right: -320px; /* Se oculta a la derecha */
-    width: 280px; max-width: 85vw; height: 100vh;
-    background-color: #0f0f0f; /* Color oscuro idéntico a YouTube */
-    box-shadow: -5px 0 25px rgba(0,0,0,0.8);
-    display: flex; flex-direction: column;
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 2000; overflow-y: auto;
-}
-.yt-sidebar.active { right: 0; } /* Se desliza hacia la pantalla */
-
-/* Cabecera del Panel */
-.yt-sidebar-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 15px 25px; border-bottom: 1px solid #272727;
-    height: 65px; box-sizing: border-box;
-}
-
-/* Lista de Links */
-.yt-sidebar-menu { list-style: none; padding: 15px 0; margin: 0; }
-.yt-sidebar-menu li { margin-bottom: 2px; }
-.yt-sidebar-menu a {
-    display: flex; align-items: center; gap: 20px;
-    padding: 12px 25px; color: #f1f1f1; text-decoration: none;
-    font-size: 1rem; font-weight: 500;
-    transition: background 0.2s;
-}
-
-/* Efectos al pasar el mouse o estar activo */
-.yt-sidebar-menu a:hover { background-color: #272727; }
-.yt-sidebar-menu a.active { background-color: #272727; font-weight: bold; }
-.yt-sidebar-menu a i { font-size: 1.3rem; width: 24px; text-align: center; color: #aaa; }
-.yt-sidebar-menu a.active i { color: white; }
-
-/* Línea separadora */
-.sidebar-divider { height: 1px; background-color: #272727; margin: 10px 0; }
-
-/* =========================================
-   9. GRÁFICA CIRCULAR ANIMADA (DASHBOARD)
-   ========================================= */
-
-.chart-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px 0 10px 0;
-}
-
-.circular-chart {
-    display: block;
-    margin: 0 auto;
-    max-width: 180px;
-    max-height: 250px;
-}
-
-.circle-bg {
-    fill: none;
-    stroke: #f0f0f0;
-    stroke-width: 2.5;
-}
-
-.circle {
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    /* La animación hace que la línea "crezca" suavemente */
-    animation: progressFill 1.5s ease-out forwards;
-}
-
-@keyframes progressFill {
-    0% { stroke-dasharray: 0, 100; }
-}
-
-.percentage {
-    fill: var(--udg-blue);
-    font-family: inherit;
-    font-size: 0.55em;
-    text-anchor: middle;
-    font-weight: bold;
-}
-
-.chart-subtitle {
-    margin-top: 20px;
-    font-size: 1.1rem;
-    color: #555;
-    font-weight: 600;
-}
-
-.chart-status {
-    font-size: 0.85rem;
-    margin-top: 5px;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-weight: bold;
-}
-
-/* ==========================================================================
-   ESTILOS PARA CALIFICACIONES Y SOLICITUDES DE BAJA
-   ========================================================================== */
-
-/* Estructura de las Ventanas Modales */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 3000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
 .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; animation: slideDown 0.3s ease-out; }
 .modal-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2, .modal-header h3 { margin: 0; color: var(--udg-blue); font-size: 1.3rem; }
 .modal-body { padding: 20px; max-height: 65vh; overflow-y: auto; }
 .modal-footer { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
 
-@keyframes slideDown { 
-    from { transform: translateY(-20px); opacity: 0; } 
-    to { transform: translateY(0); opacity: 1; } 
-}
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-/* Botones de Acción (Solicitar y Pendiente) */
+.close-btn { background: none; border: none; font-size: 1.5rem; color: #999; cursor: pointer; }
+.close-btn:hover { color: #dc3545; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 0.9rem; }
+.form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; font-family: inherit;}
+.form-group input:focus, .form-group select:focus { border-color: var(--udg-light); outline: none; }
+
+.btn-cancel { background: white; border: 1px solid #ddd; padding: 10px 15px; border-radius: 6px; cursor: pointer; color: #666; font-weight: 600; transition: 0.2s;}
+.btn-save { background: var(--udg-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;}
+.btn-save:hover { background: var(--udg-light); }
+
+.alert { padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; font-weight: 500;}
+.alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
+.alert-danger, .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
+
+/* =========================================
+   5. CALIFICACIONES Y COMPONENTES
+   ========================================= */
+.grade-item, .next-classes-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f4f6f9; font-size: 0.95rem; }
+.grade-label i { color: var(--text-muted); width: 20px; margin-right: 5px; }
+.grade-value { font-weight: bold; color: var(--udg-blue); }
+
+.total-score-banner { background-color: var(--udg-blue); color: white; border-radius: 12px; padding: 30px 20px; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.total-score-banner h3 { margin: 0; font-weight: 500; font-size: 1rem; opacity: 0.9; }
+.total-score-banner .big-score { font-size: 3.5rem; font-weight: bold; margin: 5px 0; display: block; }
+.total-score-banner p { margin: 0 0 20px 0; font-size: 0.9rem; opacity: 0.8; }
+.total-progress-bg { background-color: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; max-width: 500px; margin: 0 auto; overflow: hidden; }
+.total-progress-fill { background-color: #00bfff; height: 100%; border-radius: 4px; }
+
+.grade-category-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid transparent; transition: transform 0.2s, box-shadow 0.2s; }
+.grade-category-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.grade-category-card h4 { color: var(--udg-blue); margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+.detailed-grade-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f9f9f9; }
+.detailed-grade-item:last-child { border-bottom: none; padding-bottom: 0; }
+.dg-info strong { display: block; color: var(--text-dark); font-size: 0.95rem; margin-bottom: 3px; }
+.dg-info span { color: var(--text-muted); font-size: 0.8rem; }
+.dg-score { text-align: right; min-width: 120px; }
+.dg-score .score-text { display: block; font-weight: bold; color: #555; font-size: 0.9rem; margin-bottom: 6px; }
+
+.progress-mini { height: 5px; background-color: #eee; border-radius: 3px; width: 100%; overflow: hidden; }
+.progress-bar { height: 100%; background-color: var(--success); }
+
+/* =========================================
+   6. BOTONES ESPECIALES Y AVISOS
+   ========================================= */
 .btn-baja { background: #fff; border: 1px solid #dc3545; color: #dc3545; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; width: 100%; text-align: center; }
 .btn-baja:hover { background: #dc3545; color: white; }
-
 .btn-pendiente { background: #ffc107; border: 1px solid #e0a800; color: #856404; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; width: 100%; text-align: center; }
 .btn-pendiente:hover { background: #e0a800; }
-
 .btn-historial { background: #f1f3f5; border: 1px solid #dee2e6; color: #495057; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; }
 .btn-historial:hover { background: #e2e6ea; }
 
-/* Tarjetas del Historial de Peticiones */
 .history-card { border: 1px solid #eee; border-left: 4px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #fff; }
 .history-card.pendiente { border-left-color: #ffc107; background: #fffdf5; }
 .history-card.rechazada { border-left-color: #dc3545; background: #fff8f8; }
 .history-card.cancelada { border-left-color: #6c757d; }
 .history-card.aprobada { border-left-color: #28a745; background: #f8fff9; }
 
-/* Animación de notificación (Puntito rojo parpadeante) */
-@keyframes blink { 
-    0% {opacity:1;} 
-    50% {opacity:0.4;} 
-    100% {opacity:1;} 
-}
+.tag-aprobada { background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+.tag-rechazada { background: #f8d7da; color: #721c24; padding: 2px 6px; border-radius: 8px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+.aviso-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+.aviso-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.tag-aviso { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 5px; }
+.tag-sistema { background: #e2e3e5; color: #383d41; }
+.tag-materia { background: #cce5ff; color: #004085; }
 
-/* ==========================================================================
-   ESTILOS PARA EL PANEL DE INICIO (index.php) - AVISOS Y ETIQUETAS
-   ========================================================================== */
-.tag-aprobada { 
-    background: #d4edda; color: #155724; padding: 2px 6px; 
-    border-radius: 8px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; 
+@keyframes blink { 0% {opacity:1;} 50% {opacity:0.4;} 100% {opacity:1;} }
+
+/* =========================================
+   7. MENÚ LATERAL Y ANIMACIONES GLOBALES
+   ========================================= */
+.menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1999; display: none; backdrop-filter: blur(2px); }
+.menu-overlay.active { display: block; }
+.yt-sidebar { position: fixed; top: 0; right: -320px; width: 280px; max-width: 85vw; height: 100vh; background-color: #0f0f0f; box-shadow: -5px 0 25px rgba(0,0,0,0.8); display: flex; flex-direction: column; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; overflow-y: auto; }
+.yt-sidebar.active { right: 0; }
+.yt-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 15px 25px; border-bottom: 1px solid #272727; height: 65px; box-sizing: border-box; }
+.yt-sidebar-menu { list-style: none; padding: 15px 0; margin: 0; }
+.yt-sidebar-menu a { display: flex; align-items: center; gap: 20px; padding: 12px 25px; color: #f1f1f1; text-decoration: none; font-size: 1rem; font-weight: 500; transition: background 0.2s; }
+.yt-sidebar-menu a:hover, .yt-sidebar-menu a.active { background-color: #272727; }
+.yt-sidebar-menu a.active { font-weight: bold; }
+.yt-sidebar-menu a i { font-size: 1.3rem; width: 24px; text-align: center; color: #aaa; }
+.yt-sidebar-menu a.active i { color: white; }
+.sidebar-divider { height: 1px; background-color: #272727; margin: 10px 0; }
+
+.chart-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 0 10px 0; }
+.circular-chart { display: block; margin: 0 auto; max-width: 180px; max-height: 250px; }
+.circle-bg { fill: none; stroke: #f0f0f0; stroke-width: 2.5; }
+.circle { fill: none; stroke-width: 2.5; stroke-linecap: round; animation: progressFill 1.5s ease-out forwards; }
+@keyframes progressFill { 0% { stroke-dasharray: 0, 100; } }
+.percentage { fill: var(--udg-blue); font-family: inherit; font-size: 0.55em; text-anchor: middle; font-weight: bold; }
+.chart-subtitle { margin-top: 20px; font-size: 1.1rem; color: #555; font-weight: 600; }
+.chart-status { font-size: 0.85rem; margin-top: 5px; padding: 4px 12px; border-radius: 12px; font-weight: bold; }
+
+/* =========================================
+   8. HORARIO Y GRID CALENDARIO
+   ========================================= */
+.schedule-wrapper { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 20px; overflow-x: auto; }
+.schedule-grid { display: grid; grid-template-columns: 70px repeat(5, minmax(180px, 1fr)); grid-template-rows: 50px repeat(13, 65px); min-width: 900px; position: relative; }
+.grid-header { background-color: var(--udg-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.1); }
+.grid-header:first-child { border-top-left-radius: 8px; }
+.grid-header:last-child { border-top-right-radius: 8px; border-right: none; }
+.time-label { grid-column: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; font-size: 0.85rem; color: #888; border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
+.grid-line { grid-column: 2 / -1; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f9f9f9; }
+.class-block { margin: 4px; padding: 10px 12px; border-radius: 8px; border-left: 5px solid; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; }
+.class-block:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 6px 15px rgba(0,0,0,0.1); z-index: 20; }
+.class-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+.class-details { opacity: 0.8; font-family: monospace; display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+
+/* =========================================
+   9. COMPONENTES EXTRA Y RESPONSIVO
+   ========================================= */
+.subject-selector { padding: 6px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; color: var(--udg-blue); font-weight: 600; background-color: #f8f9fa; cursor: pointer; margin-left: auto; }
+.subject-selector:focus { outline: none; border-color: var(--udg-light); }
+
+.main-footer { background-color: var(--udg-blue); color: var(--white); padding: 40px 20px 20px; margin-top: auto; }
+.footer-content { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 30px; flex-wrap: wrap; gap: 20px; text-align: center; }
+.footer-section { flex: 1; min-width: 250px; }
+.footer-logo-img { height: 100px; width: auto; margin-bottom: 10px; }
+.address-bar { text-align: center; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; opacity: 0.7; }
+
+@media (max-width: 900px) {
+    .main-header { height: auto !important; padding: 10px 15px !important; flex-direction: column !important; gap: 15px !important; }
+    .logo-container, .user-actions { width: 100% !important; justify-content: space-between !important; }
+    .user-actions { display: none !important; }
+    .main-nav { width: 100%; overflow-x: auto; justify-content: flex-start; }
+    .main-nav ul { padding-bottom: 5px; gap: 15px; }
+    .main-nav a { white-space: nowrap; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 15px; }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .footer-content { flex-direction: column; }
 }
-.tag-rechazada { 
-    background: #f8d7da; color: #721c24; padding: 2px 6px; 
-    border-radius: 8px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; 
-}
-.aviso-item { 
-    margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; 
-}
-.aviso-item:last-child { 
-    margin-bottom: 0; padding-bottom: 0; border-bottom: none; 
+@media (max-width: 768px) {
+    .profile-name { display: none !important; }
 }
