@@ -62,34 +62,6 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* ==========================================================
-           ANIMACIÓN DE LA FILA AL PASAR EL MOUSE (HOVER EFFECT)
-           ========================================================== */
-        .clickable-row {
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-        }
-        
-        .clickable-row:hover {
-            background-color: #eaf4fc !important; /* Fondo azul muy claro */
-            box-shadow: inset 4px 0 0 0 var(--udg-blue); /* Barra indicadora azul a la izquierda */
-        }
-        
-        /* Evita que el fondo de las celdas tape el color de la fila */
-        .clickable-row:hover td {
-            background-color: transparent !important;
-        }
-
-        /* PAGINACIÓN */
-        .google-pagination { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 5px; font-family: Arial, sans-serif; }
-        .google-pagination a { color: var(--udg-blue); text-decoration: none; padding: 8px 12px; border-radius: 4px; font-size: 1rem; transition: background-color 0.2s; }
-        .google-pagination a:hover { background-color: #f1f3f4; }
-        .google-pagination a.active { color: #202124; font-weight: bold; background-color: transparent; pointer-events: none; }
-        .google-pagination .btn-nav { font-weight: 500; margin: 0 10px; }
-        .google-pagination .btn-nav:hover { text-decoration: underline; background-color: transparent; }
-    </style>
 </head>
 <body>
 
@@ -98,7 +70,7 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <main class="main-content">
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-folder-open"></i> Perfiles y Expedientes</h1>
-            <p>Consulta el historial de los alumnos y las asignaciones de los profesores. <strong>Haz clic sobre cualquier usuario para abrir su expediente.</strong></p>
+            <p>Consulta el historial de los alumnos y las asignaciones de los profesores.</p>
         </div>
 
         <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px;">
