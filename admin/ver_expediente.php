@@ -13,7 +13,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $usuario_id = $_GET['id'];
 
-// PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES (Solo para Alumnos)
+// PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificaciones'])) {
     $insc_id = $_POST['inscripcion_id'];
     if (isset($_POST['calificaciones']) && is_array($_POST['calificaciones'])) {
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificacio
     header("Location: ver_expediente.php?id=" . $usuario_id . "&exito=calificaciones"); exit;
 }
 
-// OBTENER DATOS DEL USUARIO (Maestro o Alumno)
+// OBTENER DATOS DEL USUARIO
 $sql_perfil = "SELECT u.*, a.carrera, a.alumno_id 
                FROM usuarios u 
                LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
@@ -62,7 +62,9 @@ $es_profesor = ($perfil['rol'] === 'PROFESOR');
 // ============================================
 if ($es_alumno) {
     $alumno_id = $perfil['alumno_id'];
-    $sql_materias = "SELECT i.*, m.nombre as materia, m.nivel, m.materia_id, c.nombre as ciclo, c.activo 
+    
+    // AQUÍ INCLUIMOS EL ESTADO DEL GRUPO (g.estado)
+    $sql_materias = "SELECT i.*, m.nombre as materia, m.nivel, m.materia_id, c.nombre as ciclo, c.activo, g.estado as grupo_estado, g.nrc 
                      FROM inscripciones i
                      JOIN grupos g ON i.nrc = g.nrc
                      JOIN materias m ON g.materia_id = m.materia_id
@@ -78,9 +80,15 @@ if ($es_alumno) {
     $ha_cursado_nivel_4 = false;
 
     foreach ($todas_materias as $mat) {
-        if ($mat['activo'] == 1 && $mat['estatus'] == 'INSCRITO') {
+        // SI EL GRUPO ESTÁ ACTIVO, SE QUEDA ARRIBA. SI SE CERRÓ, SE VA AL KÁRDEX
+        if ($mat['activo'] == 1 && $mat['grupo_estado'] == 'ACTIVO' && $mat['estatus'] == 'INSCRITO') {
             $materias_actuales[] = $mat;
         } else {
+            // Calcular calificación final para el historial
+            $stmt_cal = $pdo->prepare("SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = ?");
+            $stmt_cal->execute([$mat['inscripcion_id']]);
+            $puntaje = $stmt_cal->fetchColumn() ?: 0;
+            $mat['calificacion_final'] = $puntaje;
             $historial[] = $mat;
         }
         if ($mat['nivel'] == 4) $ha_cursado_nivel_4 = true;
@@ -92,7 +100,8 @@ if ($es_alumno) {
 // ============================================
 $grupos_profesor = [];
 if ($es_profesor) {
-    $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo,
+    // FILTRAMOS PARA QUE SOLO VEA LOS GRUPOS ACTIVOS
+    $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.estado,
                           MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                           MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
                           (SELECT COUNT(DISTINCT i.alumno_id) FROM inscripciones i JOIN grupos g2 ON i.nrc = g2.nrc WHERE g2.clave_grupo = g.clave_grupo AND i.estatus = 'INSCRITO') AS inscritos
@@ -100,8 +109,8 @@ if ($es_profesor) {
                    JOIN materias m ON g.materia_id = m.materia_id
                    JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                    LEFT JOIN horarios h ON g.nrc = h.nrc
-                   WHERE g.profesor_id = ?
-                   GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo
+                   WHERE g.profesor_id = ? AND g.estado = 'ACTIVO'
+                   GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo, g.estado
                    ORDER BY c.activo DESC, c.nombre DESC, m.nivel ASC";
     $stmt_g = $pdo->prepare($sql_grupos);
     $stmt_g->execute([$usuario_id]);
@@ -129,15 +138,8 @@ if ($es_profesor) {
         <?php if(isset($_GET['exito'])): ?>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({
-                        title: '¡Éxito!',
-                        text: 'Los cambios fueron guardados correctamente.',
-                        icon: 'success',
-                        confirmButtonColor: 'var(--udg-blue)'
-                    });
-                    
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.delete('exito');
+                    Swal.fire({ title: '¡Éxito!', text: 'Los cambios fueron guardados correctamente.', icon: 'success', confirmButtonColor: 'var(--udg-blue)' });
+                    const currentUrl = new URL(window.location.href); currentUrl.searchParams.delete('exito');
                     window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
                 });
             </script>
@@ -326,27 +328,24 @@ if ($es_profesor) {
             </div>
         </div>
         <?php endforeach; ?>
-        <?php endif; // FIN LÓGICA ALUMNO ?>
+        <?php endif; ?>
 
 
         <?php if ($es_profesor): ?>
             <div class="card" style="margin-top: 20px;">
                 <h3 style="color: var(--udg-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">
-                    <i class="fas fa-chalkboard"></i> Grupos Asignados (<?php echo count($grupos_profesor); ?>)
+                    <i class="fas fa-chalkboard"></i> Grupos Activos (<?php echo count($grupos_profesor); ?>)
                 </h3>
                 
                 <?php if (count($grupos_profesor) > 0): ?>
                     <div class="prof-classes-grid">
-                        <?php foreach ($grupos_profesor as $g): 
-                            $color_estado = ($g['activo'] == 1) ? '#28a745' : '#6c757d';
-                            $texto_estado = ($g['activo'] == 1) ? 'En Curso' : 'Finalizado';
-                        ?>
+                        <?php foreach ($grupos_profesor as $g): ?>
                             <a href="gestionar_grupo.php?clave=<?php echo urlencode($g['clave_grupo']); ?>" class="class-click-card" title="Haz clic para gestionar este grupo">
                                 
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                     <h4 class="class-title"><?php echo htmlspecialchars($g['materia'] . ' ' . $g['nivel']); ?></h4>
-                                    <span class="class-status" style="color: <?php echo $color_estado; ?>;">
-                                        <i class="fas fa-circle" style="font-size: 0.6rem;"></i> <?php echo $texto_estado; ?>
+                                    <span class="class-status" style="color: #28a745;">
+                                        <i class="fas fa-circle" style="font-size: 0.6rem;"></i> En Curso
                                     </span>
                                 </div>
                                 
@@ -371,10 +370,10 @@ if ($es_profesor) {
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>Este profesor no tiene grupos asignados actualmente.</p>
+                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>Este profesor no tiene grupos activos actualmente.</p>
                 <?php endif; ?>
             </div>
-        <?php endif; // FIN LÓGICA PROFESOR ?>
+        <?php endif; ?>
 
     </main>
 
