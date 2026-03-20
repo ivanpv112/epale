@@ -1,8 +1,11 @@
 /* ====================================
    ESTILOS DEL PANEL PROFESOR | e-PALE
    ==================================== */
+/* Nota: Este archivo hereda la estructura base de estudiante.css */
 
-/* Cabecera del Dashboard */
+/* =========================================
+   1. CABECERA Y ESTADÍSTICAS DEL DASHBOARD
+   ========================================= */
 .dash-header { 
     text-align: center; 
     margin-bottom: 30px; 
@@ -20,7 +23,6 @@
     font-weight: 500; 
 }
 
-/* Tarjetas de Estadísticas Azules */
 .stats-row { 
     display: grid; 
     grid-template-columns: repeat(3, 1fr); 
@@ -28,7 +30,7 @@
     margin-bottom: 25px; 
 }
 .stat-box { 
-    background-color: #001a57; 
+    background-color: var(--udg-blue); 
     color: white; 
     border-radius: 12px; 
     padding: 25px 20px; 
@@ -55,7 +57,9 @@
     letter-spacing: 1px; 
 }
 
-/* Layout Principal 2 Columnas */
+/* =========================================
+   2. LAYOUT PRINCIPAL Y TARJETAS
+   ========================================= */
 .main-grid { 
     display: grid; 
     grid-template-columns: 2fr 1fr; 
@@ -64,7 +68,6 @@
     align-items: start; 
 }
 
-/* Tarjetas de Contenido General */
 .content-card { 
     background: white; 
     border-radius: 12px; 
@@ -174,7 +177,7 @@
 }
 
 /* ==========================================================================
-   ESTILOS DEL PERFIL DEL PROFESOR (Aislados anti-choques)
+   3. ESTILOS DEL PERFIL DEL PROFESOR
    ========================================================================== */
 .teacher-header-card { 
     background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%); 
@@ -190,7 +193,6 @@
     text-align: center; 
 }
 
-/* Forzamos el centrado anulando cualquier posición absoluta previa */
 .teacher-avatar-wrapper { 
     position: relative !important; 
     width: 140px !important; 
@@ -262,21 +264,7 @@
 }
 
 /* ==========================================================================
-   ESTILOS DEL HORARIO (CSS GRID)
-   ========================================================================== */
-.schedule-wrapper { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 20px; overflow-x: auto; }
-.schedule-grid { display: grid; grid-template-columns: 70px repeat(5, minmax(180px, 1fr)); grid-template-rows: 50px repeat(13, 65px); min-width: 900px; position: relative; }
-.grid-header { background-color: var(--udg-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.1); }
-.grid-header:first-child { border-top-left-radius: 8px; } .grid-header:last-child { border-top-right-radius: 8px; border-right: none; }
-.time-label { grid-column: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; font-size: 0.85rem; color: #888; border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
-.grid-line { grid-column: 2 / -1; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f9f9f9; }
-.class-block { margin: 4px; padding: 10px 12px; border-radius: 8px; border-left: 5px solid; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; cursor: pointer; text-decoration: none; }
-.class-block:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 6px 15px rgba(0,0,0,0.1); z-index: 20; }
-.class-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
-.class-details { opacity: 0.9; font-family: monospace; display: flex; align-items: center; gap: 5px; margin-top: 3px; font-weight: bold; }
-
-/* ==========================================================================
-   ESTILOS DE LA HOJA DE CALIFICACIONES (TIPO EXCEL)
+   4. ESTILOS DE LA HOJA DE CALIFICACIONES (TIPO EXCEL)
    ========================================================================== */
 .excel-table-wrapper { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
 .excel-table { width: 100%; border-collapse: collapse; min-width: 900px; }
