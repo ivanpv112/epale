@@ -13,6 +13,17 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $usuario_id = $_GET['id'];
 
+// CREACIÓN SILENCIOSA DE LA TABLA DE CERTIFICACIONES
+try { 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS certificaciones (
+        certificacion_id INT AUTO_INCREMENT PRIMARY KEY, 
+        alumno_id INT, 
+        idioma VARCHAR(50), 
+        nivel_obtenido VARCHAR(50), 
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )"); 
+} catch(Exception $e) {}
+
 // PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificaciones'])) {
     $insc_id = $_POST['inscripcion_id'];
@@ -35,6 +46,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificacio
         }
     }
     header("Location: ver_expediente.php?id=" . $usuario_id . "&exito=calificaciones"); exit;
+}
+
+// PROCESAR REGISTRO DE CERTIFICACIONES
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_certificacion'])) {
+    $alum_id_cert = $_POST['alumno_id_cert'];
+    $idioma_cert = $_POST['idioma_cert'];
+    // Forzamos a que el nivel se guarde siempre en MAYÚSCULAS
+    $nivel_cert = strtoupper(trim($_POST['nivel_cert']));
+    
+    $stmt_chk = $pdo->prepare("SELECT certificacion_id FROM certificaciones WHERE alumno_id = ? AND idioma = ?");
+    $stmt_chk->execute([$alum_id_cert, $idioma_cert]);
+    $exists = $stmt_chk->fetchColumn();
+    
+    if ($exists) {
+        $pdo->prepare("UPDATE certificaciones SET nivel_obtenido = ? WHERE certificacion_id = ?")->execute([$nivel_cert, $exists]);
+    } else {
+        $pdo->prepare("INSERT INTO certificaciones (alumno_id, idioma, nivel_obtenido) VALUES (?, ?, ?)")->execute([$alum_id_cert, $idioma_cert, $nivel_cert]);
+    }
+    header("Location: ver_expediente.php?id=" . $usuario_id . "&exito=certificacion"); exit;
 }
 
 // OBTENER DATOS DEL USUARIO
@@ -63,7 +93,6 @@ $es_profesor = ($perfil['rol'] === 'PROFESOR');
 if ($es_alumno) {
     $alumno_id = $perfil['alumno_id'];
     
-    // AQUÍ INCLUIMOS EL ESTADO DEL GRUPO (g.estado)
     $sql_materias = "SELECT i.*, m.nombre as materia, m.nivel, m.materia_id, c.nombre as ciclo, c.activo, g.estado as grupo_estado, g.nrc 
                      FROM inscripciones i
                      JOIN grupos g ON i.nrc = g.nrc
@@ -77,21 +106,32 @@ if ($es_alumno) {
 
     $materias_actuales = [];
     $historial = [];
-    $ha_cursado_nivel_4 = false;
+    $idiomas_nivel_4 = [];
 
     foreach ($todas_materias as $mat) {
-        // SI EL GRUPO ESTÁ ACTIVO, SE QUEDA ARRIBA. SI SE CERRÓ, SE VA AL KÁRDEX
+        // Obtenemos la calificación acumulada para todos los registros
+        $stmt_cal = $pdo->prepare("SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = ?");
+        $stmt_cal->execute([$mat['inscripcion_id']]);
+        $mat['calificacion_final'] = $stmt_cal->fetchColumn() ?: 0;
+
         if ($mat['activo'] == 1 && $mat['grupo_estado'] == 'ACTIVO' && $mat['estatus'] == 'INSCRITO') {
             $materias_actuales[] = $mat;
         } else {
-            // Calcular calificación final para el historial
-            $stmt_cal = $pdo->prepare("SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = ?");
-            $stmt_cal->execute([$mat['inscripcion_id']]);
-            $puntaje = $stmt_cal->fetchColumn() ?: 0;
-            $mat['calificacion_final'] = $puntaje;
             $historial[] = $mat;
         }
-        if ($mat['nivel'] == 4) $ha_cursado_nivel_4 = true;
+        
+        if ($mat['nivel'] >= 4) {
+            $idiomas_nivel_4[$mat['materia']] = true;
+        }
+    }
+    
+    $idiomas_nivel_4 = array_keys($idiomas_nivel_4);
+    
+    $stmt_cert = $pdo->prepare("SELECT idioma, nivel_obtenido FROM certificaciones WHERE alumno_id = ?");
+    $stmt_cert->execute([$alumno_id]);
+    $certificaciones_bd = [];
+    while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
+        $certificaciones_bd[$row['idioma']] = $row['nivel_obtenido'];
     }
 }
 
@@ -100,7 +140,6 @@ if ($es_alumno) {
 // ============================================
 $grupos_profesor = [];
 if ($es_profesor) {
-    // FILTRAMOS PARA QUE SOLO VEA LOS GRUPOS ACTIVOS
     $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.estado,
                           MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                           MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -197,10 +236,7 @@ if ($es_profesor) {
                             $stmt_max = $pdo->prepare("SELECT SUM(puntos_maximos) FROM criterios_evaluacion WHERE materia_id = ?");
                             $stmt_max->execute([$mat['materia_id']]);
                             $max_puntos = $stmt_max->fetchColumn() ?: 0;
-
-                            $stmt_cal = $pdo->prepare("SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = ?");
-                            $stmt_cal->execute([$mat['inscripcion_id']]);
-                            $puntos_actuales = $stmt_cal->fetchColumn() ?: 0;
+                            $puntos_actuales = $mat['calificacion_final'];
 
                             $porcentaje = ($max_puntos > 0) ? ($puntos_actuales / $max_puntos) * 100 : 0;
                             $color_bar = ($porcentaje >= 60) ? 'var(--udg-light)' : '#dc3545';
@@ -228,6 +264,7 @@ if ($es_profesor) {
 
                 <div class="card">
                     <h3><i class="fas fa-history"></i> Historial Académico (Kárdex)</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Haz clic en cualquier materia para ver o editar sus calificaciones.</p>
                     <div style="overflow-x:auto;">
                         <table class="history-table" style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -235,21 +272,30 @@ if ($es_profesor) {
                                     <th style="padding: 10px; border-bottom: 2px solid #eee; text-align:left;">Ciclo</th>
                                     <th style="padding: 10px; border-bottom: 2px solid #eee; text-align:left;">Materia</th>
                                     <th style="padding: 10px; border-bottom: 2px solid #eee; text-align:center;">Calificación</th>
-                                    <th style="padding: 10px; border-bottom: 2px solid #eee; text-align:center;">Estado</th>
+                                    <th style="padding: 10px; border-bottom: 2px solid #eee; text-align:center;">Estado y Resultado</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if(count($historial) > 0): ?>
-                                    <?php foreach($historial as $h): ?>
-                                        <tr style="border-bottom: 1px solid #f9f9f9;">
+                                    <?php foreach($historial as $h): 
+                                        $calif = floatval($h['calificacion_final']);
+                                    ?>
+                                        <tr class="clickable-row" onclick="abrirModalCalif(<?php echo $h['inscripcion_id']; ?>)" style="border-bottom: 1px solid #f9f9f9;">
                                             <td style="padding: 10px;"><?php echo htmlspecialchars($h['ciclo']); ?></td>
-                                            <td style="padding: 10px; font-weight: 500; color: #555;"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
-                                            <td style="padding: 10px; text-align: center; font-weight: bold;"><?php echo floatval($h['calificacion_final']); ?></td>
+                                            <td style="padding: 10px; font-weight: 500; color: var(--udg-blue);"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
+                                            <td style="padding: 10px; text-align: center; font-weight: bold; font-size:1.1rem;"><?php echo $calif; ?></td>
                                             <td style="padding: 10px; text-align: center;">
-                                                <?php if($h['calificacion_final'] >= 60): ?>
-                                                    <span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Aprobado</span>
+                                                
+                                                <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
+                                                    <div style="margin-bottom: 5px;"><span style="background: #cce5ff; color: #004085; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span></div>
                                                 <?php else: ?>
-                                                    <span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Reprobado</span>
+                                                    <div style="margin-bottom: 5px;"><span style="background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
+                                                <?php endif; ?>
+
+                                                <?php if($calif >= 60): ?>
+                                                    <span class="tag-aprobado" style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Aprobado</span>
+                                                <?php else: ?>
+                                                    <span class="tag-rechazada" style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Reprobado</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
@@ -264,31 +310,41 @@ if ($es_profesor) {
             </div>
 
             <div>
-                <?php if($ha_cursado_nivel_4): ?>
-                    <div class="card" style="margin-top: 0; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; border: none;">
+                <?php if(count($idiomas_nivel_4) > 0): ?>
+                    <div class="card" style="margin-top: 0; border-top: 4px solid var(--udg-blue);">
                         <div style="text-align: center;">
-                            <i class="fas fa-certificate" style="font-size: 3rem; color: #ffc107; margin-bottom: 10px;"></i>
-                            <h3 style="color: white; margin: 0;">Certificación</h3>
+                            <i class="fas fa-certificate" style="font-size: 3rem; color: var(--udg-blue); margin-bottom: 10px;"></i>
+                            <h3 style="color: var(--udg-blue); margin: 0;">Certificaciones</h3>
+                            <p style="font-size: 0.85rem; color: #666;">Idiomas con Nivel 4 o superior</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center;">
-                            <span style="display: block; font-size: 0.9rem; margin-bottom: 5px;">Puntaje TOEFL</span>
-                            <span style="font-size: 2.5rem; font-weight: bold;">--</span>
+                        
+                        <div style="margin-top: 15px;">
+                            <?php foreach($idiomas_nivel_4 as $idioma): 
+                                $nivel_obt = $certificaciones_bd[$idioma] ?? 'Sin registrar';
+                            ?>
+                                <div style="background: #eaf4fc; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--udg-blue);">
+                                    <div>
+                                        <strong style="display:block; color: var(--udg-blue); font-size: 1rem;"><?php echo htmlspecialchars($idioma); ?></strong>
+                                        <span style="font-size: 0.85rem; color: #666;">Nivel: <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars($nivel_obt); ?></strong></span>
+                                    </div>
+                                    <button class="btn-save" style="padding: 6px 12px; font-size: 0.8rem;" onclick="abrirModalCert('<?php echo htmlspecialchars($idioma); ?>', '<?php echo htmlspecialchars($nivel_obt == 'Sin registrar' ? '' : $nivel_obt); ?>')">
+                                        <i class="fas fa-edit"></i> Asignar
+                                    </button>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                        <button style="width: 100%; padding: 12px; background: #ffc107; color: #000; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer;">
-                            <i class="fas fa-edit"></i> Registrar Puntaje
-                        </button>
                     </div>
                 <?php else: ?>
                     <div class="card" style="margin-top: 0; text-align: center; padding: 40px 20px;">
                         <i class="fas fa-lock" style="font-size: 2.5rem; color: #ddd; margin-bottom: 15px;"></i>
                         <h4 style="color: #666; margin: 0;">Certificación Bloqueada</h4>
-                        <p style="font-size: 0.85rem; color: #999; margin-top: 10px;">Disponible en Nivel 4.</p>
+                        <p style="font-size: 0.85rem; color: #999; margin-top: 10px;">Disponible al cursar Nivel 4.</p>
                     </div>
                 <?php endif; ?>
             </div>
         </div>
 
-        <?php foreach ($materias_actuales as $mat): 
+        <?php foreach ($todas_materias as $mat): 
             $stmt_crit = $pdo->prepare("SELECT * FROM criterios_evaluacion WHERE materia_id = ? ORDER BY categoria ASC");
             $stmt_crit->execute([$mat['materia_id']]);
             $criterios_materia = $stmt_crit->fetchAll(PDO::FETCH_ASSOC);
@@ -301,13 +357,20 @@ if ($es_profesor) {
         <div id="modalCalif_<?php echo $mat['inscripcion_id']; ?>" class="modal-overlay" style="display:none;">
             <div class="modal-content" style="padding: 0;">
                 <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
-                    <h2 style="margin: 0; font-size: 1.3rem;"><i class="fas fa-edit"></i> <?php echo htmlspecialchars($mat['materia']); ?></h2>
+                    <h2 style="margin: 0; font-size: 1.3rem;"><i class="fas fa-edit"></i> <?php echo htmlspecialchars($mat['materia'] . ' ' . $mat['nivel']); ?></h2>
                     <button class="close-btn" onclick="cerrarModalCalif(<?php echo $mat['inscripcion_id']; ?>)">&times;</button>
                 </div>
                 <form method="POST" style="margin: 0;">
                     <input type="hidden" name="actualizar_calificaciones" value="1">
                     <input type="hidden" name="inscripcion_id" value="<?php echo $mat['inscripcion_id']; ?>">
                     <div style="padding: 20px 30px; max-height: 60vh; overflow-y: auto;">
+                        
+                        <?php if($mat['grupo_estado'] == 'CERRADO' || $mat['activo'] == 0): ?>
+                            <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Estás editando las calificaciones de una clase finalizada.
+                            </div>
+                        <?php endif; ?>
+
                         <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
                             <?php foreach($criterios_materia as $crit): 
                                 $codigo = $crit['codigo_examen'];
@@ -328,7 +391,35 @@ if ($es_profesor) {
             </div>
         </div>
         <?php endforeach; ?>
-        <?php endif; ?>
+
+        <div id="modalCert" class="modal-overlay" style="display:none;">
+            <div class="modal-content" style="padding: 0;">
+                <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
+                    <h2 style="margin: 0; font-size: 1.3rem;"><i class="fas fa-award"></i> Asignar Nivel</h2>
+                    <button class="close-btn" onclick="cerrarModalCert()">&times;</button>
+                </div>
+                <form method="POST" style="margin: 0;">
+                    <input type="hidden" name="guardar_certificacion" value="1">
+                    <input type="hidden" name="alumno_id_cert" value="<?php echo $alumno_id; ?>">
+                    <input type="hidden" name="idioma_cert" id="inputIdiomaCert">
+                    
+                    <div style="padding: 20px 30px;">
+                        <p style="font-size: 0.9rem; color: #666; margin-top: 0;">Ingresa el nivel oficial obtenido en: <strong id="textoIdiomaCert" style="color: var(--udg-blue);"></strong></p>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Nivel Obtenido (Ej. B1, B2, C1)</label>
+                            <input type="text" name="nivel_cert" id="inputNivelCert" required placeholder="Ej. B2" style="text-transform: uppercase;">
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc;">
+                        <button type="button" class="btn-cancel" onclick="cerrarModalCert()">Cancelar</button>
+                        <button type="submit" class="btn-save" style="background:var(--udg-blue); color:white;"><i class="fas fa-save"></i> Guardar Nivel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <?php endif; // FIN LÓGICA ALUMNO ?>
 
 
         <?php if ($es_profesor): ?>
@@ -341,30 +432,14 @@ if ($es_profesor) {
                     <div class="prof-classes-grid">
                         <?php foreach ($grupos_profesor as $g): ?>
                             <a href="gestionar_grupo.php?clave=<?php echo urlencode($g['clave_grupo']); ?>" class="class-click-card" title="Haz clic para gestionar este grupo">
-                                
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                     <h4 class="class-title"><?php echo htmlspecialchars($g['materia'] . ' ' . $g['nivel']); ?></h4>
-                                    <span class="class-status" style="color: #28a745;">
-                                        <i class="fas fa-circle" style="font-size: 0.6rem;"></i> En Curso
-                                    </span>
+                                    <span class="class-status" style="color: #28a745;"><i class="fas fa-circle" style="font-size: 0.6rem;"></i> En Curso</span>
                                 </div>
-                                
-                                <div style="font-size: 0.85rem; color: #666;">
-                                    <i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; 
-                                    <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos
-                                </div>
-                                
+                                <div style="font-size: 0.85rem; color: #666;"><i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos</div>
                                 <div style="margin-top: 5px;">
-                                    <?php if($g['nrc_p']): ?>
-                                        <span class="class-nrc"><strong style="color:#28a745;">P:</strong> <?php echo $g['nrc_p']; ?></span>
-                                    <?php endif; ?>
-                                    <?php if($g['nrc_v']): ?>
-                                        <span class="class-nrc"><strong style="color:#17a2b8;">V:</strong> <?php echo $g['nrc_v']; ?></span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div style="margin-top: 10px; text-align: right; color: var(--udg-blue); font-size: 0.85rem; font-weight: bold;">
-                                    Gestionar Grupo <i class="fas fa-arrow-right"></i>
+                                    <?php if($g['nrc_p']): ?><span class="class-nrc"><strong style="color:#28a745;">P:</strong> <?php echo $g['nrc_p']; ?></span><?php endif; ?>
+                                    <?php if($g['nrc_v']): ?><span class="class-nrc"><strong style="color:#17a2b8;">V:</strong> <?php echo $g['nrc_v']; ?></span><?php endif; ?>
                                 </div>
                             </a>
                         <?php endforeach; ?>
@@ -386,6 +461,15 @@ if ($es_profesor) {
         }
         function abrirModalCalif(id) { document.getElementById('modalCalif_' + id).style.display = 'flex'; }
         function cerrarModalCalif(id) { document.getElementById('modalCalif_' + id).style.display = 'none'; }
+        
+        function abrirModalCert(idioma, nivel) {
+            document.getElementById('inputIdiomaCert').value = idioma;
+            document.getElementById('textoIdiomaCert').innerText = idioma;
+            document.getElementById('inputNivelCert').value = nivel;
+            document.getElementById('modalCert').style.display = 'flex';
+        }
+        function cerrarModalCert() { document.getElementById('modalCert').style.display = 'none'; }
+        
         window.onclick = function(e) { 
             if(e.target.classList.contains('modal-overlay')) e.target.style.display = 'none';
         };
