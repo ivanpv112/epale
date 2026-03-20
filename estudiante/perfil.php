@@ -2,12 +2,21 @@
 session_start();
 require '../db.php';
 
-// 1. Seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// 2. PROCESAR ACTUALIZACIÓN DE DATOS
+// CREACIÓN SILENCIOSA DE LA TABLA (Por si no se ha creado desde admin)
+try { 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS certificaciones (
+        certificacion_id INT AUTO_INCREMENT PRIMARY KEY, 
+        alumno_id INT, 
+        idioma VARCHAR(50), 
+        nivel_obtenido VARCHAR(50), 
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )"); 
+} catch(Exception $e) {}
+
 $mensaje_exito = "";
 $mensaje_error = "";
 
@@ -32,32 +41,65 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['actualizar_perfil'])) 
     }
 }
 
-// Mensajes por GET
-if(isset($_GET['exito']) && $_GET['exito'] == 'foto') {
-    $mensaje_exito = "¡Tu foto de perfil ha sido actualizada!";
-}
+if(isset($_GET['exito']) && $_GET['exito'] == 'foto') { $mensaje_exito = "¡Tu foto de perfil ha sido actualizada!"; }
 if(isset($_GET['error'])) {
     if($_GET['error'] == 'ext') $mensaje_error = "Error: Solo se permiten imágenes JPG, PNG o WEBP.";
     else if($_GET['error'] == 'mime') $mensaje_error = "Error: El archivo no es una imagen válida.";
-    else if($_GET['error'] == 'upload') $mensaje_error = "Error: La imagen es demasiado pesada o superó el límite del servidor (Máximo 2MB recomendados).";
+    else if($_GET['error'] == 'upload') $mensaje_error = "Error: La imagen es demasiado pesada.";
     else $mensaje_error = "Ocurrió un error al guardar la foto.";
 }
 
-// 3. Obtener datos
-$stmt = $pdo->prepare("
-    SELECT u.*, a.carrera 
-    FROM usuarios u 
-    LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
-    WHERE u.usuario_id = ?
-");
+$stmt = $pdo->prepare("SELECT u.*, a.carrera, a.alumno_id FROM usuarios u LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id WHERE u.usuario_id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
+$alumno_id = $user['alumno_id'];
 
 $nombre_completo = $user['nombre'] . " " . (isset($user['apellido_paterno']) ? $user['apellido_paterno'] : $user['apellidos']) . (isset($user['apellido_materno']) && $user['apellido_materno'] ? ' ' . $user['apellido_materno'] : '');
-
 $foto_perfil = "../img/avatar-default.png"; 
-if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/perfiles/" . $user['foto_perfil'])) {
-    $foto_perfil = "../img/perfiles/" . $user['foto_perfil'];
+if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/perfiles/" . $user['foto_perfil'])) { $foto_perfil = "../img/perfiles/" . $user['foto_perfil']; }
+
+// ===============================================
+// KÁRDEX: EXTRAER CLASES CERRADAS
+// ===============================================
+$sql_historial = "SELECT i.inscripcion_id, m.nombre as materia, m.nivel, c.nombre as ciclo, 
+                         (SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = i.inscripcion_id) as calificacion_final
+                  FROM inscripciones i
+                  JOIN grupos g ON i.nrc = g.nrc
+                  JOIN materias m ON g.materia_id = m.materia_id
+                  JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                  WHERE i.alumno_id = ? AND g.estado = 'CERRADO' AND i.estatus = 'INSCRITO'
+                  ORDER BY c.nombre DESC, m.nivel DESC";
+$stmt_hist = $pdo->prepare($sql_historial);
+$stmt_hist->execute([$alumno_id]);
+$historial = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
+
+// ===============================================
+// CERTIFICACIONES: OBTENER IDIOMAS DE NIVEL 4 Y NIVELES ASIGNADOS
+// ===============================================
+$sql_todas = "SELECT m.nombre as materia, m.nivel 
+              FROM inscripciones i
+              JOIN grupos g ON i.nrc = g.nrc
+              JOIN materias m ON g.materia_id = m.materia_id
+              WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO'";
+$stmt_todas = $pdo->prepare($sql_todas);
+$stmt_todas->execute([$alumno_id]);
+$todas_las_inscripciones = $stmt_todas->fetchAll(PDO::FETCH_ASSOC);
+
+$idiomas_nivel_4 = [];
+foreach($todas_las_inscripciones as $ins) {
+    if ($ins['nivel'] >= 4) {
+        $idiomas_nivel_4[$ins['materia']] = true;
+    }
+}
+$idiomas_nivel_4 = array_keys($idiomas_nivel_4);
+
+$certificaciones_bd = [];
+if (count($idiomas_nivel_4) > 0) {
+    $stmt_cert = $pdo->prepare("SELECT idioma, nivel_obtenido FROM certificaciones WHERE alumno_id = ?");
+    $stmt_cert->execute([$alumno_id]);
+    while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
+        $certificaciones_bd[$row['idioma']] = $row['nivel_obtenido'];
+    }
 }
 ?>
 
@@ -69,6 +111,10 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
     <title>Perfil | E-Pale</title>
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .clickable-row { cursor: pointer; transition: background-color 0.2s; }
+        .clickable-row:hover { background-color: #f1f8ff; }
+    </style>
 </head>
 <body>
 
@@ -98,6 +144,27 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
             <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <?php echo $mensaje_error; ?></div>
         <?php endif; ?>
 
+        <?php if(count($idiomas_nivel_4) > 0): ?>
+            <div class="card" style="border-top: 4px solid var(--udg-blue); margin-bottom: 25px;">
+                <h3 style="margin-top: 0; color: var(--udg-blue);"><i class="fas fa-award" style="color: var(--udg-blue);"></i> Mis Certificaciones Oficiales</h3>
+                <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Niveles obtenidos en los idiomas en los que has cursado el Nivel 4 o superior.</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <?php foreach($idiomas_nivel_4 as $idioma): 
+                        $nivel_obt = $certificaciones_bd[$idioma] ?? null;
+                    ?>
+                        <div style="border: 1px solid <?php echo $nivel_obt ? 'var(--udg-light)' : '#eee'; ?>; border-radius: 8px; padding: 20px; text-align: center; background: <?php echo $nivel_obt ? '#eaf4fc' : '#f8f9fa'; ?>; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: 0.2s;">
+                            <i class="fas fa-certificate" style="font-size: 2.5rem; color: <?php echo $nivel_obt ? 'var(--udg-light)' : '#ccc'; ?>; margin-bottom: 10px;"></i>
+                            <h4 style="margin: 0 0 5px 0; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : '#666'; ?>;"><?php echo htmlspecialchars($idioma); ?></h4>
+                            <span style="font-size: 1.2rem; font-weight: bold; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : '#888'; ?>;">
+                                <?php echo $nivel_obt ? htmlspecialchars(strtoupper($nivel_obt)) : '<span style="font-size:0.8rem; font-weight:normal; font-style:italic;">Pendiente de registro</span>'; ?>
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="profile-grid">
             
             <div class="card">
@@ -107,17 +174,14 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                         <i class="fas fa-pen"></i>
                     </button>
                 </h3>
-                
                 <div class="info-section">
                     <span class="info-label">Nombre Completo</span>
                     <span class="info-value"><?php echo htmlspecialchars($nombre_completo); ?></span>
                 </div>
-                
                 <div class="info-section">
                     <span class="info-label">Correo Electrónico</span>
                     <span class="info-value"><?php echo htmlspecialchars($user['correo']); ?></span>
                 </div>
-
                 <div class="info-section">
                     <span class="info-label">Teléfono</span>
                     <span class="info-value"><?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span style="color:#aaa;">No registrado</span>'; ?></span>
@@ -126,45 +190,56 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
 
             <div class="card">
                 <h3><i class="fas fa-graduation-cap"></i> Información Académica</h3>
-                
                 <div class="info-section">
                     <span class="info-label">Código de Estudiante</span>
                     <span class="info-value"><?php echo isset($user['codigo']) && $user['codigo'] ? htmlspecialchars($user['codigo']) : '---'; ?></span>
                 </div>
-
                 <div class="info-section">
                     <span class="info-label">Carrera / Programa</span>
                     <span class="info-value"><?php echo isset($user['carrera']) && $user['carrera'] ? htmlspecialchars($user['carrera']) : 'Sin asignar'; ?></span>
                 </div>
-
                 <div class="info-section">
-                    <span class="info-label">Nivel Actual</span>
-                    <span class="info-value">Inglés IV</span>
-                </div>
-
-                <div class="info-section">
-                    <span class="info-label">Ciclo Escolar</span>
-                    <span class="info-value">2026-A</span>
+                    <span class="info-label">Estatus en el Sistema</span>
+                    <span class="info-value" style="color: #28a745; font-weight: bold;">Estudiante Activo</span>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h3><i class="fas fa-history"></i> Historial de Calificaciones</h3>
+            <h3><i class="fas fa-history"></i> Historial Académico (Kárdex)</h3>
+            <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Haz clic en cualquier materia para ver el desglose de tu calificación final.</p>
             <div style="overflow-x:auto;">
                 <table class="history-table">
                     <thead>
                         <tr>
                             <th>Materia</th>
                             <th>Ciclo</th>
-                            <th>Calificación</th>
-                            <th>Estado</th>
+                            <th style="text-align: center;">Calificación Final</th>
+                            <th style="text-align: center;">Estado</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>Inglés III</td><td>2025-B</td><td><strong>92</strong></td><td><span class="tag-aprobado">Aprobado</span></td></tr>
-                        <tr><td>Inglés II</td><td>2025-A</td><td><strong>88</strong></td><td><span class="tag-aprobado">Aprobado</span></td></tr>
-                        <tr><td>Inglés I</td><td>2024-B</td><td><strong>95</strong></td><td><span class="tag-aprobado">Aprobado</span></td></tr>
+                        <?php if(count($historial) > 0): ?>
+                            <?php foreach($historial as $h): 
+                                $calif = floatval($h['calificacion_final']);
+                            ?>
+                                <tr class="clickable-row" onclick="window.location.href='calificaciones.php?ins=<?php echo $h['inscripcion_id']; ?>'">
+                                    <td><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
+                                    <td><?php echo htmlspecialchars($h['ciclo']); ?></td>
+                                    <td style="text-align: center; font-size: 1.1rem; color: var(--udg-blue);"><strong><?php echo $calif; ?></strong></td>
+                                    <td style="text-align: center;">
+                                        <div style="margin-bottom: 5px;"><span style="background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
+                                        <?php if($calif >= 60): ?>
+                                            <span class="tag-aprobado" style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">Aprobado</span>
+                                        <?php else: ?>
+                                            <span class="tag-rechazada" style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">Reprobado</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="4" style="text-align:center; padding: 30px; color:#888;">Aún no tienes materias finalizadas.</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -186,19 +261,16 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
             </div>
             <form method="POST" action="perfil.php">
                 <input type="hidden" name="actualizar_perfil" value="1">
-                
                 <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
                     <div class="form-group">
                         <label>Correo Electrónico</label>
                         <input type="email" name="correo" value="<?php echo htmlspecialchars($user['correo']); ?>" required>
                     </div>
-
                     <div class="form-group">
                         <label>Teléfono</label>
                         <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 33 1234 5678">
                     </div>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="cerrarModalEditar()">Cancelar</button>
                     <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar Cambios</button>
@@ -213,10 +285,8 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                 <h2>Cambiar Foto de Perfil</h2>
                 <button class="close-btn" onclick="cerrarModalFoto()">&times;</button>
             </div>
-            
             <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
                 <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
-                
                 <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
                     <div class="form-group">
                         <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none;">
@@ -242,7 +312,6 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
         
         function abrirModalEditar() { modalEditar.style.display = 'flex'; }
         function cerrarModalEditar() { modalEditar.style.display = 'none'; }
-        
         function abrirModalFoto() { modalFoto.style.display = 'flex'; }
         function cerrarModalFoto() { modalFoto.style.display = 'none'; }
 
