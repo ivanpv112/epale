@@ -4,8 +4,9 @@ require '../db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
-// Ampliar silenciosamente la columna de días para evitar el error "Data truncated"
+// Ampliar silenciosamente las tablas para soportar las nuevas funciones
 try { $pdo->exec("ALTER TABLE horarios MODIFY dias_patron VARCHAR(50)"); } catch (Exception $e) { }
+try { $pdo->exec("ALTER TABLE grupos ADD COLUMN estado VARCHAR(20) DEFAULT 'ACTIVO'"); } catch (Exception $e) { }
 
 $clave = $_GET['clave'] ?? '';
 $es_edicion = !empty($clave);
@@ -19,70 +20,51 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'created') {
 // ==========================================
 // FUNCIONES INTELIGENTES DE DETECCIÓN DE CHOQUES
 // ==========================================
-
-// 1. Validar que el AULA no esté ocupada
 function checkAulaCollision($nrc, $aula, $dias, $inicio, $fin, $ciclo_id, $pdo) {
     if (empty($aula) || empty($dias) || empty($inicio) || empty($fin)) return false;
-
     $sql = "SELECT h.nrc, h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre 
             FROM horarios h JOIN grupos g ON h.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id 
             WHERE g.ciclo_id = ? AND h.aula = ? AND h.nrc != ?";
     $stmt = $pdo->prepare($sql); $stmt->execute([$ciclo_id, $aula, $nrc]);
     $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     $start1 = strtotime($inicio); $end1 = strtotime($fin);
 
     foreach ($matches as $m) {
         if (empty($m['hora_inicio']) || empty($m['hora_fin']) || empty($m['dias_patron'])) continue;
         $start2 = strtotime($m['hora_inicio']); $end2 = strtotime($m['hora_fin']);
-        
         if ($start1 < $end2 && $end1 > $start2) {
             $d1 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($dias)));
             $d2 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($m['dias_patron'])));
-            
-            if (count(array_intersect($d1, $d2)) > 0) {
-                return "¡Choque de Aula! El aula '{$aula}' ya está ocupada por '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en esos días y horas.";
-            }
+            if (count(array_intersect($d1, $d2)) > 0) return "¡Choque de Aula! El aula '{$aula}' ya está ocupada por '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en esos días y horas.";
         }
     }
     return false;
 }
 
-// 2. Validar que el PROFESOR no esté ocupado
 function checkProfesorCollision($nrc, $profesor_id, $dias, $inicio, $fin, $ciclo_id, $pdo) {
     if (empty($profesor_id) || empty($dias) || empty($inicio) || empty($fin)) return false;
-
     $sql = "SELECT h.nrc, h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre 
             FROM horarios h JOIN grupos g ON h.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id 
             WHERE g.ciclo_id = ? AND g.profesor_id = ? AND h.nrc != ?";
     $stmt = $pdo->prepare($sql); $stmt->execute([$ciclo_id, $profesor_id, $nrc]);
     $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     $start1 = strtotime($inicio); $end1 = strtotime($fin);
 
     foreach ($matches as $m) {
         if (empty($m['hora_inicio']) || empty($m['hora_fin']) || empty($m['dias_patron'])) continue;
         $start2 = strtotime($m['hora_inicio']); $end2 = strtotime($m['hora_fin']);
-        
         if ($start1 < $end2 && $end1 > $start2) {
             $d1 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($dias)));
             $d2 = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($m['dias_patron'])));
-            
-            if (count(array_intersect($d1, $d2)) > 0) {
-                return "¡Cruce de Docente! El profesor seleccionado ya imparte '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en ese mismo horario.";
-            }
+            if (count(array_intersect($d1, $d2)) > 0) return "¡Cruce de Docente! El profesor seleccionado ya imparte '{$m['mat_nombre']}' (NRC: {$m['nrc']}) en ese mismo horario.";
         }
     }
     return false;
 }
 
-// 3. NUEVA FUNCIÓN: Validar que el ESTUDIANTE no esté ocupado
 function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
-    // 1. Obtener los horarios del grupo AL QUE SE LE QUIERE INSCRIBIR
     $sql_horarios_nuevo = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre AS mat_nombre
-                           FROM horarios h 
-                           JOIN grupos g ON h.nrc = g.nrc 
-                           JOIN materias m ON g.materia_id = m.materia_id
+                           FROM horarios h JOIN grupos g ON h.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id
                            WHERE g.clave_grupo = (SELECT clave_grupo FROM grupos WHERE nrc = ? LIMIT 1)";
     $stmt_nuevo = $pdo->prepare($sql_horarios_nuevo);
     $stmt_nuevo->execute([$nrc_nuevo]);
@@ -90,12 +72,8 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
 
     if (empty($horarios_nuevos)) return false; 
 
-    // 2. Obtener los horarios de las clases QUE EL ALUMNO YA TIENE INSCRITAS
     $sql_horarios_actuales = "SELECT h.dias_patron, h.hora_inicio, h.hora_fin, m.nombre as mat_nombre, h.nrc 
-                              FROM inscripciones i
-                              JOIN grupos g ON i.nrc = g.nrc
-                              JOIN horarios h ON g.nrc = h.nrc
-                              JOIN materias m ON g.materia_id = m.materia_id
+                              FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc JOIN horarios h ON g.nrc = h.nrc JOIN materias m ON g.materia_id = m.materia_id
                               WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.ciclo_id = ? AND h.nrc != ?";
     $stmt_actuales = $pdo->prepare($sql_horarios_actuales);
     $stmt_actuales->execute([$alumno_id, $ciclo_id, $nrc_nuevo]);
@@ -103,34 +81,24 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
 
     if (empty($clases_actuales)) return false; 
 
-    // 3. Comparar cada horario nuevo contra cada clase actual
     foreach ($horarios_nuevos as $nuevo) {
         if (empty($nuevo['hora_inicio']) || empty($nuevo['hora_fin']) || empty($nuevo['dias_patron'])) continue;
-        
-        $start_n = strtotime($nuevo['hora_inicio']); 
-        $end_n = strtotime($nuevo['hora_fin']);
+        $start_n = strtotime($nuevo['hora_inicio']); $end_n = strtotime($nuevo['hora_fin']);
         $dias_n = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($nuevo['dias_patron'])));
 
         foreach ($clases_actuales as $actual) {
             if (empty($actual['hora_inicio']) || empty($actual['hora_fin']) || empty($actual['dias_patron'])) continue;
-            
-            $start_a = strtotime($actual['hora_inicio']); 
-            $end_a = strtotime($actual['hora_fin']);
+            $start_a = strtotime($actual['hora_inicio']); $end_a = strtotime($actual['hora_fin']);
             $dias_a = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($actual['dias_patron'])));
 
             if ($start_n < $end_a && $end_n > $start_a) {
-                if (count(array_intersect($dias_n, $dias_a)) > 0) {
-                    return "¡Choque de Horario! El estudiante ya está cursando '{$actual['mat_nombre']}' en ese mismo horario.";
-                }
+                if (count(array_intersect($dias_n, $dias_a)) > 0) return "¡Choque de Horario! El estudiante ya está cursando '{$actual['mat_nombre']}' en ese mismo horario.";
             }
         }
     }
     return false;
 }
 
-// ==========================================
-// PROCESAMIENTO DE FORMULARIOS 
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- QUITAR ALUMNO ---
@@ -142,38 +110,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- AGREGAR ALUMNO ---
     if (isset($_POST['action']) && $_POST['action'] === 'add_student') {
-        $nuevo_alumno_id = $_POST['nuevo_alumno_id']; 
-        $nrc_grupo = $_POST['nrc_base'];
-        $cupo_actual = $_POST['cupo_actual']; 
-        $inscritos_actuales = $_POST['inscritos_actuales'];
+        $nuevo_alumno_id = $_POST['nuevo_alumno_id']; $nrc_grupo = $_POST['nrc_base'];
+        $cupo_actual = $_POST['cupo_actual']; $inscritos_actuales = $_POST['inscritos_actuales'];
         $ciclo_actual = $_POST['ciclo_actual_grupo'];
 
-        if (empty($nuevo_alumno_id) || !is_numeric($nuevo_alumno_id)) { 
-            $mensaje = "Selecciona un alumno de la lista."; $tipo_mensaje = "error"; 
-        } 
-        elseif ($inscritos_actuales >= $cupo_actual) { 
-            $mensaje = "El grupo ya está lleno. Aumenta la capacidad máxima primero."; $tipo_mensaje = "error"; 
-        } 
+        if (empty($nuevo_alumno_id) || !is_numeric($nuevo_alumno_id)) { $mensaje = "Selecciona un alumno de la lista."; $tipo_mensaje = "error"; } 
+        elseif ($inscritos_actuales >= $cupo_actual) { $mensaje = "El grupo ya está lleno. Aumenta la capacidad máxima primero."; $tipo_mensaje = "error"; } 
         else {
-            // VERIFICACIÓN DE CHOQUE DE HORARIO DEL ESTUDIANTE
             $choque_estudiante = checkEstudianteCollision($nuevo_alumno_id, $nrc_grupo, $ciclo_actual, $pdo);
-            
             if ($choque_estudiante) {
-                $mensaje = $choque_estudiante; 
-                $tipo_mensaje = "error";
+                $mensaje = $choque_estudiante; $tipo_mensaje = "error";
             } else {
                 $check = $pdo->prepare("SELECT estatus FROM inscripciones WHERE alumno_id = ? AND nrc = ?"); 
                 $check->execute([$nuevo_alumno_id, $nrc_grupo]);
                 $registro = $check->fetch(PDO::FETCH_ASSOC);
                 
                 if ($registro) {
-                    if ($registro['estatus'] === 'INSCRITO') { 
-                        $mensaje = "El alumno ya está inscrito en esta clase."; $tipo_mensaje = "error"; 
-                    } 
-                    else { 
-                        $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]); 
-                        $mensaje = "Alumno re-inscrito correctamente."; $tipo_mensaje = "success"; 
-                    }
+                    if ($registro['estatus'] === 'INSCRITO') { $mensaje = "El alumno ya está inscrito en esta clase."; $tipo_mensaje = "error"; } 
+                    else { $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]); $mensaje = "Alumno re-inscrito correctamente."; $tipo_mensaje = "success"; }
                 } else {
                     $pdo->prepare("INSERT INTO inscripciones (alumno_id, nrc, estatus) VALUES (?, ?, 'INSCRITO')")->execute([$nuevo_alumno_id, $nrc_grupo]);
                     $mensaje = "Alumno inscrito correctamente."; $tipo_mensaje = "success";
@@ -185,31 +139,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // --- GUARDAR O CREAR GRUPO ---
     if (isset($_POST['action']) && $_POST['action'] === 'save_group') {
         try {
-            $n_prof = $_POST['profesor_id'] ?? ''; $n_mat = $_POST['materia_id'] ?? ''; $n_ciclo = $_POST['ciclo_id'] ?? '';
-            $n_cupo = intval($_POST['cupo'] ?? 30); $n_edicion_total = isset($_POST['edicion_total']) ? 1 : 0;
+            $n_prof = $_POST['profesor_id'] ?? ''; 
+            $n_mat = $_POST['materia_id'] ?? ''; 
+            $n_ciclo_nombre = strtoupper(trim($_POST['ciclo_nombre'] ?? ''));
+            
+            $n_cupo = intval($_POST['cupo'] ?? 30); 
+            $n_edicion_total = isset($_POST['edicion_total']) ? 1 : 0;
+            $n_estado = $_POST['estado'] ?? 'ACTIVO'; // NUEVO PARAMETRO DE ESTADO DE CLASE
+            
             $nrc_p = trim($_POST['rnc_presencial']); $nrc_v = trim($_POST['rnc_virtual']);
 
-            if (empty($n_prof) || empty($n_mat) || empty($n_ciclo)) throw new Exception("Faltan campos obligatorios en la configuración (Profesor, Materia o Ciclo).");
+            if (empty($n_prof) || empty($n_mat) || empty($n_ciclo_nombre)) throw new Exception("Faltan campos obligatorios en la configuración (Profesor, Materia o Ciclo).");
             if (empty($nrc_p) && empty($nrc_v)) throw new Exception("Debes ingresar al menos un número de NRC (Presencial o Virtual).");
 
+            $pdo->beginTransaction();
+
+            $stmt_c = $pdo->prepare("SELECT ciclo_id FROM ciclos WHERE nombre = ?");
+            $stmt_c->execute([$n_ciclo_nombre]);
+            $n_ciclo = $stmt_c->fetchColumn();
+            if (!$n_ciclo) {
+                $pdo->prepare("INSERT INTO ciclos (nombre, activo) VALUES (?, 1)")->execute([$n_ciclo_nombre]);
+                $n_ciclo = $pdo->lastInsertId();
+            }
+
             if (!empty($nrc_p)) {
-                if (empty($_POST['dias_presencial']) || empty($_POST['inicio_presencial']) || empty($_POST['fin_presencial'])) {
-                    throw new Exception("Si ingresas un NRC Presencial, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
-                }
+                if (empty($_POST['dias_presencial']) || empty($_POST['inicio_presencial']) || empty($_POST['fin_presencial'])) { throw new Exception("Si ingresas un NRC Presencial, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin."); }
                 $choque_aula = checkAulaCollision($nrc_p, $_POST['aula_presencial'], $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
                 if ($choque_aula) throw new Exception($choque_aula);
-
                 $choque_prof = checkProfesorCollision($nrc_p, $n_prof, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
                 if ($choque_prof) throw new Exception($choque_prof);
             }
 
             if (!empty($nrc_v)) {
-                if (empty($_POST['dias_virtual']) || empty($_POST['inicio_virtual']) || empty($_POST['fin_virtual'])) {
-                    throw new Exception("Si ingresas un NRC Virtual, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin.");
-                }
+                if (empty($_POST['dias_virtual']) || empty($_POST['inicio_virtual']) || empty($_POST['fin_virtual'])) { throw new Exception("Si ingresas un NRC Virtual, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin."); }
                 $choque_v_aula = checkAulaCollision($nrc_v, $_POST['aula_virtual'], $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
                 if ($choque_v_aula) throw new Exception($choque_v_aula);
-
                 $choque_v_prof = checkProfesorCollision($nrc_v, $n_prof, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
                 if ($choque_v_prof) throw new Exception($choque_v_prof);
             }
@@ -220,19 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($start_p < $end_v && $end_p > $start_v) {
                     $d_p = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($_POST['dias_presencial'])));
                     $d_v = str_split(preg_replace('/[^A-Za-z]/', '', strtoupper($_POST['dias_virtual'])));
-                    if (count(array_intersect($d_p, $d_v)) > 0) {
-                        throw new Exception("¡Choque interno! Los horarios Presencial y Virtual que ingresaste se cruzan entre sí.");
-                    }
+                    if (count(array_intersect($d_p, $d_v)) > 0) throw new Exception("¡Choque interno! Los horarios Presencial y Virtual que ingresaste se cruzan entre sí.");
                 }
             }
-
-            $pdo->beginTransaction();
 
             if ($es_edicion) {
                 $inscritos_actuales = $_POST['inscritos_actuales'] ?? 0;
                 if ($n_cupo < $inscritos_actuales) throw new Exception("No puedes reducir la capacidad a {$n_cupo}. Ya tienes {$inscritos_actuales} alumnos inscritos.");
                 
-                $pdo->prepare("UPDATE grupos SET profesor_id=?, materia_id=?, ciclo_id=?, cupo=?, edicion_total=? WHERE clave_grupo=?")->execute([$n_prof, $n_mat, $n_ciclo, $n_cupo, $n_edicion_total, $clave]);
+                // Actualizamos agregando también el estado
+                $pdo->prepare("UPDATE grupos SET profesor_id=?, materia_id=?, ciclo_id=?, cupo=?, edicion_total=?, estado=? WHERE clave_grupo=?")->execute([$n_prof, $n_mat, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
                 if ($nrc_p) $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $_POST['aula_presencial'], $nrc_p]);
                 if ($nrc_v) $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $_POST['aula_virtual'], $nrc_v]);
                 
@@ -240,19 +201,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mensaje = "Datos del grupo actualizados correctamente."; $tipo_mensaje = "success";
             } else {
                 $nueva_clave = uniqid('grp_');
-                $insertGrupo = $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                // Insertamos agregando el estado
+                $insertGrupo = $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, estado, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $insertHorario = $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)");
 
                 if ($nrc_p !== '') {
                     $chk = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ?"); $chk->execute([$nrc_p]);
                     if($chk->fetchColumn() > 0) throw new Exception("El NRC Presencial $nrc_p ya está siendo utilizado en otro grupo.");
-                    $insertGrupo->execute([$nrc_p, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $nueva_clave]);
+                    $insertGrupo->execute([$nrc_p, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $nueva_clave]);
                     $insertHorario->execute([$nrc_p, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], 'PRESENCIAL', $_POST['aula_presencial']]);
                 }
                 if ($nrc_v !== '') {
                     $chk = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ?"); $chk->execute([$nrc_v]);
                     if($chk->fetchColumn() > 0) throw new Exception("El NRC Virtual $nrc_v ya está siendo utilizado en otro grupo.");
-                    $insertGrupo->execute([$nrc_v, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $nueva_clave]);
+                    $insertGrupo->execute([$nrc_v, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $nueva_clave]);
                     $insertHorario->execute([$nrc_v, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], 'VIRTUAL', $_POST['aula_virtual']]);
                 }
                 $pdo->commit();
@@ -269,15 +231,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Obtener catálogos para los selects
 $list_profesores = $pdo->query("SELECT usuario_id, codigo, nombre, apellido_paterno, apellido_materno FROM usuarios WHERE rol='PROFESOR' AND estatus='ACTIVO' ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
 $list_materias = $pdo->query("SELECT materia_id, clave, nombre FROM materias ORDER BY clave")->fetchAll(PDO::FETCH_ASSOC);
-$list_ciclos = $pdo->query("SELECT ciclo_id, nombre FROM ciclos ORDER BY nombre DESC")->fetchAll(PDO::FETCH_ASSOC);
+$list_ciclos = $pdo->query("SELECT nombre FROM ciclos ORDER BY nombre DESC")->fetchAll(PDO::FETCH_ASSOC);
 $list_alumnos = $pdo->query("SELECT a.alumno_id, u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, a.carrera FROM alumnos a JOIN usuarios u ON a.usuario_id = u.usuario_id WHERE u.estatus='ACTIVO' ORDER BY u.nombre")->fetchAll(PDO::FETCH_ASSOC);
 
-// Variables para los campos del formulario
 $g = []; $alumnos_inscritos = []; $total_inscritos = 0; $nrc_base = '';
 
 if ($es_edicion) {
-    $sql = "SELECT g.clave_grupo, m.materia_id, m.nombre AS materia, u.usuario_id AS profesor_id, u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap, u.foto_perfil AS prof_foto, u.correo AS prof_correo, c.ciclo_id,
-                   MAX(g.cupo) AS cupo, MAX(g.edicion_total) AS edicion_total,
+    $sql = "SELECT g.clave_grupo, m.materia_id, m.nombre AS materia, u.usuario_id AS profesor_id, u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap, u.foto_perfil AS prof_foto, u.correo AS prof_correo, c.ciclo_id, c.nombre as ciclo_nombre,
+                   MAX(g.cupo) AS cupo, MAX(g.edicion_total) AS edicion_total, MAX(g.estado) AS estado,
                    MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_presencial,
                    MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_virtual,
                    MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.aula END) AS aula_presencial,
@@ -289,7 +250,7 @@ if ($es_edicion) {
                    MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.hora_fin END) AS fin_presencial,
                    MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.hora_fin END) AS fin_virtual
             FROM grupos g JOIN materias m ON g.materia_id = m.materia_id JOIN usuarios u ON g.profesor_id = u.usuario_id JOIN ciclos c ON g.ciclo_id = c.ciclo_id LEFT JOIN horarios h ON g.nrc = h.nrc
-            WHERE g.clave_grupo=? GROUP BY g.clave_grupo, m.materia_id, m.nombre, u.usuario_id, u.nombre, u.apellido_paterno, u.foto_perfil, u.correo, c.ciclo_id";
+            WHERE g.clave_grupo=? GROUP BY g.clave_grupo, m.materia_id, m.nombre, u.usuario_id, u.nombre, u.apellido_paterno, u.foto_perfil, u.correo, c.ciclo_id, c.nombre";
     $stmt = $pdo->prepare($sql); $stmt->execute([$clave]); $g = $stmt->fetch(PDO::FETCH_ASSOC);
     if(!$g) { header("Location: grupos_nrc.php"); exit; }
 
@@ -300,12 +261,12 @@ if ($es_edicion) {
     $foto_profesor = "../img/avatar-default.png"; if($g['prof_foto'] && file_exists("../img/perfiles/" . $g['prof_foto'])) { $foto_profesor = "../img/perfiles/" . $g['prof_foto']; }
 }
 
-// INYECCIÓN DE VALORES AL FORMULARIO
 $v_prof = ($tipo_mensaje == 'error' && isset($_POST['profesor_id'])) ? $_POST['profesor_id'] : ($g['profesor_id'] ?? '');
 $v_mat = ($tipo_mensaje == 'error' && isset($_POST['materia_id'])) ? $_POST['materia_id'] : ($g['materia_id'] ?? '');
-$v_ciclo = ($tipo_mensaje == 'error' && isset($_POST['ciclo_id'])) ? $_POST['ciclo_id'] : ($g['ciclo_id'] ?? '');
+$v_ciclo_nombre = ($tipo_mensaje == 'error' && isset($_POST['ciclo_nombre'])) ? $_POST['ciclo_nombre'] : ($g['ciclo_nombre'] ?? '');
 $v_cupo = ($tipo_mensaje == 'error' && isset($_POST['cupo'])) ? $_POST['cupo'] : ($g['cupo'] ?? 30);
 $v_edit_total = ($tipo_mensaje == 'error' && isset($_POST['edicion_total'])) ? 1 : ($g['edicion_total'] ?? 0);
+$v_estado = ($tipo_mensaje == 'error' && isset($_POST['estado'])) ? $_POST['estado'] : ($g['estado'] ?? 'ACTIVO');
 
 $v_nrc_p = ($tipo_mensaje == 'error' && isset($_POST['rnc_presencial'])) ? $_POST['rnc_presencial'] : ($g['nrc_presencial'] ?? '');
 $v_aula_p = ($tipo_mensaje == 'error' && isset($_POST['aula_presencial'])) ? $_POST['aula_presencial'] : ($g['aula_presencial'] ?? '');
@@ -337,8 +298,16 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
     <main class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <?php if($es_edicion): ?><span style="font-weight: bold; color: #555;">Gestionando: <span style="color: var(--udg-blue);"><?php echo htmlspecialchars($g['materia']); ?></span></span>
-            <?php else: ?><span style="font-weight: bold; color: #28a745;">Creando Nuevo Grupo</span><?php endif; ?>
+            <a href="grupos_nrc.php" style="color: var(--udg-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-arrow-left"></i> Volver al listado</a>
+            <?php if($es_edicion): ?>
+                <span style="font-weight: bold; color: #555;">Gestionando: <span style="color: var(--udg-blue);"><?php echo htmlspecialchars($g['materia']); ?></span>
+                <?php if($g['estado'] == 'CERRADO'): ?>
+                    <span style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 10px;"><i class="fas fa-lock"></i> Finalizada</span>
+                <?php endif; ?>
+                </span>
+            <?php else: ?>
+                <span style="font-weight: bold; color: #28a745;">Creando Nuevo Grupo</span>
+            <?php endif; ?>
         </div>
 
         <?php if($mensaje): ?>
@@ -350,8 +319,6 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                         icon: '<?php echo $tipo_mensaje; ?>',
                         confirmButtonColor: 'var(--udg-blue)'
                     });
-                    
-                    // Limpiamos la URL para que no vuelva a saltar si refrescan la página
                     const currentUrl = new URL(window.location.href);
                     if (currentUrl.searchParams.has('msg')) {
                         currentUrl.searchParams.delete('msg');
@@ -385,10 +352,10 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                             <input type="hidden" name="nuevo_alumno_id" id="hiddenAlumnoId" required>
                             <div style="display: flex; gap: 10px; align-items: stretch;">
                                 <div class="custom-select-wrapper">
-                                    <input type="text" id="searchInput" placeholder="Escribe el nombre o código..." style="width: 100%; height: 42px; padding: 10px 15px; border-radius: 6px; border: none; box-sizing: border-box; font-family: inherit;" autocomplete="off">
+                                    <input type="text" id="searchInput" placeholder="Escribe el nombre o código..." style="width: 100%; height: 42px; padding: 10px 15px; border-radius: 6px; border: none; box-sizing: border-box; font-family: inherit;" autocomplete="off" <?php echo ($v_estado == 'CERRADO') ? 'disabled' : ''; ?>>
                                     <div class="custom-options" id="optionsContainer"></div>
                                 </div>
-                                <button type="submit" class="btn-save" style="background: #28a745; white-space: nowrap; height: 42px;"><i class="fas fa-plus"></i> Añadir</button>
+                                <button type="submit" class="btn-save" style="background: #28a745; white-space: nowrap; height: 42px;" <?php echo ($v_estado == 'CERRADO') ? 'disabled style="background:#ccc; cursor:not-allowed;"' : ''; ?>><i class="fas fa-plus"></i> Añadir</button>
                             </div>
                         </form>
                     </div>
@@ -401,14 +368,14 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                     <div class="student-row">
                                         <a href="ver_expediente.php?id=<?php echo $alum['usuario_id']; ?>" class="student-link">
                                             <div style="font-weight: bold; color: var(--udg-blue); font-size: 0.95rem;"><?php echo htmlspecialchars($alum['nombre'] . ' ' . $alum['apellido_paterno']); ?></div>
-                                            <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px;">Cod: <?php echo htmlspecialchars($alum['codigo']); ?></div>
+                                            <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px;">Codigo: <?php echo htmlspecialchars($alum['codigo']); ?></div>
                                         </a>
                                         <div class="student-action">
                                             <form method="POST" style="margin: 0;">
                                                 <input type="hidden" name="action" value="remove_student">
                                                 <input type="hidden" name="alumno_id" value="<?php echo $alum['alumno_id']; ?>">
                                                 <input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>">
-                                                <button type="button" onclick="confirmarBajaAlumno(this, '<?php echo addslashes(htmlspecialchars($alum['nombre'])); ?>')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.2rem; padding: 5px;" title="Expulsar">
+                                                <button type="button" onclick="confirmarBajaAlumno(this, '<?php echo addslashes(htmlspecialchars($alum['nombre'])); ?>')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.2rem; padding: 5px;" title="Expulsar" <?php echo ($v_estado == 'CERRADO') ? 'disabled style="color:#ccc; cursor:not-allowed;"' : ''; ?>>
                                                     <i class="fas fa-user-minus"></i>
                                                 </button>
                                             </form>
@@ -495,19 +462,29 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                 </div>
                                 <div class="form-group">
                                     <label>Ciclo Escolar <span style="color:red;">*</span></label>
-                                    <select name="ciclo_id" required>
-                                        <option value="">Seleccionar...</option>
+                                    <input type="text" name="ciclo_nombre" list="ciclosList" value="<?php echo htmlspecialchars($v_ciclo_nombre); ?>" required placeholder="Ej. 2026-A" style="text-transform: uppercase;">
+                                    <datalist id="ciclosList">
                                         <?php foreach($list_ciclos as $c): ?>
-                                            <option value="<?php echo $c['ciclo_id']; ?>" <?php if($v_ciclo == $c['ciclo_id']) echo 'selected'; ?>><?php echo htmlspecialchars($c['nombre']); ?></option>
+                                            <option value="<?php echo htmlspecialchars($c['nombre']); ?>">
                                         <?php endforeach; ?>
-                                    </select>
+                                    </datalist>
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label>Capacidad Máxima (Cupo)</label>
-                                <input type="number" name="cupo" min="<?php echo $es_edicion ? max(1, $total_inscritos) : 1; ?>" value="<?php echo htmlspecialchars($v_cupo); ?>" required style="font-weight: bold; color: var(--udg-blue); font-size: 1.1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="form-group">
+                                    <label>Capacidad Máxima (Cupo)</label>
+                                    <input type="number" name="cupo" min="<?php echo $es_edicion ? max(1, $total_inscritos) : 1; ?>" value="<?php echo htmlspecialchars($v_cupo); ?>" required style="font-weight: bold; color: var(--udg-blue); font-size: 1.1rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Estado de la Clase</label>
+                                    <select name="estado" style="font-weight: bold; <?php echo ($v_estado == 'CERRADO') ? 'color: #dc3545;' : 'color: #28a745;'; ?>">
+                                        <option value="ACTIVO" <?php if($v_estado == 'ACTIVO') echo 'selected'; ?>>🟢 En Curso (Activa)</option>
+                                        <option value="CERRADO" <?php if($v_estado == 'CERRADO') echo 'selected'; ?>>🔴 Finalizada (Cerrada)</option>
+                                    </select>
+                                </div>
                             </div>
+
                         </div>
                     </div>
 
@@ -524,6 +501,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
         
         function confirmarBajaAlumno(btn, nombreAlumno) {
+            if(btn.disabled) return;
             Swal.fire({ 
                 title: '¿Dar de baja?', 
                 html: `Estás a punto de dar de baja a <b>${nombreAlumno}</b>.`, 
