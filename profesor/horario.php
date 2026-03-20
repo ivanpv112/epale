@@ -13,7 +13,7 @@ $sql_horarios = "SELECT m.materia_id, m.nombre as materia, c.nombre as ciclo, g.
                  JOIN materias m ON g.materia_id = m.materia_id
                  JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                  JOIN horarios h ON g.nrc = h.nrc
-                 WHERE g.profesor_id = ? AND c.activo = 1
+                 WHERE g.profesor_id = ? AND c.activo = 1 AND g.estado = 'ACTIVO'
                  ORDER BY h.hora_inicio ASC";
                  
 $stmt_h = $pdo->prepare($sql_horarios);
