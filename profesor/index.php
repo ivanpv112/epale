@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
 $profesor_id = $_SESSION['user_id'];
 $nombre_profesor = $_SESSION['nombre'] . ' ' . $_SESSION['apellido_paterno'];
 
-// 1. OBTENER GRUPOS ACTIVOS (AHORA AGRUPADOS POR CLAVE_GRUPO)
+// 1. OBTENER GRUPOS ACTIVOS (AHORA TAMBIÉN FILTRA g.estado = 'ACTIVO')
 $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.materia_id, g.ciclo_id, g.profesor_id,
                       MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                       MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -27,7 +27,7 @@ $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS c
                JOIN materias m ON g.materia_id = m.materia_id
                JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                LEFT JOIN horarios h ON g.nrc = h.nrc
-               WHERE g.profesor_id = ? AND c.activo = 1
+               WHERE g.profesor_id = ? AND c.activo = 1 AND g.estado = 'ACTIVO'
                GROUP BY g.clave_grupo, g.materia_id, c.ciclo_id, g.profesor_id, m.nombre, m.nivel, c.nombre
                ORDER BY m.nivel ASC";
 
@@ -91,7 +91,7 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
 
         <div class="main-grid">
             <div class="content-card" style="overflow-x: auto;">
-                <h3 class="card-title"><i class="fas fa-chalkboard"></i> Mis Grupos</h3>
+                <h3 class="card-title"><i class="fas fa-chalkboard"></i> Mis Grupos Activos</h3>
                 <table class="prof-table">
                     <thead><tr><th>Materia</th><th>Nivel</th><th>Alumnos</th><th>Horario</th><th>Aula</th></tr></thead>
                     <tbody>
@@ -110,7 +110,7 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="5" style="text-align: center; color:#aaa; padding: 30px;">No tienes grupos asignados.</td></tr>
+                            <tr><td colspan="5" style="text-align: center; color:#aaa; padding: 30px;">No tienes grupos activos asignados.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
