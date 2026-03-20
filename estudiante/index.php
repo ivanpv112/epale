@@ -2,12 +2,10 @@
 session_start();
 require '../db.php'; 
 
-// 1. Seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// 2. Obtener el alumno_id y el nombre real desde la BD
 $stmt_al = $pdo->prepare("SELECT a.alumno_id, u.nombre, u.apellido_paterno, u.apellido_materno 
                           FROM alumnos a 
                           JOIN usuarios u ON a.usuario_id = u.usuario_id 
@@ -18,26 +16,26 @@ $alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
 $alumno_id = $alumno['alumno_id'];
 $nombre_completo = trim($alumno['nombre'] . ' ' . $alumno['apellido_paterno'] . ' ' . $alumno['apellido_materno']);
 
-// 3. Obtener materias inscritas del alumno 
+// MATERIAS ACTIVAS
 $sql_materias = "SELECT i.inscripcion_id, m.materia_id, m.nombre, m.nivel, g.nrc 
                  FROM inscripciones i
                  JOIN grupos g ON i.nrc = g.nrc
                  JOIN materias m ON g.materia_id = m.materia_id
-                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO'";
+                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'";
 $stmt_mat = $pdo->prepare($sql_materias);
 $stmt_mat->execute([$alumno_id]);
 $materias_inscritas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
 
-// 4. LÓGICA INTELIGENTE DE PRÓXIMAS CLASES (BLINDADA PARA PHP 8)
 $dias_map = [ 'Monday' => 'L', 'Tuesday' => 'M', 'Wednesday' => 'I', 'Thursday' => 'J', 'Friday' => 'V', 'Saturday' => 'S', 'Sunday' => 'D' ];
 $dia_hoy_letra = $dias_map[date('l')]; 
 
+// HORARIOS ACTIVOS
 $sql_horarios = "SELECT h.hora_inicio, h.hora_fin, h.aula, h.modalidad, h.dias_patron, m.nombre, m.nivel 
                  FROM horarios h
                  JOIN grupos g ON h.nrc = g.nrc
                  JOIN materias m ON g.materia_id = m.materia_id
                  JOIN inscripciones i ON g.nrc = i.nrc
-                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO'
+                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'
                  ORDER BY h.hora_inicio ASC";
 $stmt_hor = $pdo->prepare($sql_horarios);
 $stmt_hor->execute([$alumno_id]);
@@ -45,13 +43,9 @@ $todos_horarios = $stmt_hor->fetchAll(PDO::FETCH_ASSOC);
 
 $clases_hoy = [];
 foreach ($todos_horarios as $h) {
-    // Nos aseguramos de convertir el valor a String, incluso si es null
     $patron = isset($h['dias_patron']) ? (string)$h['dias_patron'] : '';
-    
-    // Eliminamos números, guiones y espacios (Solo letras)
     $solo_letras = preg_replace('/[^A-Za-z]/', '', strtoupper($patron));
     
-    // CIBERSEGURIDAD PHP 8: Evitar el ValueError asegurando que NO esté vacío
     if (!empty($solo_letras) && strlen($solo_letras) > 0) {
         $dias_clase = str_split($solo_letras);
         if (in_array($dia_hoy_letra, $dias_clase)) {
@@ -60,13 +54,10 @@ foreach ($todos_horarios as $h) {
     }
 }
 
-// CREACIÓN DE FECHA EN ESPAÑOL (Evita usar strftime que está obsoleto)
 $meses_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 $dias_es = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 $fecha_texto_es = $dias_es[date('w')] . ', ' . date('d') . ' de ' . $meses_es[date('n') - 1];
 
-
-// 5. OBTENER NOTIFICACIONES DINÁMICAS (CADUCAN A LOS 15 DÍAS AUTOMÁTICAMENTE)
 $sql_notif_bajas = "SELECT sb.estatus, sb.fecha_respuesta, m.nombre, m.nivel
                     FROM solicitudes_bajas sb
                     JOIN inscripciones i ON sb.inscripcion_id = i.inscripcion_id
@@ -120,7 +111,7 @@ if (!function_exists('format_score')) {
                             <?php endforeach; ?>
                         </select>
                     <?php else: ?>
-                        <span style="font-size:0.8rem; color:#888;">Sin materias</span>
+                        <span style="font-size:0.8rem; color:#888;">Sin materias activas</span>
                     <?php endif; ?>
                 </h3>
                 
@@ -137,12 +128,10 @@ if (!function_exists('format_score')) {
                     $materia_id = $mat['materia_id'];
                     $display = ($index === 0) ? 'block' : 'none';
                     
-                    // 1. Obtener máximo
                     $stmt_max = $pdo->prepare("SELECT SUM(puntos_maximos) FROM criterios_evaluacion WHERE materia_id = ?");
                     $stmt_max->execute([$materia_id]);
                     $max_puntos = $stmt_max->fetchColumn() ?: 0;
                     
-                    // 2. Sumar puntos
                     $stmt_cal = $pdo->prepare("SELECT puntaje FROM calificaciones WHERE inscripcion_id = ?");
                     $stmt_cal->execute([$insc_id]);
                     $suma_puntos = 0;
@@ -150,7 +139,6 @@ if (!function_exists('format_score')) {
                         if($row['puntaje'] !== null) $suma_puntos += floatval($row['puntaje']);
                     }
 
-                    // 3. Calcular porcentaje
                     $porcentaje = ($max_puntos > 0) ? ($suma_puntos / $max_puntos) * 100 : 0;
                     if ($porcentaje > 100) $porcentaje = 100;
                     
@@ -194,7 +182,7 @@ if (!function_exists('format_score')) {
                     </div>
                     
                     <div style="text-align: center; margin-top: 15px;">
-                        <button onclick="window.location.href='calificaciones.php?ins=<?php echo $insc_id; ?>'" style="padding: 8px 15px; background: transparent; border: 1px solid var(--udg-blue); color: var(--udg-blue); border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Criterios</button>
+                        <button onclick="window.location.href='calificaciones.php?ins=<?php echo $insc_id; ?>'" style="padding: 8px 15px; background: transparent; border: 1px solid var(--udg-blue); color: var(--udg-blue); border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Ver Desglose</button>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -225,7 +213,7 @@ if (!function_exists('format_score')) {
                     <?php else: ?>
                         <div style="text-align:center; padding: 20px 0; color:#888;">
                             <i class="fas fa-mug-hot" style="font-size: 2.5rem; color: #eee; margin-bottom: 10px; display: block;"></i>
-                            No tienes clases programadas para hoy.
+                            ¡Día libre! No tienes clases programadas para hoy.
                         </div>
                     <?php endif; ?>
                 </ul>
