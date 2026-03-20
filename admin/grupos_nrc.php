@@ -11,7 +11,10 @@ if (isset($_GET['del_clave'])) {
 
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $filtro_materia = isset($_GET['materia']) ? $_GET['materia'] : '';
-$where = "1=1"; $params = [];
+
+// FILTRO MAESTRO: Solo mostramos los grupos que están ACTIVOS
+$where = "g.estado = 'ACTIVO'"; 
+$params = [];
 
 if ($search !== '') {
     $where .= " AND (m.nombre LIKE :q1 OR m.clave LIKE :q2 OR g.nrc LIKE :q3)";
@@ -56,13 +59,14 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <?php include 'menu_admin.php'; ?>
     <main class="main-content">
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-chalkboard"></i> Gestión de Grupos y Alumnos</h1>
-            <p>Administra los horarios, aulas y el cupo de estudiantes por cada clase.</p>
+            <p>Administra los horarios, aulas y el cupo de los grupos que están <strong>En Curso</strong>.</p>
         </div>
 
         <?php if(isset($_GET['success'])): ?><div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡El grupo ha sido guardado correctamente!</div>
@@ -133,7 +137,7 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-light);"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos.</td></tr>
+                        <tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-light);"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos activos. Las clases finalizadas están en Ciclos Escolares.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
@@ -151,14 +155,12 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
             }).then((result) => { if (result.isConfirmed) { window.location.href = url; } });
         }
 
-        // MAGIA: Limpiar la URL después de cargar para que las alertas no se repitan con F5
         if (window.history.replaceState) {
             const url = new URL(window.location);
             if (url.searchParams.has('success') || url.searchParams.has('success_del') || url.searchParams.has('error')) {
                 url.searchParams.delete('success');
                 url.searchParams.delete('success_del');
                 url.searchParams.delete('error');
-                // Reemplazamos la URL en la barra de direcciones de forma silenciosa
                 window.history.replaceState({path:url.href}, '', url.href);
             }
         }
