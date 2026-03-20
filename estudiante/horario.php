@@ -7,12 +7,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// 1. Obtener el ID de alumno
 $stmt_alumno = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
 $stmt_alumno->execute([$_SESSION['user_id']]);
 $alumno_id = $stmt_alumno->fetchColumn();
 
-// 2. Obtener todas las materias inscritas en el ciclo ACTIVO
+// OBTENER SOLO MATERIAS ACTIVAS
 $sql_horarios = "SELECT m.materia_id, m.nombre as materia, c.nombre as ciclo, 
                         h.modalidad, h.dias_patron, h.hora_inicio, h.hora_fin, h.aula
                  FROM inscripciones i
@@ -20,16 +19,15 @@ $sql_horarios = "SELECT m.materia_id, m.nombre as materia, c.nombre as ciclo,
                  JOIN materias m ON g.materia_id = m.materia_id
                  JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                  JOIN horarios h ON g.nrc = h.nrc
-                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND c.activo = 1
+                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'
                  ORDER BY h.hora_inicio ASC";
                  
 $stmt_h = $pdo->prepare($sql_horarios);
 $stmt_h->execute([$alumno_id]);
 $horarios_db = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
 
-$ciclo_actual = count($horarios_db) > 0 ? $horarios_db[0]['ciclo'] : 'Sin ciclo activo';
+$ciclo_actual = count($horarios_db) > 0 ? $horarios_db[0]['ciclo'] : 'Sin clases activas';
 
-// 3. Función inteligente para descifrar los días
 function descifrarDias($cadena) {
     $columnas = [];
     $s = strtoupper($cadena);
@@ -50,7 +48,6 @@ function descifrarDias($cadena) {
     return array_unique($columnas);
 }
 
-// 4. Paleta de colores pastel
 $paleta = [
     ['bg' => '#e7f3ff', 'border' => '#8bb9ff', 'text' => '#0056b3'], 
     ['bg' => '#e6f8ec', 'border' => '#89dfa9', 'text' => '#0f5132'], 
@@ -64,7 +61,6 @@ $colores_asignados = [];
 $color_index = 0;
 $bloques_render = [];
 
-// Preparar los bloques para el calendario
 foreach ($horarios_db as $h) {
     if (!$h['hora_inicio'] || !$h['hora_fin'] || !$h['dias_patron']) continue;
 
@@ -122,7 +118,7 @@ foreach ($horarios_db as $h) {
             <h1 style="color: var(--udg-blue); margin: 0; font-size: 2rem;">
                 <i class="far fa-calendar-alt"></i> Mi Horario
             </h1>
-            <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Semestre <?php echo htmlspecialchars($ciclo_actual); ?></p>
+            <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Ciclo: <?php echo htmlspecialchars($ciclo_actual); ?></p>
         </div>
 
         <div class="schedule-wrapper">
