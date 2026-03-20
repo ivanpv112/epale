@@ -95,3 +95,43 @@
 
 /* Etiqueta Admin en Perfil */
 .admin-badge { background-color: #dc3545; color: white; padding: 5px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
+
+/* ==========================================================================
+   9. ESTILOS PARA LAS PESTAÑAS DE SOLICITUDES (solicitudes.php)
+   ========================================================================== */
+.tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+.btn-tab { padding: 10px 20px; text-decoration: none; color: #555; border-radius: 8px 8px 0 0; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; border-bottom: none; transition: 0.2s; position: relative; top: 12px; }
+.btn-tab.active { background: var(--udg-blue); color: white; border-color: var(--udg-blue); }
+.btn-tab:hover:not(.active) { background: #e9ecef; }
+.badge-tab { background: #dc3545; color: white; border-radius: 12px; padding: 2px 6px; font-size: 0.75rem; margin-left: 8px; }
+
+/* ==========================================================================
+   10. ESTILOS PARA ÁRBOL DE CICLOS (ciclos.php)
+   ========================================================================== */
+details.tree-node {
+    background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+details.tree-node > summary {
+    padding: 15px 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    background: #f8f9fa; transition: background 0.2s; list-style: none; color: var(--udg-blue); font-size: 1.1rem;
+}
+details.tree-node > summary::-webkit-details-marker { display: none; }
+details.tree-node > summary:hover { background: #f1f3f5; }
+details.tree-node[open] > summary { border-bottom: 1px solid #eee; background: var(--udg-blue); color: white; }
+.tree-content { padding: 15px 20px; background: #fff; }
+
+/* Level 2 (Idiomas) */
+details.tree-lang { border-left: 4px solid var(--udg-light); margin-bottom: 8px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+details.tree-lang > summary { padding: 12px 15px; background: white; color: var(--udg-blue); list-style: none; cursor: pointer; font-weight: bold; transition: 0.2s;}
+details.tree-lang > summary::-webkit-details-marker { display: none; }
+details.tree-lang[open] > summary { background: #eaf4fc; border-bottom: 1px solid #d0e3ff; }
+
+/* Level 3 (Niveles) */
+details.tree-level { border-left: 4px solid #17a2b8; margin-bottom: 8px; border-radius: 6px; overflow: hidden;}
+details.tree-level > summary { padding: 10px 15px; background: white; color: #333; list-style: none; cursor: pointer; font-weight: bold; transition: 0.2s;}
+details.tree-level > summary::-webkit-details-marker { display: none; }
+details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px solid #eee;}
+
+/* Level 4 (Clases) */
+.tree-class-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #fdfdfd; border: 1px solid #f1f1f1; border-radius: 6px; margin-bottom: 8px; transition: 0.2s; }
+.tree-class-item:hover { border-color: #ccc; transform: translateX(5px); box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
