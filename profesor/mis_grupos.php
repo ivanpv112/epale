@@ -17,8 +17,8 @@ if ($search !== '') {
     $params[] = "%" . $search . "%"; 
 }
 
-// OBTENER GRUPOS POR CLAVE ÚNICA (BLINDADO CONTRA MODO ESTRICTO)
-$sql = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.materia_id, g.ciclo_id, g.profesor_id,
+// OBTENER GRUPOS (Ahora incluye g.estado)
+$sql = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.estado, g.materia_id, g.ciclo_id, g.profesor_id,
                MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
                MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.aula END) AS aula_p,
@@ -38,8 +38,8 @@ $sql = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c
         JOIN ciclos c ON g.ciclo_id = c.ciclo_id
         LEFT JOIN horarios h ON g.nrc = h.nrc
         WHERE g.profesor_id = ? $where_extra
-        GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo, g.materia_id, g.ciclo_id, g.profesor_id
-        ORDER BY c.activo DESC, c.nombre DESC, m.nivel ASC";
+        GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo, g.estado, g.materia_id, g.ciclo_id, g.profesor_id
+        ORDER BY c.activo DESC, g.estado ASC, c.nombre DESC, m.nivel ASC";
 
 $stmt = $pdo->prepare($sql); 
 $stmt->execute($params); 
@@ -93,17 +93,18 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <tbody>
                         <?php if (count($grupos) > 0): ?>
                             <?php foreach ($grupos as $g): 
-                                $opacidad = ($g['activo'] == 1) ? '1' : '0.6'; 
-                                $bg_tr = ($g['activo'] == 1) ? '#fff' : '#fcfcfc';
+                                $esta_activa = ($g['activo'] == 1 && $g['estado'] == 'ACTIVO');
+                                $opacidad = $esta_activa ? '1' : '0.6'; 
+                                $bg_tr = $esta_activa ? '#fff' : '#fcfcfc';
                             ?>
                                 <tr style="background-color: <?php echo $bg_tr; ?>; opacity: <?php echo $opacidad; ?>;" onclick="window.location.href='detalle_grupo.php?clave=<?php echo $g['clave_grupo']; ?>'">
                                     
                                     <td style="padding: 15px 20px; font-weight: bold; color: #555;">
                                         <?php echo htmlspecialchars($g['ciclo']); ?>
-                                        <?php if($g['activo'] == 1): ?>
+                                        <?php if($esta_activa): ?>
                                             <span style="display: block; font-size: 0.75rem; color: #28a745; margin-top: 3px;"><i class="fas fa-circle" style="font-size: 0.5rem; margin-right:3px;"></i>En curso</span>
                                         <?php else: ?>
-                                            <span style="display: block; font-size: 0.75rem; color: #888; margin-top: 3px;">Terminado</span>
+                                            <span style="display: block; font-size: 0.75rem; color: #6c757d; margin-top: 3px;"><i class="fas fa-archive" style="font-size: 0.6rem; margin-right:3px;"></i>Finalizada</span>
                                         <?php endif; ?>
                                     </td>
                                     
@@ -156,6 +157,6 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal de Profesores</div></footer>
+    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal Docente</div></footer>
 </body>
 </html>
