@@ -11,8 +11,8 @@ if (!$clave_grupo) { header("Location: mis_grupos.php"); exit; }
 
 $mensaje = '';
 
-// 1. OBTENER INFORMACIÓN USANDO CLAVE_GRUPO
-$stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, m.clave, c.nombre AS ciclo, g.edicion_total,
+// 1. OBTENER INFORMACIÓN (AHORA INCLUYE g.estado)
+$stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, m.clave, c.nombre AS ciclo, g.edicion_total, g.estado,
                                    MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_presencial,
                                    MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_virtual
                             FROM grupos g
@@ -20,20 +20,22 @@ $stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, m
                             JOIN ciclos c ON c.ciclo_id = g.ciclo_id 
                             LEFT JOIN horarios h ON g.nrc = h.nrc
                             WHERE g.clave_grupo = ? AND g.profesor_id = ?
-                            GROUP BY g.clave_grupo, m.materia_id, c.ciclo_id, g.profesor_id, m.nombre, m.nivel, m.clave, c.nombre, g.edicion_total");
+                            GROUP BY g.clave_grupo, m.materia_id, c.ciclo_id, g.profesor_id, m.nombre, m.nivel, m.clave, c.nombre, g.edicion_total, g.estado");
 $stmt_info->execute([$clave_grupo, $profesor_id]);
 $info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
 
 if (!$info_grupo) { header("Location: mis_grupos.php"); exit; }
+
 $edicion_total = $info_grupo['edicion_total'] ?? 0;
-$materia_id = $info_grupo['materia_id']; // Lo necesitamos para los criterios
+$grupo_cerrado = ($info_grupo['estado'] === 'CERRADO');
+$materia_id = $info_grupo['materia_id']; 
 
 $txt_nrc = '';
 if ($info_grupo['nrc_presencial']) $txt_nrc .= 'P: ' . $info_grupo['nrc_presencial'] . ' ';
 if ($info_grupo['nrc_virtual']) $txt_nrc .= ($txt_nrc ? '| V: ' : 'V: ') . $info_grupo['nrc_virtual'];
 
-// 2. GUARDAR CALIFICACIONES 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'guardar_calificaciones') {
+// 2. GUARDAR CALIFICACIONES (Bloqueado por seguridad si la clase está cerrada)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'guardar_calificaciones' && !$grupo_cerrado) {
     $nuevas_calificaciones = $_POST['calificaciones'] ?? [];
     try {
         $pdo->beginTransaction();
@@ -75,7 +77,7 @@ foreach ($criterios as &$c) {
 }
 unset($c);
 
-// 4. OBTENER ALUMNOS USANDO CLAVE_GRUPO
+// 4. OBTENER ALUMNOS
 $sql_alum = "SELECT i.inscripcion_id, u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, a.carrera
              FROM inscripciones i
              JOIN grupos g ON i.nrc = g.nrc
@@ -123,7 +125,18 @@ if (count($alumnos) > 0) {
             </div>
         </div>
 
-        <?php if($edicion_total == 0): ?><div class="alert" style="background: #e7f3ff; color: #004085; border: 1px solid #b8daff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;"><i class="fas fa-lock" style="font-size: 1.8rem; color: #0056b3;"></i><div><strong>Control Escolar Restringido</strong><br><span style="font-size: 0.9rem;">Como docente, puedes calificar proyectos, actividades y participaciones. La captura de exámenes (Qz1, Qz2, Qz3, TOEFL) es manejada por Control Escolar.</span></div></div><?php endif; ?>
+        <?php if($grupo_cerrado): ?>
+            <div class="alert" style="background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                <i class="fas fa-archive" style="font-size: 1.8rem;"></i>
+                <div><strong>Clase Finalizada</strong><br><span style="font-size: 0.9rem;">Esta clase ha sido cerrada por la administración. Las calificaciones son de solo lectura.</span></div>
+            </div>
+        <?php elseif($edicion_total == 0): ?>
+            <div class="alert" style="background: #e7f3ff; color: #004085; border: 1px solid #b8daff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                <i class="fas fa-lock" style="font-size: 1.8rem; color: #0056b3;"></i>
+                <div><strong>Control Escolar Restringido</strong><br><span style="font-size: 0.9rem;">Como docente, puedes calificar proyectos, actividades y participaciones. La captura de exámenes (Qz1, Qz2, Qz3, TOEFL) es manejada por Control Escolar.</span></div>
+            </div>
+        <?php endif; ?>
+
         <?php if($mensaje): ?><div class="alert alert-success" style="margin-bottom: 20px; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px;"><i class="fas fa-check-circle"></i> <?php echo $mensaje; ?></div><?php endif; ?>
 
         <?php if (count($criterios) === 0): ?><div class="alert" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 20px; border-radius: 8px; text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i><strong>No hay criterios de evaluación definidos.</strong></div>
@@ -131,8 +144,11 @@ if (count($alumnos) > 0) {
         <?php else: ?>
             <form method="POST" action="detalle_grupo.php?clave=<?php echo $clave_grupo; ?>" id="formCalificaciones">
                 <input type="hidden" name="action" value="guardar_calificaciones">
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #001a57; padding: 15px 20px; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                    <div style="color: white; font-weight: bold;"><i class="fas fa-edit"></i> Hoja de Calificaciones</div><button type="submit" class="btn-save" style="background: #28a745; box-shadow: none;"><i class="fas fa-save"></i> Guardar Cambios</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: <?php echo $grupo_cerrado ? '#6c757d' : '#001a57'; ?>; padding: 15px 20px; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                    <div style="color: white; font-weight: bold;"><i class="fas fa-edit"></i> Hoja de Calificaciones <?php if($grupo_cerrado) echo "(Solo Lectura)"; ?></div>
+                    <?php if(!$grupo_cerrado): ?>
+                        <button type="submit" class="btn-save" style="background: #28a745; box-shadow: none;"><i class="fas fa-save"></i> Guardar Cambios</button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="excel-table-wrapper" style="border-top-left-radius: 0; border-top-right-radius: 0; margin-bottom: 0;">
@@ -142,8 +158,10 @@ if (count($alumnos) > 0) {
                                 <th>Alumno</th>
                                 <?php foreach($criterios as $c): ?>
                                     <th title="<?php echo htmlspecialchars($c['nombre_examen']); ?>">
-                                        <i class="fas <?php echo $c['icono']; ?>" style="color: <?php echo $c['color']; ?>; display: block; font-size: 1.2rem; margin-bottom: 5px;"></i>
-                                        <div style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto;"><?php echo htmlspecialchars($c['nombre_examen']); ?><?php if($c['bloqueado']) echo ' <i class="fas fa-lock" style="color:#aaa; font-size:0.75rem;" title="Manejado por Control Escolar"></i>'; ?></div>
+                                        <i class="fas <?php echo $c['icono']; ?>" style="color: <?php echo $grupo_cerrado ? '#aaa' : $c['color']; ?>; display: block; font-size: 1.2rem; margin-bottom: 5px;"></i>
+                                        <div style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto;"><?php echo htmlspecialchars($c['nombre_examen']); ?>
+                                            <?php if($c['bloqueado'] || $grupo_cerrado) echo ' <i class="fas fa-lock" style="color:#aaa; font-size:0.75rem;" title="Manejado por Control Escolar"></i>'; ?>
+                                        </div>
                                         <span style="font-weight: normal; color: #aaa; font-size: 0.75rem;">Máx: <?php echo floatval($c['puntos_maximos']); ?></span>
                                     </th>
                                 <?php endforeach; ?>
@@ -158,11 +176,18 @@ if (count($alumnos) > 0) {
                                         $cod_examen = $c['codigo_examen']; $max_pts = floatval($c['puntos_maximos']);
                                         $val_actual = isset($calificaciones_actuales[$insc_id][$cod_examen]) ? floatval($calificaciones_actuales[$insc_id][$cod_examen]) : '';
                                         if($val_actual !== '') $suma_alumno += $val_actual;
-                                        $readonly_attr = $c['bloqueado'] ? 'readonly tabindex="-1"' : ''; $class_attr = $c['bloqueado'] ? 'grade-input grade-locked js-grade-input' : 'grade-input js-grade-input';
+                                        
+                                        // BLOQUEO LÓGICO Y VISUAL
+                                        $bloqueado_total = $c['bloqueado'] || $grupo_cerrado;
+                                        $readonly_attr = $bloqueado_total ? 'readonly tabindex="-1"' : ''; 
+                                        $class_attr = $bloqueado_total ? 'grade-input grade-locked js-grade-input' : 'grade-input js-grade-input';
                                     ?>
                                         <td>
-                                            <?php if($c['bloqueado']): ?><input type="hidden" name="calificaciones[<?php echo $insc_id; ?>][<?php echo $cod_examen; ?>]" value="<?php echo $val_actual; ?>"><?php endif; ?>
-                                            <input type="number" step="0.01" min="0" max="<?php echo $max_pts; ?>" <?php if(!$c['bloqueado']): ?>name="calificaciones[<?php echo $insc_id; ?>][<?php echo $cod_examen; ?>]"<?php endif; ?> value="<?php echo $val_actual; ?>" class="<?php echo $class_attr; ?>" data-insc="<?php echo $insc_id; ?>" <?php echo $readonly_attr; ?> <?php if($c['bloqueado']) echo 'title="Calificación manejada por Control Escolar"'; ?>>
+                                            <?php if($bloqueado_total && !$grupo_cerrado): ?>
+                                                <input type="hidden" name="calificaciones[<?php echo $insc_id; ?>][<?php echo $cod_examen; ?>]" value="<?php echo $val_actual; ?>">
+                                            <?php endif; ?>
+                                            
+                                            <input type="number" step="0.01" min="0" max="<?php echo $max_pts; ?>" <?php if(!$bloqueado_total): ?>name="calificaciones[<?php echo $insc_id; ?>][<?php echo $cod_examen; ?>]"<?php endif; ?> value="<?php echo $val_actual; ?>" class="<?php echo $class_attr; ?>" data-insc="<?php echo $insc_id; ?>" <?php echo $readonly_attr; ?> <?php if($bloqueado_total) echo 'title="Calificación Bloqueada o Cerrada"'; ?>>
                                         </td>
                                     <?php endforeach; ?>
                                     <td style="background: #f8fbff;"><div class="total-cell js-total-<?php echo $insc_id; ?>"><?php echo number_format($suma_alumno, 1); ?></div></td>
@@ -171,7 +196,12 @@ if (count($alumnos) > 0) {
                         </tbody>
                     </table>
                 </div>
-                <div style="background: #f8f9fa; padding: 15px 20px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid #eee; border-top: none; text-align: right;"><button type="submit" class="btn-save" style="font-size: 1.1rem; padding: 10px 25px;"><i class="fas fa-save"></i> Guardar Cambios</button></div>
+                
+                <?php if(!$grupo_cerrado): ?>
+                <div style="background: #f8f9fa; padding: 15px 20px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid #eee; border-top: none; text-align: right;">
+                    <button type="submit" class="btn-save" style="font-size: 1.1rem; padding: 10px 25px;"><i class="fas fa-save"></i> Guardar Cambios</button>
+                </div>
+                <?php endif; ?>
             </form>
         <?php endif; ?>
     </main>
