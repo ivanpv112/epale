@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 10-03-2026 a las 01:51:20
+-- Tiempo de generación: 20-03-2026 a las 20:52:58
 -- Versión del servidor: 8.0.36
 -- Versión de PHP: 8.3.14
 
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `calificaciones` (
   `puntaje` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`calificacion_id`),
   KEY `inscripcion_id` (`inscripcion_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `calificaciones`
@@ -75,8 +75,6 @@ INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`
 (6, 1, 'WRITING', 5.00),
 (7, 1, 'PLATAFORMA', 40.00),
 (8, 1, 'PARTICIPACION', 5.00),
-(9, 2, 'Q1', 8.00),
-(10, 2, 'PLATAFORMA', 5.00),
 (11, 1, 'TOEFL', 15.00),
 (12, 6, 'TOEFL', 5.00),
 (13, 6, 'PARTICIPACION', 5.00),
@@ -87,6 +85,29 @@ INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`
 (18, 6, 'Q3', 5.00),
 (19, 6, 'QO1', 5.00),
 (20, 6, 'QO2', 5.00);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `certificaciones`
+--
+
+DROP TABLE IF EXISTS `certificaciones`;
+CREATE TABLE IF NOT EXISTS `certificaciones` (
+  `certificacion_id` int NOT NULL AUTO_INCREMENT,
+  `alumno_id` int DEFAULT NULL,
+  `idioma` varchar(50) DEFAULT NULL,
+  `nivel_obtenido` varchar(50) DEFAULT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`certificacion_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Volcado de datos para la tabla `certificaciones`
+--
+
+INSERT INTO `certificaciones` (`certificacion_id`, `alumno_id`, `idioma`, `nivel_obtenido`, `fecha_registro`) VALUES
+(1, 1, 'Inglés', 'B2', '2026-03-20 19:04:32');
 
 -- --------------------------------------------------------
 
@@ -127,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `criterios_evaluacion` (
   `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'var(--udg-light)',
   PRIMARY KEY (`criterio_id`),
   KEY `materia_id` (`materia_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `criterios_evaluacion`
@@ -143,7 +164,9 @@ INSERT INTO `criterios_evaluacion` (`criterio_id`, `materia_id`, `categoria`, `c
 (7, 1, 'Plataforma', 'PLATAFORMA', 'Actividades Moodle', 40.00, 'fa-laptop-code', '#dc3545'),
 (8, 1, 'Participación', 'PARTICIPACION', 'Participación en clase', 5.00, 'fa-hand-paper', '#17a2b8'),
 (9, 1, 'Certificación', 'TOEFL', 'Examen TOEFL', 15.00, 'fa-certificate', '#6f42c1'),
-(10, 2, 'Certificación', 'TOEFL', 'Examen TOEFL', 10.00, 'fa-certificate', '#6f42c1');
+(10, 2, 'Certificación', 'TOEFL', 'Examen TOEFL', 10.00, 'fa-certificate', '#6f42c1'),
+(11, 2, 'Quizzes', 'Q1', 'Quiz 1', 10.00, 'fa-book-open', 'var(--udg-light)'),
+(12, 2, 'Plataforma', 'PLATAFORMA', 'Actividades Moodle', 40.00, 'fa-laptop-code', '#dc3545');
 
 -- --------------------------------------------------------
 
@@ -160,6 +183,7 @@ CREATE TABLE IF NOT EXISTS `grupos` (
   `cupo` int DEFAULT '30',
   `edicion_total` tinyint(1) DEFAULT '0',
   `clave_grupo` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `estado` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'ACTIVO',
   PRIMARY KEY (`nrc`),
   KEY `materia_id` (`materia_id`),
   KEY `profesor_id` (`profesor_id`),
@@ -170,11 +194,11 @@ CREATE TABLE IF NOT EXISTS `grupos` (
 -- Volcado de datos para la tabla `grupos`
 --
 
-INSERT INTO `grupos` (`nrc`, `materia_id`, `profesor_id`, `ciclo_id`, `cupo`, `edicion_total`, `clave_grupo`) VALUES
-(1, 1, 8, 1, 30, 0, 'grp_69af725cbcb61'),
-(60495, 1, 2, 1, 30, 0, '60495'),
-(60501, 2, 2, 1, 30, 0, '60501'),
-(60966, 1, 2, 1, 30, 0, '60966');
+INSERT INTO `grupos` (`nrc`, `materia_id`, `profesor_id`, `ciclo_id`, `cupo`, `edicion_total`, `clave_grupo`, `estado`) VALUES
+(1, 1, 8, 1, 30, 0, 'grp_69af725cbcb61', 'ACTIVO'),
+(60495, 1, 2, 1, 30, 0, '60495', 'ACTIVO'),
+(60501, 2, 2, 1, 30, 0, '60501', 'ACTIVO'),
+(60966, 1, 2, 1, 30, 0, '60966', 'ACTIVO');
 
 -- --------------------------------------------------------
 
@@ -200,10 +224,10 @@ CREATE TABLE IF NOT EXISTS `horarios` (
 --
 
 INSERT INTO `horarios` (`horario_id`, `nrc`, `dias_patron`, `hora_inicio`, `hora_fin`, `modalidad`, `aula`) VALUES
-(1, 60495, 'L-M', '14:00:00', '16:00:00', 'PRESENCIAL', 'N-203'),
-(2, 60501, 'M-J', '16:00:00', '18:00:00', 'PRESENCIAL', 'N-202'),
-(5, 60966, 'L-M', '14:00:00', '16:00:00', 'PRESENCIAL', 'N-202'),
-(7, 1, 'L-M', '12:00:00', '15:00:00', 'PRESENCIAL', '');
+(1, 60495, 'M-J', '16:00:00', '18:00:00', 'PRESENCIAL', 'N-203'),
+(2, 60501, 'L-I', '09:00:00', '11:00:00', 'PRESENCIAL', 'N-204'),
+(5, 60966, 'V', '18:00:00', '20:00:00', 'PRESENCIAL', 'N-202'),
+(7, 1, 'V', '12:00:00', '15:00:00', 'PRESENCIAL', '');
 
 -- --------------------------------------------------------
 
@@ -229,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `inscripciones` (
 
 INSERT INTO `inscripciones` (`inscripcion_id`, `alumno_id`, `nrc`, `estatus`, `calificacion_final`) VALUES
 (1, 1, 60495, 'INSCRITO', 0.00),
-(2, 1, 60501, 'INSCRITO', 0.00),
+(2, 1, 60501, 'BAJA', 0.00),
 (5, 2, 60501, 'INSCRITO', 0.00),
 (6, 4, 60966, 'INSCRITO', 0.00),
 (7, 4, 60495, 'INSCRITO', 0.00);
@@ -248,7 +272,7 @@ CREATE TABLE IF NOT EXISTS `materias` (
   `nivel` int NOT NULL,
   PRIMARY KEY (`materia_id`),
   UNIQUE KEY `clave` (`clave`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `materias`
@@ -256,7 +280,38 @@ CREATE TABLE IF NOT EXISTS `materias` (
 
 INSERT INTO `materias` (`materia_id`, `clave`, `nombre`, `nivel`) VALUES
 (1, 'I0004', 'Inglés', 4),
-(2, 'F0001', 'Francés', 1);
+(2, 'F0001', 'Francés', 1),
+(3, 'F0002', 'Francés', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `solicitudes_bajas`
+--
+
+DROP TABLE IF EXISTS `solicitudes_bajas`;
+CREATE TABLE IF NOT EXISTS `solicitudes_bajas` (
+  `solicitud_id` int NOT NULL AUTO_INCREMENT,
+  `inscripcion_id` int NOT NULL,
+  `motivo` varchar(255) NOT NULL,
+  `descripcion` text,
+  `estatus` enum('PENDIENTE','APROBADA','RECHAZADA','CANCELADA') DEFAULT 'PENDIENTE',
+  `respuesta_admin` text,
+  `fecha_solicitud` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_respuesta` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`solicitud_id`),
+  KEY `inscripcion_id` (`inscripcion_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Volcado de datos para la tabla `solicitudes_bajas`
+--
+
+INSERT INTO `solicitudes_bajas` (`solicitud_id`, `inscripcion_id`, `motivo`, `descripcion`, `estatus`, `respuesta_admin`, `fecha_solicitud`, `fecha_respuesta`) VALUES
+(5, 2, 'Inscripción por error', 'Ya no la quiero', 'RECHAZADA', 'Denegada', '2026-03-12 21:44:55', '2026-03-12 21:45:10'),
+(6, 2, 'Choque de horario', '', 'RECHAZADA', '', '2026-03-12 21:57:39', '2026-03-12 21:57:47'),
+(7, 2, 'Problemas laborales/personales', 'Ya no la quiero', 'APROBADA', '', '2026-03-12 22:03:39', '2026-03-12 22:03:49'),
+(8, 1, 'Choque de horario', 'Ya no la quiero', 'RECHAZADA', '', '2026-03-13 00:28:39', '2026-03-13 00:28:54');
 
 -- --------------------------------------------------------
 
@@ -289,13 +344,13 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
 --
 
 INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `apellido_materno`, `correo`, `password`, `telefono`, `rol`, `estatus`, `foto_perfil`, `google_id`, `fecha_creacion`) VALUES
-(1, 'AD01', 'Admin', 'Principal', NULL, 'admin@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', NULL, 'ADMIN', 'ACTIVO', NULL, NULL, '2026-02-18 21:47:58'),
-(2, 'PR01', 'Juan', 'Mendez', NULL, 'profe@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', NULL, 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-02-18 21:47:58'),
+(1, 'AD01', 'Admin', 'Principal', NULL, 'admin@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '', 'ADMIN', 'ACTIVO', NULL, NULL, '2026-02-18 21:47:58'),
+(2, 'PR01', 'Juan', 'Mendez', NULL, 'profe@epale.com', '$2y$10$6zwvqbLclOuR0huCPcQSgeAXpouNrVKdjeHfYiiO3v5pZ4quf2ut2', '', 'PROFESOR', 'ACTIVO', 'prof_2_1773183139.jpg', NULL, '2026-02-18 21:47:58'),
 (3, '3', 'Luis', 'Macias', 'Mendez', 'alumno@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3322777085', 'ALUMNO', 'ACTIVO', 'eab28fd4255211378f37.jpg', NULL, '2026-02-18 21:47:58'),
 (4, '2187345', 'Jorge', 'Ledezma', 'Paredes', 'test2@gmail.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3344553322', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-02-18 21:58:25'),
 (7, '2', 'Ivan Alejandro', 'Godinez', 'Padilla', 'test3@gmail.com', '$2y$10$WKAXb1YFEvwvBvEAFnt6GO2ujXXSOuU3YuxNvX3SJ5FZj9pDfvmGO', '222334456', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-05 20:43:36'),
 (8, '01092834', 'Martin', 'Padilla', 'Yunuem', 'test9@gmail.com', '$2y$10$O/UZX7omnuXb5xyfbQMQce4zjAeXzX8N1jmQJTpkJaXXHo2HZ7Kka', '3344222233', 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-03-05 23:03:29'),
-(10, '4', 'Valeria', 'Enriquez', 'Ruvalcaba', 'test10@gmail.com', '$2y$10$kyib1jrUJa/5J.AMnJCzIu53yUVFEQbEDCzGjuOIOlxNVJbPsjQl2', '', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-06 20:27:09');
+(10, '1', 'Valeria', 'Enriquez', 'Ruvalcaba', 'test10@gmail.com', '$2y$10$kyib1jrUJa/5J.AMnJCzIu53yUVFEQbEDCzGjuOIOlxNVJbPsjQl2', '', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-06 20:27:09');
 
 --
 -- Restricciones para tablas volcadas
@@ -339,6 +394,12 @@ ALTER TABLE `horarios`
 ALTER TABLE `inscripciones`
   ADD CONSTRAINT `inscripciones_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `alumnos` (`alumno_id`),
   ADD CONSTRAINT `inscripciones_ibfk_2` FOREIGN KEY (`nrc`) REFERENCES `grupos` (`nrc`);
+
+--
+-- Filtros para la tabla `solicitudes_bajas`
+--
+ALTER TABLE `solicitudes_bajas`
+  ADD CONSTRAINT `solicitudes_bajas_ibfk_1` FOREIGN KEY (`inscripcion_id`) REFERENCES `inscripciones` (`inscripcion_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
