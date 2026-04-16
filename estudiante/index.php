@@ -74,6 +74,43 @@ $avisos_dinamicos = $stmt_notif->fetchAll(PDO::FETCH_ASSOC);
 if (!function_exists('format_score')) {
     function format_score($num) { return floatval($num) == intval($num) ? intval($num) : floatval($num); }
 }
+
+// ===============================================
+// LECTURA DE AVISOS DEL ADMINISTRADOR (INTELIGENTE)
+// ===============================================
+// 1. Limpiamos expirados por si acaso
+$pdo->exec("DELETE FROM avisos WHERE fecha_expiracion IS NOT NULL AND fecha_expiracion < NOW()");
+
+// 2. Extraemos los datos del alumno para cruzar info
+$mis_nrcs = []; $mis_materias_ids = []; $mis_idiomas = [];
+foreach ($materias_inscritas as $m) {
+    $mis_nrcs[] = $m['nrc'];
+    $mis_materias_ids[] = $m['materia_id'];
+    $idioma_puro = trim(preg_replace('/[0-9]+/', '', $m['nombre'])); // Ej: "Inglés 1" -> "Inglés"
+    $mis_idiomas[] = $idioma_puro;
+}
+$mis_idiomas = array_unique($mis_idiomas);
+
+// 3. Consultar Avisos (Globales + Los que coincidan con sus inscripciones)
+$sql_avisos = "SELECT * FROM avisos WHERE tipo_audiencia = 'GLOBAL'";
+
+if (count($mis_idiomas) > 0) {
+    $in_idiomas = "'" . implode("','", $mis_idiomas) . "'";
+    $sql_avisos .= " OR (tipo_audiencia = 'IDIOMA' AND audiencia_ref IN ($in_idiomas))";
+}
+if (count($mis_materias_ids) > 0) {
+    $in_mats = implode(",", $mis_materias_ids);
+    $sql_avisos .= " OR (tipo_audiencia = 'MATERIA' AND audiencia_ref IN ($in_mats))";
+}
+if (count($mis_nrcs) > 0) {
+    $in_nrc = implode(",", $mis_nrcs);
+    $sql_avisos .= " OR (tipo_audiencia = 'GRUPO' AND audiencia_ref IN ($in_nrc))";
+}
+
+$sql_avisos .= " ORDER BY fecha_creacion DESC";
+$avisos_admin = $pdo->query($sql_avisos)->fetchAll(PDO::FETCH_ASSOC);
+// ===============================================
+
 ?>
 
 <!DOCTYPE html>
@@ -228,24 +265,36 @@ if (!function_exists('format_score')) {
                     
                     <?php foreach($avisos_dinamicos as $aviso): ?>
                         <div class="aviso-item">
-                            <span class="tag-aviso tag-sistema" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">Administración</span>
+                            <span class="tag-aviso tag-sistema" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">Control Escolar</span>
                             <?php if($aviso['estatus'] == 'APROBADA'): ?>
                                 <span class="tag-aprobada" style="float: right;">Aprobada</span><br>
                                 <strong style="color: #333;">Solicitud de Baja:</strong> Tu petición para abandonar <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars($aviso['nombre'] . ' ' . $aviso['nivel']); ?></strong> fue aprobada.
                             <?php else: ?>
                                 <span class="tag-rechazada" style="float: right;">Rechazada</span><br>
-                                <strong style="color: #333;">Solicitud de Baja:</strong> Tu petición para abandonar <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars($aviso['nombre'] . ' ' . $aviso['nivel']); ?></strong> fue rechazada. Consulta los detalles en tus calificaciones.
+                                <strong style="color: #333;">Solicitud de Baja:</strong> Tu petición para abandonar <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars($aviso['nombre'] . ' ' . $aviso['nivel']); ?></strong> fue rechazada. Revisa el Kárdex.
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
 
-                    <div class="aviso-item">
-                        <span class="tag-aviso tag-sistema">Sistema</span><br>
-                        <strong>Aviso Global:</strong> Mantenimiento de la plataforma Moodle programado para este sábado a las 00:00 hrs.
-                    </div>
+                    <?php foreach($avisos_admin as $aviso): 
+                        $tag_color = '#e2e3e5'; $tag_text = '#383d41'; $etiqueta = 'Aviso Global';
+                        if ($aviso['tipo_audiencia'] == 'IDIOMA') { $etiqueta = 'Aviso de Idioma'; $tag_color = '#cce5ff'; $tag_text = '#004085'; }
+                        elseif ($aviso['tipo_audiencia'] == 'MATERIA') { $etiqueta = 'Aviso de Nivel'; $tag_color = '#d4edda'; $tag_text = '#155724'; }
+                        elseif ($aviso['tipo_audiencia'] == 'GRUPO') { $etiqueta = 'Aviso de tu Clase'; $tag_color = '#f8d7da'; $tag_text = '#721c24'; }
+                    ?>
+                        <div class="aviso-item">
+                            <span class="tag-aviso tag-sistema" style="background: <?php echo $tag_color; ?>; color: <?php echo $tag_text; ?>; border: 1px solid <?php echo $tag_text; ?>;"><?php echo $etiqueta; ?></span><br>
+                            <strong style="color: #333;"><?php echo htmlspecialchars($aviso['titulo']); ?>:</strong> <?php echo nl2br(htmlspecialchars($aviso['cuerpo'])); ?>
+                            
+                            <?php if($aviso['fecha_expiracion']): ?>
+                                <div style="font-size: 0.75rem; color: #aaa; margin-top: 5px;"><i class="fas fa-stopwatch"></i> Desaparecerá pronto.</div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
                     
-                    <?php if(count($materias_inscritas) == 0 && count($avisos_dinamicos) == 0): ?>
+                    <?php if(count($materias_inscritas) == 0 && count($avisos_dinamicos) == 0 && count($avisos_admin) == 0): ?>
                         <div style="text-align:center; padding: 20px 0; color:#aaa; font-style: italic;">
+                            <i class="far fa-check-circle" style="font-size: 2rem; margin-bottom: 10px; display: block; color: #eee;"></i>
                             No tienes notificaciones nuevas.
                         </div>
                     <?php endif; ?>
