@@ -6,7 +6,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// CREACIÓN SILENCIOSA DE LA TABLA (Por si no se ha creado desde admin)
+// CREACIÓN SILENCIOSA DE TABLAS (Por si no se han creado)
 try { 
     $pdo->exec("CREATE TABLE IF NOT EXISTS certificaciones (
         certificacion_id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -15,6 +15,16 @@ try {
         nivel_obtenido VARCHAR(50), 
         fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"); 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS examenes_diagnosticos (
+        examen_id INT AUTO_INCREMENT PRIMARY KEY, 
+        alumno_id INT, 
+        idioma VARCHAR(50), 
+        calificacion_texto VARCHAR(50),
+        nivel_asignado INT,
+        fecha_realizacion DATE,
+        periodo VARCHAR(20),
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch(Exception $e) {}
 
 $mensaje_exito = "";
@@ -74,7 +84,7 @@ $stmt_hist->execute([$alumno_id]);
 $historial = $stmt_hist->fetchAll(PDO::FETCH_ASSOC);
 
 // ===============================================
-// CERTIFICACIONES: OBTENER IDIOMAS DE NIVEL 4 Y NIVELES ASIGNADOS
+// CERTIFICACIONES
 // ===============================================
 $sql_todas = "SELECT m.nombre as materia, m.nivel 
               FROM inscripciones i
@@ -101,6 +111,14 @@ if (count($idiomas_nivel_4) > 0) {
         $certificaciones_bd[$row['idioma']] = $row['nivel_obtenido'];
     }
 }
+
+// ===============================================
+// EXÁMENES DIAGNÓSTICOS
+// ===============================================
+$stmt_diag = $pdo->prepare("SELECT * FROM examenes_diagnosticos WHERE alumno_id = ? ORDER BY fecha_realizacion DESC");
+$stmt_diag->execute([$alumno_id]);
+$examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -142,6 +160,29 @@ if (count($idiomas_nivel_4) > 0) {
         <?php endif; ?>
         <?php if(!empty($mensaje_error)): ?>
             <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <?php echo $mensaje_error; ?></div>
+        <?php endif; ?>
+
+        <?php if(count($examenes_diagnosticos) > 0): ?>
+            <div class="card" style="border-top: 4px solid #17a2b8; margin-bottom: 25px;">
+                <h3 style="margin-top: 0; color: #17a2b8;"><i class="fas fa-clipboard-check" style="color: #17a2b8;"></i> Examen Diagnóstico</h3>
+                <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Resultados de tu evaluación inicial para la asignación de nivel.</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                    <?php foreach($examenes_diagnosticos as $diag): ?>
+                        <div style="border: 1px solid #eee; border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px; background: #f8f9fa; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: var(--udg-blue); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
+                                <span style="background: #e7f3ff; color: var(--udg-blue); padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid #b8daff;"><?php echo htmlspecialchars($diag['periodo']); ?></span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem; color: #555;">
+                                <div><i class="fas fa-layer-group" style="color:#aaa;"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
+                                <div><i class="fas fa-star" style="color:#aaa;"></i> Calif: <strong style="color:#333;"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
+                                <div style="grid-column: span 2;"><i class="far fa-calendar-alt" style="color:#aaa;"></i> Fecha de aplicación: <span style="color:#333; font-weight:500;"><?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></span></div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         <?php endif; ?>
 
         <?php if(count($idiomas_nivel_4) > 0): ?>
