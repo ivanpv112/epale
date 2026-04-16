@@ -13,7 +13,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $usuario_id = $_GET['id'];
 
-// CREACIÓN SILENCIOSA DE LA TABLA DE CERTIFICACIONES
+// CREACIÓN SILENCIOSA DE LAS TABLAS NECESARIAS
 try { 
     $pdo->exec("CREATE TABLE IF NOT EXISTS certificaciones (
         certificacion_id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -22,6 +22,17 @@ try {
         nivel_obtenido VARCHAR(50), 
         fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"); 
+    
+    $pdo->exec("CREATE TABLE IF NOT EXISTS examenes_diagnosticos (
+        examen_id INT AUTO_INCREMENT PRIMARY KEY, 
+        alumno_id INT, 
+        idioma VARCHAR(50), 
+        calificacion_texto VARCHAR(50),
+        nivel_asignado INT,
+        fecha_realizacion DATE,
+        periodo VARCHAR(20),
+        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch(Exception $e) {}
 
 // PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES
@@ -52,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificacio
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_certificacion'])) {
     $alum_id_cert = $_POST['alumno_id_cert'];
     $idioma_cert = $_POST['idioma_cert'];
-    // Forzamos a que el nivel se guarde siempre en MAYÚSCULAS
     $nivel_cert = strtoupper(trim($_POST['nivel_cert']));
     
     $stmt_chk = $pdo->prepare("SELECT certificacion_id FROM certificaciones WHERE alumno_id = ? AND idioma = ?");
@@ -65,6 +75,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_certificacion'
         $pdo->prepare("INSERT INTO certificaciones (alumno_id, idioma, nivel_obtenido) VALUES (?, ?, ?)")->execute([$alum_id_cert, $idioma_cert, $nivel_cert]);
     }
     header("Location: ver_expediente.php?id=" . $usuario_id . "&exito=certificacion"); exit;
+}
+
+// PROCESAR GUARDADO/EDICIÓN DE EXAMEN DIAGNÓSTICO
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_diagnostico'])) {
+    $examen_id = $_POST['examen_id'] ?? '';
+    $alum_id = $_POST['alumno_id_diag'];
+    $idioma = trim($_POST['idioma_diag']);
+    $periodo = strtoupper(trim($_POST['periodo_diag']));
+    $nivel = intval($_POST['nivel_diag']);
+    $calificacion = strtoupper(trim($_POST['calif_diag']));
+    $fecha = $_POST['fecha_diag'];
+
+    if (!empty($examen_id)) {
+        $pdo->prepare("UPDATE examenes_diagnosticos SET idioma=?, periodo=?, nivel_asignado=?, calificacion_texto=?, fecha_realizacion=? WHERE examen_id=?")
+            ->execute([$idioma, $periodo, $nivel, $calificacion, $fecha, $examen_id]);
+    } else {
+        $pdo->prepare("INSERT INTO examenes_diagnosticos (alumno_id, idioma, periodo, nivel_asignado, calificacion_texto, fecha_realizacion) VALUES (?, ?, ?, ?, ?, ?)")
+            ->execute([$alum_id, $idioma, $periodo, $nivel, $calificacion, $fecha]);
+    }
+    header("Location: ver_expediente.php?id=" . $usuario_id . "&exito=diagnostico"); exit;
 }
 
 // OBTENER DATOS DEL USUARIO
@@ -109,7 +139,6 @@ if ($es_alumno) {
     $idiomas_nivel_4 = [];
 
     foreach ($todas_materias as $mat) {
-        // Obtenemos la calificación acumulada para todos los registros
         $stmt_cal = $pdo->prepare("SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = ?");
         $stmt_cal->execute([$mat['inscripcion_id']]);
         $mat['calificacion_final'] = $stmt_cal->fetchColumn() ?: 0;
@@ -133,13 +162,20 @@ if ($es_alumno) {
     while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
         $certificaciones_bd[$row['idioma']] = $row['nivel_obtenido'];
     }
+
+    $stmt_diag = $pdo->prepare("SELECT * FROM examenes_diagnosticos WHERE alumno_id = ? ORDER BY fecha_realizacion DESC");
+    $stmt_diag->execute([$alumno_id]);
+    $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // ============================================
-// LÓGICA SI ES PROFESOR
+// LÓGICA SI ES PROFESOR (Corregida para Historial)
 // ============================================
-$grupos_profesor = [];
+$grupos_profesor_activos = [];
+$grupos_profesor_historial = [];
+
 if ($es_profesor) {
+    // Ya NO filtramos por g.estado = 'ACTIVO', traemos todos
     $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.estado,
                           MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                           MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -148,12 +184,21 @@ if ($es_profesor) {
                    JOIN materias m ON g.materia_id = m.materia_id
                    JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                    LEFT JOIN horarios h ON g.nrc = h.nrc
-                   WHERE g.profesor_id = ? AND g.estado = 'ACTIVO'
+                   WHERE g.profesor_id = ?
                    GROUP BY g.clave_grupo, m.nombre, m.nivel, c.nombre, c.activo, g.estado
-                   ORDER BY c.activo DESC, c.nombre DESC, m.nivel ASC";
+                   ORDER BY c.activo DESC, g.estado ASC, c.nombre DESC, m.nivel ASC";
     $stmt_g = $pdo->prepare($sql_grupos);
     $stmt_g->execute([$usuario_id]);
-    $grupos_profesor = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
+    $todos_grupos_prof = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
+
+    // Separamos en activos y cerrados
+    foreach ($todos_grupos_prof as $g) {
+        if ($g['estado'] == 'ACTIVO' && $g['activo'] == 1) {
+            $grupos_profesor_activos[] = $g;
+        } else {
+            $grupos_profesor_historial[] = $g;
+        }
+    }
 }
 ?>
 
@@ -167,6 +212,14 @@ if ($es_profesor) {
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .edit-diag-master-btn {
+            background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 0.9rem; 
+            padding: 5px 10px; border-radius: 6px; border: 1px solid var(--udg-blue); transition: all 0.2s;
+            font-weight: bold;
+        }
+        .edit-diag-master-btn:hover { background: var(--udg-blue); color: white; }
+    </style>
 </head>
 <body>
 
@@ -228,6 +281,7 @@ if ($es_profesor) {
 
         <?php if($es_alumno): ?>
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            
             <div>
                 <div class="card" style="margin-top: 0;">
                     <h3><i class="fas fa-book-reader"></i> Cursando Actualmente</h3>
@@ -285,13 +339,11 @@ if ($es_profesor) {
                                             <td style="padding: 10px; font-weight: 500; color: var(--udg-blue);"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
                                             <td style="padding: 10px; text-align: center; font-weight: bold; font-size:1.1rem;"><?php echo $calif; ?></td>
                                             <td style="padding: 10px; text-align: center;">
-                                                
                                                 <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
                                                     <div style="margin-bottom: 5px;"><span style="background: #cce5ff; color: #004085; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span></div>
                                                 <?php else: ?>
                                                     <div style="margin-bottom: 5px;"><span style="background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
                                                 <?php endif; ?>
-
                                                 <?php if($calif >= 60): ?>
                                                     <span class="tag-aprobado" style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Aprobado</span>
                                                 <?php else: ?>
@@ -310,6 +362,51 @@ if ($es_profesor) {
             </div>
 
             <div>
+                <div class="card" style="margin-top: 0; border-top: 4px solid var(--udg-blue); margin-bottom: 20px;">
+                    <div style="text-align: center; position: relative;">
+                        <div style="position: absolute; top: 0; right: 0;">
+                            <?php if(count($examenes_diagnosticos) > 0): 
+                                $diag = $examenes_diagnosticos[0]; 
+                            ?>
+                                <button class="edit-diag-master-btn" onclick="abrirModalDiag(<?php echo $diag['examen_id']; ?>, '<?php echo htmlspecialchars($diag['idioma']); ?>', '<?php echo htmlspecialchars($diag['periodo']); ?>', <?php echo $diag['nivel_asignado']; ?>, '<?php echo htmlspecialchars($diag['calificacion_texto']); ?>', '<?php echo $diag['fecha_realizacion']; ?>')" title="Editar Diagnóstico">
+                                    <i class="fas fa-pen"></i> Editar
+                                </button>
+                            <?php else: ?>
+                                <button class="edit-diag-master-btn" onclick="abrirModalDiag('', '', '', '', '', '')" title="Agregar Diagnóstico">
+                                    <i class="fas fa-plus"></i> Agregar
+                                </button>
+                            <?php endif; ?>
+                        </div>
+
+                        <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--udg-blue); margin-bottom: 10px; margin-top: 20px;"></i>
+                        <h3 style="color: var(--udg-blue); margin: 0;">Examen Diagnóstico</h3>
+                        <p style="font-size: 0.85rem; color: #666;">Resultados de ubicación inicial</p>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <?php if(count($examenes_diagnosticos) > 0): ?>
+                            <?php foreach($examenes_diagnosticos as $diag): ?>
+                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #17a2b8; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['idioma']); ?></strong>
+                                        <span style="background: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; border: 1px solid #b8daff;"><?php echo htmlspecialchars($diag['periodo']); ?></span>
+                                    </div>
+                                    <div style="margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: #555;">
+                                        <div><i class="fas fa-layer-group" style="color:#aaa;"></i> Nivel: <strong style="color:#333; font-size: 1rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
+                                        <div><i class="fas fa-star" style="color:#aaa;"></i> Calif: <strong style="color:#333;"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
+                                        <div style="grid-column: span 2;"><i class="far fa-calendar-alt" style="color:#aaa;"></i> Fecha: <?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 20px 10px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ddd;">
+                                <i class="fas fa-search" style="font-size: 2rem; color: #ddd; margin-bottom: 10px; display: block;"></i>
+                                <span style="font-size: 0.85rem; color: #888;">Sin registro de examen diagnóstico.</span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <?php if(count($idiomas_nivel_4) > 0): ?>
                     <div class="card" style="margin-top: 0; border-top: 4px solid var(--udg-blue);">
                         <div style="text-align: center;">
@@ -364,13 +461,11 @@ if ($es_profesor) {
                     <input type="hidden" name="actualizar_calificaciones" value="1">
                     <input type="hidden" name="inscripcion_id" value="<?php echo $mat['inscripcion_id']; ?>">
                     <div style="padding: 20px 30px; max-height: 60vh; overflow-y: auto;">
-                        
                         <?php if($mat['grupo_estado'] == 'CERRADO' || $mat['activo'] == 0): ?>
                             <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; border-left: 4px solid #ffc107;">
                                 <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Estás editando las calificaciones de una clase finalizada.
                             </div>
                         <?php endif; ?>
-
                         <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
                             <?php foreach($criterios_materia as $crit): 
                                 $codigo = $crit['codigo_examen'];
@@ -402,7 +497,6 @@ if ($es_profesor) {
                     <input type="hidden" name="guardar_certificacion" value="1">
                     <input type="hidden" name="alumno_id_cert" value="<?php echo $alumno_id; ?>">
                     <input type="hidden" name="idioma_cert" id="inputIdiomaCert">
-                    
                     <div style="padding: 20px 30px;">
                         <p style="font-size: 0.9rem; color: #666; margin-top: 0;">Ingresa el nivel oficial obtenido en: <strong id="textoIdiomaCert" style="color: var(--udg-blue);"></strong></p>
                         <div class="form-group" style="margin-bottom: 0;">
@@ -410,7 +504,6 @@ if ($es_profesor) {
                             <input type="text" name="nivel_cert" id="inputNivelCert" required placeholder="Ej. B2" style="text-transform: uppercase;">
                         </div>
                     </div>
-                    
                     <div class="modal-footer" style="padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc;">
                         <button type="button" class="btn-cancel" onclick="cerrarModalCert()">Cancelar</button>
                         <button type="submit" class="btn-save" style="background:var(--udg-blue); color:white;"><i class="fas fa-save"></i> Guardar Nivel</button>
@@ -419,22 +512,63 @@ if ($es_profesor) {
             </div>
         </div>
 
-        <?php endif; // FIN LÓGICA ALUMNO ?>
-
+        <div id="modalDiag" class="modal-overlay" style="display:none;">
+            <div class="modal-content" style="padding: 0;">
+                <div class="modal-header" style="padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee;">
+                    <h2 style="margin: 0; font-size: 1.3rem;" id="modalDiagTitle"><i class="fas fa-clipboard-check"></i> Examen Diagnóstico</h2>
+                    <button class="close-btn" onclick="cerrarModalDiag()">&times;</button>
+                </div>
+                <form method="POST" style="margin: 0;">
+                    <input type="hidden" name="guardar_diagnostico" value="1">
+                    <input type="hidden" name="examen_id" id="inputExamenId">
+                    <input type="hidden" name="alumno_id_diag" value="<?php echo $alumno_id; ?>">
+                    <div style="padding: 20px 30px;">
+                        <div class="form-group">
+                            <label>Idioma</label>
+                            <input type="text" name="idioma_diag" id="inputIdiomaDiag" required placeholder="Ej. Inglés">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Nivel Asignado</label>
+                                <input type="number" name="nivel_diag" id="inputNivelDiag" required min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label>Calificación Textual</label>
+                                <input type="text" name="calif_diag" id="inputCalifDiag" required placeholder="Ej. A2 INICIAL" style="text-transform: uppercase;">
+                            </div>
+                            <div class="form-group">
+                                <label>Periodo</label>
+                                <input type="text" name="periodo_diag" id="inputPeriodoDiag" required placeholder="Ej. 2022-B" style="text-transform: uppercase;">
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha de Realización</label>
+                                <input type="date" name="fecha_diag" id="inputFechaDiag" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc;">
+                        <button type="button" class="btn-cancel" onclick="cerrarModalDiag()">Cancelar</button>
+                        <button type="submit" class="btn-save" style="background:#17a2b8; color:white;"><i class="fas fa-save"></i> Guardar Diagnóstico</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if ($es_profesor): ?>
-            <div class="card" style="margin-top: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            
+            <div class="card" style="margin-top: 0;">
                 <h3 style="color: var(--udg-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">
-                    <i class="fas fa-chalkboard"></i> Grupos Activos (<?php echo count($grupos_profesor); ?>)
+                    <i class="fas fa-chalkboard-teacher"></i> Grupos Activos en Curso (<?php echo count($grupos_profesor_activos); ?>)
                 </h3>
-                
-                <?php if (count($grupos_profesor) > 0): ?>
+                <?php if (count($grupos_profesor_activos) > 0): ?>
                     <div class="prof-classes-grid">
-                        <?php foreach ($grupos_profesor as $g): ?>
+                        <?php foreach ($grupos_profesor_activos as $g): ?>
                             <a href="gestionar_grupo.php?clave=<?php echo urlencode($g['clave_grupo']); ?>" class="class-click-card" title="Haz clic para gestionar este grupo">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                     <h4 class="class-title"><?php echo htmlspecialchars($g['materia'] . ' ' . $g['nivel']); ?></h4>
-                                    <span class="class-status" style="color: #28a745;"><i class="fas fa-circle" style="font-size: 0.6rem;"></i> En Curso</span>
+                                    <span class="class-status" style="color: #28a745; background: #e6f8ec; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Activo</span>
                                 </div>
                                 <div style="font-size: 0.85rem; color: #666;"><i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos</div>
                                 <div style="margin-top: 5px;">
@@ -445,9 +579,36 @@ if ($es_profesor) {
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>Este profesor no tiene grupos activos actualmente.</p>
+                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>No tiene grupos activos en este momento.</p>
                 <?php endif; ?>
             </div>
+
+            <div class="card" style="margin-top: 0;">
+                <h3 style="color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0;">
+                    <i class="fas fa-archive"></i> Historial de Clases Impartidas (<?php echo count($grupos_profesor_historial); ?>)
+                </h3>
+                <?php if (count($grupos_profesor_historial) > 0): ?>
+                    <div class="prof-classes-grid">
+                        <?php foreach ($grupos_profesor_historial as $g): ?>
+                            <a href="gestionar_grupo.php?clave=<?php echo urlencode($g['clave_grupo']); ?>" class="class-click-card" style="opacity: 0.7; background: #fafafa;" title="Ver grupo cerrado">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <h4 class="class-title" style="color: #555;"><?php echo htmlspecialchars($g['materia'] . ' ' . $g['nivel']); ?></h4>
+                                    <span class="class-status" style="color: #6c757d; background: #e2e3e5; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;"><i class="fas fa-lock" style="font-size: 0.6rem;"></i> Finalizada</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #666;"><i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos</div>
+                                <div style="margin-top: 5px;">
+                                    <?php if($g['nrc_p']): ?><span class="class-nrc" style="background:#eee; color:#555;"><strong>P:</strong> <?php echo $g['nrc_p']; ?></span><?php endif; ?>
+                                    <?php if($g['nrc_v']): ?><span class="class-nrc" style="background:#eee; color:#555;"><strong>V:</strong> <?php echo $g['nrc_v']; ?></span><?php endif; ?>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p style="color: #888; text-align: center; padding: 20px 0;"><i class="fas fa-ghost" style="font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px;"></i>No hay registro de clases pasadas.</p>
+                <?php endif; ?>
+            </div>
+
+        </div>
         <?php endif; ?>
 
     </main>
@@ -455,24 +616,30 @@ if ($es_profesor) {
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <script>
-        function toggleMobileMenu() {
-            document.getElementById('navWrapper').classList.toggle('active');
-            document.getElementById('menuOverlay').classList.toggle('active');
-        }
+        function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
+        
         function abrirModalCalif(id) { document.getElementById('modalCalif_' + id).style.display = 'flex'; }
         function cerrarModalCalif(id) { document.getElementById('modalCalif_' + id).style.display = 'none'; }
         
-        function abrirModalCert(idioma, nivel) {
-            document.getElementById('inputIdiomaCert').value = idioma;
-            document.getElementById('textoIdiomaCert').innerText = idioma;
-            document.getElementById('inputNivelCert').value = nivel;
-            document.getElementById('modalCert').style.display = 'flex';
-        }
+        function abrirModalCert(idioma, nivel) { document.getElementById('inputIdiomaCert').value = idioma; document.getElementById('textoIdiomaCert').innerText = idioma; document.getElementById('inputNivelCert').value = nivel; document.getElementById('modalCert').style.display = 'flex'; }
         function cerrarModalCert() { document.getElementById('modalCert').style.display = 'none'; }
         
-        window.onclick = function(e) { 
-            if(e.target.classList.contains('modal-overlay')) e.target.style.display = 'none';
-        };
+        function abrirModalDiag(id, idioma, periodo, nivel, calif, fecha) {
+            document.getElementById('inputExamenId').value = id;
+            document.getElementById('inputIdiomaDiag').value = idioma;
+            document.getElementById('inputPeriodoDiag').value = periodo;
+            document.getElementById('inputNivelDiag').value = nivel;
+            document.getElementById('inputCalifDiag').value = calif;
+            document.getElementById('inputFechaDiag').value = fecha;
+            
+            if(id) { document.getElementById('modalDiagTitle').innerHTML = '<i class="fas fa-clipboard-check"></i> Editar Diagnóstico'; } 
+            else { document.getElementById('modalDiagTitle').innerHTML = '<i class="fas fa-plus"></i> Agregar Diagnóstico'; }
+            
+            document.getElementById('modalDiag').style.display = 'flex';
+        }
+        function cerrarModalDiag() { document.getElementById('modalDiag').style.display = 'none'; }
+
+        window.onclick = function(e) { if(e.target.classList.contains('modal-overlay')) e.target.style.display = 'none'; };
     </script>
 </body>
 </html>
