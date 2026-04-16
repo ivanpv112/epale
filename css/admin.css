@@ -135,3 +135,39 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 /* Level 4 (Clases) */
 .tree-class-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #fdfdfd; border: 1px solid #f1f1f1; border-radius: 6px; margin-bottom: 8px; transition: 0.2s; }
 .tree-class-item:hover { border-color: #ccc; transform: translateX(5px); box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+
+/* ==========================================================================
+   ESTILOS UTILITARIOS Y COMPONENTES (Reemplazo de estilos en línea)
+   ========================================================================== */
+
+/* Menú Superior */
+.logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; }
+.logo-text { font-size: 1.2rem; font-weight: bold; }
+.header-actions { display: flex; align-items: center; gap: 15px; }
+.profile-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: white; }
+.menu-toggle-btn { background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0; }
+.badge-notification { background: var(--danger); color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.7rem; margin-left: 5px; font-weight: bold; }
+
+/* Tablas e Información de Usuarios */
+.admin-table { width: 100%; border-collapse: collapse; }
+.user-name { margin: 0; color: var(--udg-blue); font-size: 1.05rem; }
+.user-email { font-size: 0.85rem; color: var(--text-light); }
+.text-muted-italic { color: #aaa; font-style: italic; }
+.icon-muted { color: #888; margin-right: 5px; }
+.empty-table-msg { text-align: center; padding: 40px; color: var(--text-light); }
+
+/* Espaciados utilitarios */
+.mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+
+/* Estilos para la tabla principal del admin */
+.admin-table th { padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee; color: #333; font-weight: bold; }
+.admin-table td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+
+/* Etiquetas de estado adicionales */
+.tag-inactivo { background-color: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+
+/* Grid para formularios modales */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.form-grid .full-width { grid-column: span 2; }
