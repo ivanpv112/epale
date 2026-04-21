@@ -255,15 +255,32 @@ body {
 .address-bar { text-align: center; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; opacity: 0.7; }
 
 @media (max-width: 900px) {
-    .main-header { height: auto !important; padding: 10px 15px !important; flex-direction: column !important; gap: 15px !important; }
-    .logo-container, .user-actions { width: 100% !important; justify-content: space-between !important; }
-    .user-actions { display: none !important; }
-    .main-nav { width: 100%; overflow-x: auto; justify-content: flex-start; }
-    .main-nav ul { padding-bottom: 5px; gap: 15px; }
-    .main-nav a { white-space: nowrap; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 15px; }
+    /* Mantenemos el Header siempre en una sola línea (row) */
+    .main-header { 
+        height: auto !important; 
+        padding: 10px 15px !important; 
+        flex-direction: row !important; /* <--- MAGIA AQUÍ: Obligamos a que siga siendo fila */
+        align-items: center !important; 
+    }
+    
+    /* El logo a la izquierda, los botones a la derecha */
+    .logo-container { width: auto !important; }
+    
+    /* Ajustes específicos para las acciones del usuario (Foto + Sándwich) */
+    .user-actions { 
+        width: auto !important; 
+        display: flex !important; /* Mantenemos visible la foto y el sándwich */
+        gap: 10px !important; 
+    }
+    
+    /* Ocultamos el nombre para ahorrar espacio, solo dejamos la foto */
+    .profile-name { display: none !important; }
+    .profile-btn { padding: 4px !important; } /* Reducimos el margen del botón de foto */
+
+    /* La barra de navegación central se oculta (usaremos el menú lateral) */
+    .main-nav { display: none !important; }
+
+    /* Ajustes para el resto del contenido en móviles */
     .dashboard-grid { grid-template-columns: 1fr; }
     .footer-content { flex-direction: column; }
-}
-@media (max-width: 768px) {
-    .profile-name { display: none !important; }
 }
