@@ -171,3 +171,52 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 /* Grid para formularios modales */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .form-grid .full-width { grid-column: span 2; }
+
+/* =========================================================
+   GESTIÓN DE GRUPOS Y TABLAS INTERACTIVAS
+   ========================================================= */
+
+/* Efecto hover inteligente para filas clickeables */
+.group-row {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+.group-row:hover {
+    background-color: #f0f7ff !important; /* Azul clarito interactivo */
+    transform: translateY(-2px); /* Se levanta un poco */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Proyecta sombra */
+    z-index: 10;
+    position: relative;
+}
+
+/* Diseño de las etiquetas NRC (Badges gigantes) */
+.nrc-badge {
+    display: inline-block;
+    background: #fff3cd; 
+    color: #856404;
+    padding: 4px 12px; 
+    border-radius: 6px;
+    font-size: 1.15rem; 
+    font-weight: bold;
+    border: 1px solid #ffeeba;
+    margin-top: 8px; 
+    margin-bottom: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.nrc-badge-virtual {
+    background: #cff4fc; 
+    color: #055160; 
+    border-color: #b6effb;
+}
+
+/* Clases utilitarias para la tabla */
+.table-header-clean th {
+    padding: 15px 20px;
+    text-align: left;
+    color: #555;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #eee;
+}
+.td-clean { padding: 15px 20px; }
+.td-center { padding: 15px 20px; text-align: center; }
