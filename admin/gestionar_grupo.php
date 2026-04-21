@@ -145,12 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $n_cupo = intval($_POST['cupo'] ?? 30); 
             $n_edicion_total = isset($_POST['edicion_total']) ? 1 : 0;
-            $n_estado = $_POST['estado'] ?? 'ACTIVO'; // NUEVO PARAMETRO DE ESTADO DE CLASE
+            $n_estado = $_POST['estado'] ?? 'ACTIVO'; 
             
             $nrc_p = trim($_POST['rnc_presencial']); $nrc_v = trim($_POST['rnc_virtual']);
 
             if (empty($n_prof) || empty($n_mat) || empty($n_ciclo_nombre)) throw new Exception("Faltan campos obligatorios en la configuración (Profesor, Materia o Ciclo).");
             if (empty($nrc_p) && empty($nrc_v)) throw new Exception("Debes ingresar al menos un número de NRC (Presencial o Virtual).");
+            if (!empty($nrc_p) && !empty($nrc_v) && $nrc_p === $nrc_v) throw new Exception("El NRC Presencial y el NRC Virtual no pueden ser el mismo número.");
 
             $pdo->beginTransaction();
 
@@ -162,22 +163,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $n_ciclo = $pdo->lastInsertId();
             }
 
+            // BLINDAJE: Validaciones Universales de Presencial (Aplica para edición y creación)
             if (!empty($nrc_p)) {
                 if (empty($_POST['dias_presencial']) || empty($_POST['inicio_presencial']) || empty($_POST['fin_presencial'])) { throw new Exception("Si ingresas un NRC Presencial, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin."); }
+                
+                $chk_p = $pdo->prepare("SELECT clave_grupo FROM grupos WHERE nrc = ?");
+                $chk_p->execute([$nrc_p]);
+                $clave_exist = $chk_p->fetchColumn();
+                if ($clave_exist && $clave_exist !== $clave) throw new Exception("El NRC Presencial $nrc_p ya está siendo utilizado en otro grupo de la escuela.");
+
                 $choque_aula = checkAulaCollision($nrc_p, $_POST['aula_presencial'], $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
                 if ($choque_aula) throw new Exception($choque_aula);
                 $choque_prof = checkProfesorCollision($nrc_p, $n_prof, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $n_ciclo, $pdo);
                 if ($choque_prof) throw new Exception($choque_prof);
             }
 
+            // BLINDAJE: Validaciones Universales de Virtual (Aplica para edición y creación)
             if (!empty($nrc_v)) {
                 if (empty($_POST['dias_virtual']) || empty($_POST['inicio_virtual']) || empty($_POST['fin_virtual'])) { throw new Exception("Si ingresas un NRC Virtual, es obligatorio llenar los Días, Hora de Inicio y Hora de Fin."); }
+                
+                $chk_v = $pdo->prepare("SELECT clave_grupo FROM grupos WHERE nrc = ?");
+                $chk_v->execute([$nrc_v]);
+                $clave_exist_v = $chk_v->fetchColumn();
+                if ($clave_exist_v && $clave_exist_v !== $clave) throw new Exception("El NRC Virtual $nrc_v ya está siendo utilizado en otro grupo de la escuela.");
+
                 $choque_v_aula = checkAulaCollision($nrc_v, $_POST['aula_virtual'], $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
                 if ($choque_v_aula) throw new Exception($choque_v_aula);
                 $choque_v_prof = checkProfesorCollision($nrc_v, $n_prof, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $n_ciclo, $pdo);
                 if ($choque_v_prof) throw new Exception($choque_v_prof);
             }
 
+            // BLINDAJE: Choque Interno
             if (!empty($nrc_p) && !empty($nrc_v) && !empty($_POST['dias_presencial']) && !empty($_POST['dias_virtual'])) {
                 $start_p = strtotime($_POST['inicio_presencial']); $end_p = strtotime($_POST['fin_presencial']);
                 $start_v = strtotime($_POST['inicio_virtual']); $end_v = strtotime($_POST['fin_virtual']);
@@ -189,31 +205,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($es_edicion) {
+                // Modo Edición: Actualizar e Insertar (Si añadió un NRC que antes no estaba)
                 $inscritos_actuales = $_POST['inscritos_actuales'] ?? 0;
                 if ($n_cupo < $inscritos_actuales) throw new Exception("No puedes reducir la capacidad a {$n_cupo}. Ya tienes {$inscritos_actuales} alumnos inscritos.");
                 
-                // Actualizamos agregando también el estado
                 $pdo->prepare("UPDATE grupos SET profesor_id=?, materia_id=?, ciclo_id=?, cupo=?, edicion_total=?, estado=? WHERE clave_grupo=?")->execute([$n_prof, $n_mat, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
-                if ($nrc_p) $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $_POST['aula_presencial'], $nrc_p]);
-                if ($nrc_v) $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $_POST['aula_virtual'], $nrc_v]);
+                
+                // Módulo Presencial (Guardado Seguro)
+                if (!empty($nrc_p)) {
+                    $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ? AND clave_grupo = ?");
+                    $stmt_check->execute([$nrc_p, $clave]);
+                    if ($stmt_check->fetchColumn() > 0) {
+                        $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], $_POST['aula_presencial'], $nrc_p]);
+                    } else {
+                        $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, estado, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")->execute([$nrc_p, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
+                        $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)")->execute([$nrc_p, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], 'PRESENCIAL', $_POST['aula_presencial']]);
+                    }
+                }
+
+                // Módulo Virtual (Guardado Seguro)
+                if (!empty($nrc_v)) {
+                    $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ? AND clave_grupo = ?");
+                    $stmt_check->execute([$nrc_v, $clave]);
+                    if ($stmt_check->fetchColumn() > 0) {
+                        $pdo->prepare("UPDATE horarios SET dias_patron=?, hora_inicio=?, hora_fin=?, aula=? WHERE nrc=?")->execute([$_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], $_POST['aula_virtual'], $nrc_v]);
+                    } else {
+                        $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, estado, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")->execute([$nrc_v, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
+                        $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)")->execute([$nrc_v, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], 'VIRTUAL', $_POST['aula_virtual']]);
+                    }
+                }
                 
                 $pdo->commit();
                 $mensaje = "Datos del grupo actualizados correctamente."; $tipo_mensaje = "success";
             } else {
+                // Modo Creación
                 $nueva_clave = uniqid('grp_');
-                // Insertamos agregando el estado
                 $insertGrupo = $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, estado, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $insertHorario = $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)");
 
                 if ($nrc_p !== '') {
-                    $chk = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ?"); $chk->execute([$nrc_p]);
-                    if($chk->fetchColumn() > 0) throw new Exception("El NRC Presencial $nrc_p ya está siendo utilizado en otro grupo.");
                     $insertGrupo->execute([$nrc_p, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $nueva_clave]);
                     $insertHorario->execute([$nrc_p, $_POST['dias_presencial'], $_POST['inicio_presencial'], $_POST['fin_presencial'], 'PRESENCIAL', $_POST['aula_presencial']]);
                 }
                 if ($nrc_v !== '') {
-                    $chk = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE nrc = ?"); $chk->execute([$nrc_v]);
-                    if($chk->fetchColumn() > 0) throw new Exception("El NRC Virtual $nrc_v ya está siendo utilizado en otro grupo.");
                     $insertGrupo->execute([$nrc_v, $n_mat, $n_prof, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $nueva_clave]);
                     $insertHorario->execute([$nrc_v, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], 'VIRTUAL', $_POST['aula_virtual']]);
                 }
@@ -368,7 +402,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                     <div class="student-row">
                                         <a href="ver_expediente.php?id=<?php echo $alum['usuario_id']; ?>" class="student-link">
                                             <div style="font-weight: bold; color: var(--udg-blue); font-size: 0.95rem;"><?php echo htmlspecialchars($alum['nombre'] . ' ' . $alum['apellido_paterno']); ?></div>
-                                            <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px;">Codigo: <?php echo htmlspecialchars($alum['codigo']); ?></div>
+                                            <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px;">Código: <?php echo htmlspecialchars($alum['codigo']); ?></div>
                                         </a>
                                         <div class="student-action">
                                             <form method="POST" style="margin: 0;">
@@ -413,7 +447,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
                         <div class="card" style="margin: 0; border-top: 4px solid #17a2b8;">
                             <h4 style="margin: 0 0 15px 0; color: #17a2b8;"><i class="fas fa-laptop-house"></i> Virtual</h4>
-                            <div class="form-group"><label>NRC</label><input type="number" name="rnc_virtual" value="<?php echo htmlspecialchars($v_nrc_v); ?>" <?php if($es_edicion && $g['nrc_virtual']) echo 'readonly class="readonly-input"'; ?> placeholder="Ej. 60501"></div>
+                            <div class="form-group"><label>NRC</label><input type="number" name="rnc_virtual" value="<?php echo htmlspecialchars($v_nrc_v); ?>" <?php if($es_edicion && $g['nrc_virtual']) echo 'readonly class="readonly-input" title="El NRC no se puede editar"'; ?> placeholder="Ej. 60501"></div>
                             <div class="form-group"><label>Plataforma</label><input type="text" name="aula_virtual" value="<?php echo htmlspecialchars($v_aula_v); ?>" placeholder="Ej. Zoom o Meet"></div>
                             <div class="form-group"><label>Días</label><input type="text" name="dias_virtual" value="<?php echo htmlspecialchars($v_dias_v); ?>" placeholder="Ej. J-V"></div>
                             <div class="form-group" style="display: flex; gap: 5px; margin-bottom: 0;">
