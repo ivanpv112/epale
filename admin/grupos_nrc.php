@@ -4,15 +4,41 @@ require '../db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
+// ===============================================
+// ELIMINACIÓN DE GRUPO (BLINDADO CON TRANSACCIÓN)
+// ===============================================
 if (isset($_GET['del_clave'])) {
-    $pdo->prepare("DELETE FROM grupos WHERE clave_grupo=?")->execute([$_GET['del_clave']]);
-    header("Location: grupos_nrc.php?success_del=1"); exit;
+    try {
+        $pdo->beginTransaction();
+        $clave = $_GET['del_clave'];
+
+        $stmt = $pdo->prepare("SELECT nrc FROM grupos WHERE clave_grupo = ?");
+        $stmt->execute([$clave]);
+        $nrcs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($nrcs)) {
+            $inQuery = implode(',', array_fill(0, count($nrcs), '?'));
+            
+            $pdo->prepare("DELETE FROM horarios WHERE nrc IN ($inQuery)")->execute($nrcs);
+            $pdo->prepare("DELETE FROM inscripciones WHERE nrc IN ($inQuery)")->execute($nrcs);
+            $pdo->prepare("DELETE FROM asistencias WHERE inscripcion_id IN (SELECT inscripcion_id FROM inscripciones WHERE nrc IN ($inQuery))")->execute($nrcs);
+            $pdo->prepare("DELETE FROM calificaciones WHERE inscripcion_id IN (SELECT inscripcion_id FROM inscripciones WHERE nrc IN ($inQuery))")->execute($nrcs);
+        }
+
+        $pdo->prepare("DELETE FROM grupos WHERE clave_grupo=?")->execute([$clave]);
+        $pdo->commit();
+        header("Location: grupos_nrc.php?success_del=1"); exit;
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        header("Location: grupos_nrc.php?error=" . urlencode("No se pudo eliminar el grupo. Verifique la base de datos.")); exit;
+    }
 }
 
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $filtro_materia = isset($_GET['materia']) ? $_GET['materia'] : '';
 
-// FILTRO MAESTRO: Solo mostramos los grupos que están ACTIVOS
+// FILTRO MAESTRO: Solo grupos ACTIVOS
 $where = "g.estado = 'ACTIVO'"; 
 $params = [];
 
@@ -64,23 +90,23 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
 <body>
     <?php include 'menu_admin.php'; ?>
     <main class="main-content">
-        <div class="page-title-center" style="margin-bottom: 30px;">
+        <div class="page-title-center mb-30">
             <h1><i class="fas fa-chalkboard"></i> Gestión de Grupos y Alumnos</h1>
             <p>Administra los horarios, aulas y el cupo de los grupos que están <strong>En Curso</strong>.</p>
         </div>
 
-        <?php if(isset($_GET['success'])): ?><div class="alert alert-success" style="margin-bottom: 20px;"><i class="fas fa-check-circle"></i> ¡El grupo ha sido guardado correctamente!</div>
-        <?php elseif(isset($_GET['success_del'])): ?><div class="alert alert-success" style="margin-bottom: 20px; background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El grupo fue eliminado con éxito!</div>
-        <?php elseif(isset($_GET['error'])): ?><div class="alert" style="margin-bottom: 20px; background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px;"><i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> <?php echo htmlspecialchars($_GET['error']); ?></div><?php endif; ?>
+        <?php if(isset($_GET['success'])): ?><div class="alert alert-success mb-20"><i class="fas fa-check-circle"></i> ¡El grupo ha sido guardado correctamente!</div>
+        <?php elseif(isset($_GET['success_del'])): ?><div class="alert alert-success mb-20" style="background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El grupo fue eliminado con éxito!</div>
+        <?php elseif(isset($_GET['error'])): ?><div class="alert mb-20" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px;"><i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> <?php echo htmlspecialchars($_GET['error']); ?></div><?php endif; ?>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-            <form method="GET" action="grupos_nrc.php" style="display: flex; gap: 10px; flex-grow: 1; max-width: 800px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <form method="GET" action="grupos_nrc.php" class="toolbar" style="margin-bottom: 0; flex-grow: 1; max-width: 800px; padding: 10px;">
                 <div style="display: flex; align-items: center; flex-grow: 1; border: 1px solid #ddd; border-radius: 6px; padding: 0 10px;">
-                    <i class="fas fa-search" style="color:#aaa;"></i>
+                    <i class="fas fa-search icon-muted"></i>
                     <input type="text" name="q" placeholder="Buscar por Nombre o NRC..." value="<?php echo htmlspecialchars($search); ?>" style="border: none; outline: none; padding: 10px; width: 100%;">
                 </div>
-                <select name="materia" style="padding: 10px; border-radius: 6px; border: 1px solid #ddd; outline: none; cursor: pointer;">
-                    <option value="">Todas</option>
+                <select name="materia" class="filter-select" style="padding: 10px;">
+                    <option value="">Todas las materias</option>
                     <?php foreach($materias_unicas as $mat_name): ?>
                         <option value="<?php echo htmlspecialchars($mat_name); ?>" <?php if($filtro_materia == $mat_name) echo 'selected'; ?>><?php echo htmlspecialchars($mat_name); ?></option>
                     <?php endforeach; ?>
@@ -92,16 +118,16 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
         </div>
 
         <div class="card" style="padding: 0; overflow: hidden;">
-            <div class="table-wrapper" style="overflow-x:auto;">
-                <table class="history-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
+            <div class="table-wrapper">
+                <table class="admin-table">
+                    <thead class="table-header-clean">
                         <tr>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Materia / Ciclo</th>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Profesor</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">NRC y Aula</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Horario</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estudiantes</th>
-                            <th style="padding: 15px; text-align: center; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Acciones</th>
+                            <th>Materia / Ciclo</th>
+                            <th>Profesor</th>
+                            <th style="text-align: center;">NRC y Aula</th>
+                            <th style="text-align: center;">Horario</th>
+                            <th style="text-align: center;">Estudiantes</th>
+                            <th style="text-align: center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -112,32 +138,35 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
                             elseif ($inscritos >= $cupo) { $badge_bg = '#f8d7da'; $badge_color = '#dc3545'; $txt_cupo = "Llena"; } 
                             else { $badge_bg = '#d4edda'; $badge_color = '#28a745'; $txt_cupo = "Con cupo"; }
                         ?>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;">
-                                    <div style="color: var(--udg-blue); font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
-                                    <div style="font-size: 0.85rem; color: #888;">Ciclo: <?php echo htmlspecialchars($g['periodo']); ?> | Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
+                            <tr class="group-row" onclick="window.location.href='gestionar_grupo.php?clave=<?php echo $g['clave_grupo']; ?>'">
+                                <td class="td-clean">
+                                    <div class="user-name" style="font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
+                                    <div class="user-email">Ciclo: <?php echo htmlspecialchars($g['periodo']); ?> | Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
                                 </td>
-                                <td style="padding: 15px;"><i class="fas fa-chalkboard-teacher" style="color: #ccc; margin-right: 5px;"></i><?php echo htmlspecialchars($g['profesor'] . ' ' . $g['prof_ap']); ?></td>
-                                <td style="padding: 15px; text-align: center; font-size: 0.85rem; white-space: nowrap;">
-                                    <div style="color: #28a745; margin-bottom: 3px;"><strong>P:</strong> <?php echo $g['nrc_presencial'] ? $g['nrc_presencial'] . ' | ' . htmlspecialchars($g['aula_presencial']?:'S/A') : '---'; ?></div>
-                                    <div style="color: #17a2b8;"><strong>V:</strong> <?php echo $g['nrc_virtual'] ? $g['nrc_virtual'] . ' | ' . htmlspecialchars($g['aula_virtual']?:'S/A') : '---'; ?></div>
+                                <td class="td-clean"><i class="fas fa-chalkboard-teacher icon-muted"></i><?php echo htmlspecialchars($g['profesor'] . ' ' . $g['prof_ap']); ?></td>
+                                
+                                <td class="td-center" style="font-size: 0.85rem; white-space: nowrap;">
+                                    <div style="color: #28a745; margin-bottom: 3px;"><strong>NRC P:</strong> <?php echo $g['nrc_presencial'] ? $g['nrc_presencial'] . ' | ' . htmlspecialchars($g['aula_presencial']?:'S/A') : '---'; ?></div>
+                                    <div style="color: #17a2b8;"><strong>NRC V:</strong> <?php echo $g['nrc_virtual'] ? $g['nrc_virtual'] . ' | ' . htmlspecialchars($g['aula_virtual']?:'S/A') : '---'; ?></div>
                                 </td>
-                                <td style="padding: 15px; text-align: center; font-size: 0.85rem; white-space: nowrap;">
+                                
+                                <td class="td-center" style="font-size: 0.85rem; white-space: nowrap;">
                                     <div style="color: #28a745; margin-bottom: 3px;"><strong>P:</strong> <?php echo $g['dias_presencial'] ? htmlspecialchars($g['dias_presencial']) . ' ' . date('H:i', strtotime($g['inicio_presencial'])) . '-' . date('H:i', strtotime($g['fin_presencial'])) : '---'; ?></div>
                                     <div style="color: #17a2b8;"><strong>V:</strong> <?php echo $g['dias_virtual'] ? htmlspecialchars($g['dias_virtual']) . ' ' . date('H:i', strtotime($g['inicio_virtual'])) . '-' . date('H:i', strtotime($g['fin_virtual'])) : '---'; ?></div>
                                 </td>
-                                <td style="padding: 15px; text-align: center;">
+                                
+                                <td class="td-center">
                                     <div style="font-weight: bold; font-size: 1.1rem; color: #333; margin-bottom: 4px;"><?php echo $inscritos; ?> <span style="color: #999; font-weight: normal; font-size: 0.9rem;">/ <?php echo $cupo; ?></span></div>
                                     <span style="background-color: <?php echo $badge_bg; ?>; color: <?php echo $badge_color; ?>; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold;"><?php echo $txt_cupo; ?></span>
                                 </td>
-                                <td style="padding: 15px; text-align: center;">
-                                    <a href="gestionar_grupo.php?clave=<?php echo $g['clave_grupo']; ?>" class="btn-save" style="display: inline-flex; width: auto; font-size: 0.85rem; padding: 8px 15px; text-decoration: none; margin-right: 5px;"><i class="fas fa-cog"></i> Gestionar</a>
-                                    <a href="#" onclick="confirmarBorrado('grupos_nrc.php?del_clave=<?php echo $g['clave_grupo']; ?>')" style="color: #dc3545; font-size: 1.2rem; margin-left: 10px;" title="Eliminar"><i class="fas fa-trash-alt"></i></a>
+                                
+                                <td class="td-center">
+                                    <a href="#" onclick="event.stopPropagation(); confirmarBorrado('grupos_nrc.php?del_clave=<?php echo $g['clave_grupo']; ?>')" style="color: #dc3545; font-size: 1.3rem; transition: 0.2s;" title="Eliminar Clase"><i class="fas fa-trash-alt"></i></a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="6" style="text-align:center; padding: 40px; color: var(--text-light);"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos activos. Las clases finalizadas están en Ciclos Escolares.</td></tr>
+                        <tr><td colspan="6" class="empty-table-msg"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos activos. Las clases finalizadas están en Ciclos Escolares.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
