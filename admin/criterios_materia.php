@@ -65,7 +65,7 @@ foreach ($criterios as $c) {
     $total_puntos += floatval($c['puntos_maximos']);
 }
 
-// FOTO DEL ADMIN (Para el header)
+// FOTO DEL ADMIN
 $stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
 $stmt_foto->execute([$_SESSION['user_id']]);
 $user_foto = $stmt_foto->fetchColumn();
@@ -80,6 +80,19 @@ $user_foto = $stmt_foto->fetchColumn();
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ESTILOS PARA EL MENÚ DESPLEGABLE INTELIGENTE */
+        .smart-dropdown {
+            display: none; position: absolute; top: calc(100% + 5px); left: 0; right: 0;
+            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; z-index: 1000;
+            max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .smart-option {
+            padding: 10px 15px; cursor: pointer; color: #333; font-size: 0.95rem; transition: background 0.2s; border-bottom: 1px solid #f8f9fa;
+        }
+        .smart-option:hover { background: #f0f7ff; color: var(--udg-blue); font-weight: 500; }
+        .smart-option:last-child { border-bottom: none; }
+    </style>
 </head>
 <body>
 
@@ -87,7 +100,7 @@ $user_foto = $stmt_foto->fetchColumn();
 
     <main class="main-content">
         
-        <a href="<?php echo htmlspecialchars($url_volver); ?>" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+        <a href="materias.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
             <i class="fas fa-arrow-left"></i> Volver a la página anterior
         </a>
 
@@ -177,65 +190,71 @@ $user_foto = $stmt_foto->fetchColumn();
     <div id="criterioModal" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h2 id="modalTitle">Agregar Criterio de Evaluación</h2>
+                <h2 id="modalTitle" style="margin: 0;"><i class="fas fa-plus-circle"></i> Agregar Criterio</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             
-            <form method="POST" id="formCriterio">
+            <form method="POST" id="formCriterio" style="margin: 0;">
                 <input type="hidden" name="save_criterio" value="1">
                 <input type="hidden" name="criterio_id" id="criterioId">
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group" style="grid-column: span 2;"> 
-                        <label>Categoría (Grupo visual)</label> 
-                        <input type="text" name="categoria" id="critCategoria" required placeholder="Ej. Quizzes, Proyectos, Plataforma, Examen Final..."> 
-                        <small style="color: #888; font-size: 0.8rem;">Las actividades con la misma categoría se agruparán en la misma tarjeta.</small>
-                    </div>
+                <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        
+                        <div class="form-group" style="grid-column: span 2; position: relative;"> 
+                            <label>Categoría (Grupo visual) <span style="color:red;">*</span></label> 
+                            <input type="text" name="categoria" id="critCategoria" required placeholder="Ej. Quizzes, Proyectos, Plataforma..." autocomplete="off"> 
+                            <div id="dropCategoria" class="smart-dropdown"></div>
+                            <small style="color: #888; font-size: 0.8rem; display: block; margin-top: 5px;">Las actividades con la misma categoría se agruparán en la misma tarjeta.</small>
+                        </div>
 
-                    <div class="form-group"> 
-                        <label>Código Interno</label> 
-                        <input type="text" name="codigo_examen" id="critCodigo" required placeholder="Ej. Q1, WRITING, FINAL" style="text-transform: uppercase;"> 
-                    </div>
+                        <div class="form-group" style="position: relative;"> 
+                            <label>Código Interno <span style="color:red;">*</span></label> 
+                            <input type="text" name="codigo_examen" id="critCodigo" required placeholder="Ej. QZ1, WRITING" style="text-transform: uppercase;" autocomplete="off"> 
+                            <div id="dropCodigo" class="smart-dropdown"></div>
+                        </div>
 
-                    <div class="form-group"> 
-                        <label>Puntos Máximos</label> 
-                        <input type="number" name="puntos_maximos" id="critPuntos" step="0.01" required min="0.1" placeholder="Ej. 10"> 
-                    </div>
+                        <div class="form-group"> 
+                            <label>Puntos Máximos <span style="color:red;">*</span></label> 
+                            <input type="number" name="puntos_maximos" id="critPuntos" step="0.01" required min="0.1" placeholder="Ej. 10"> 
+                        </div>
 
-                    <div class="form-group" style="grid-column: span 2;"> 
-                        <label>Nombre del Examen/Actividad (Visible para el alumno)</label> 
-                        <input type="text" name="nombre_examen" id="critNombre" required placeholder="Ej. Quiz 1, Examen TOEFL, Actividades Moodle..."> 
-                    </div>
+                        <div class="form-group" style="grid-column: span 2; position: relative;"> 
+                            <label>Nombre del Examen/Actividad (Visible para el alumno) <span style="color:red;">*</span></label> 
+                            <input type="text" name="nombre_examen" id="critNombre" required placeholder="Ej. Quiz 1, Actividades Moodle..." autocomplete="off"> 
+                            <div id="dropNombre" class="smart-dropdown"></div>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Icono</label>
-                        <select name="icono" id="critIcono">
-                            <option value="fa-star">★ Estrella (Defecto)</option>
-                            <option value="fa-book-open">📖 Libro (Quizzes/Lecturas)</option>
-                            <option value="fa-comments">💬 Comentarios (Orales)</option>
-                            <option value="fa-file-signature">📝 Papel (Proyectos/Writing)</option>
-                            <option value="fa-laptop-code">💻 Laptop (Plataforma)</option>
-                            <option value="fa-hand-paper">✋ Mano (Participación)</option>
-                            <option value="fa-certificate">🎓 Certificado (TOEFL/Final)</option>
-                        </select>
-                    </div>
+                        <div class="form-group">
+                            <label>Icono</label>
+                            <select name="icono" id="critIcono">
+                                <option value="fa-star">★ Estrella (Defecto)</option>
+                                <option value="fa-book-open">📖 Libro (Quizzes/Lecturas)</option>
+                                <option value="fa-comments">💬 Comentarios (Orales)</option>
+                                <option value="fa-file-signature">📝 Papel (Proyectos)</option>
+                                <option value="fa-laptop-code">💻 Laptop (Plataforma)</option>
+                                <option value="fa-hand-paper">✋ Mano (Participación)</option>
+                                <option value="fa-certificate">🎓 Certificado (Idioma/Final)</option>
+                            </select>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Color</label>
-                        <select name="color" id="critColor">
-                            <option value="var(--udg-light)">Azul UdeG</option>
-                            <option value="#28a745">Verde (Éxito)</option>
-                            <option value="#ffc107">Amarillo (Advertencia)</option>
-                            <option value="#dc3545">Rojo (Peligro/Importante)</option>
-                            <option value="#17a2b8">Cian (Info)</option>
-                            <option value="#6f42c1">Morado (Especial)</option>
-                        </select>
+                        <div class="form-group">
+                            <label>Color</label>
+                            <select name="color" id="critColor">
+                                <option value="var(--udg-light)">Azul (Examenes)</option>
+                                <option value="#28a745">Verde (Orales)</option>
+                                <option value="#ffc107">Amarillo (Proyectos)</option>
+                                <option value="#dc3545">Rojo (Plataforma)</option>
+                                <option value="#17a2b8">Cian (Participación)</option>
+                                <option value="#6f42c1">Morado (Certificación)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-footer" style="margin-top: 20px;">
+                <div class="modal-footer" style="margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc;">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save" id="btnSubmit"><i class="fas fa-save"></i> Guardar</button>
+                    <button type="submit" class="btn-save" id="btnSubmit"><i class="fas fa-save"></i> Guardar Criterio</button>
                 </div>
             </form>
         </div>
@@ -251,15 +270,15 @@ $user_foto = $stmt_foto->fetchColumn();
         const overlayMenu = document.getElementById('menuOverlay');
 
         function openModal() { 
-            document.getElementById('modalTitle').innerText = 'Agregar Criterio de Evaluación';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Agregar Criterio';
             document.getElementById('criterioId').value = '';
             document.getElementById('formCriterio').reset(); 
-            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-plus"></i> Agregar';
+            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-plus"></i> Agregar Criterio';
             modal.style.display = 'flex'; 
         }
 
         function editCriterio(crit) {
-            document.getElementById('modalTitle').innerText = 'Editar Criterio de Evaluación';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Criterio';
             document.getElementById('criterioId').value = crit.criterio_id;
             
             document.getElementById('critCategoria').value = crit.categoria;
@@ -279,6 +298,48 @@ $user_foto = $stmt_foto->fetchColumn();
             if(e.target == modal) closeModal(); 
             if(e.target == overlayMenu) toggleMobileMenu();
         };
+
+        // =====================================================================
+        // LÓGICA DEL MENÚ DESPLEGABLE INTELIGENTE (AUTOCOMPLETE)
+        // =====================================================================
+        const dataCategoria = ['Quizzes', 'Examen Oral', 'Proyecto Final', 'Plataforma', 'Participación', 'Examen TOEFL', 'Examen Final'];
+        const dataCodigo = ['QZ1', 'QZ2', 'QZ3', 'ORAL1', 'ORAL2', 'WRITING', 'PLAT', 'PART', 'TOEFL', 'FINAL'];
+        const dataNombre = ['Quiz 1', 'Quiz 2', 'Quiz 3', 'Quiz Oral 1', 'Quiz Oral 2', 'Writing Project', 'Actividades en Plataforma', 'Participación en Clase', 'Examen TOEFL', 'Examen Final'];
+
+        function setupAutocomplete(inputId, dropId, list) {
+            const input = document.getElementById(inputId);
+            const drop = document.getElementById(dropId);
+
+            function renderOptions(filter) {
+                drop.innerHTML = '';
+                const lowerFilter = filter.toLowerCase();
+                const filtered = list.filter(item => item.toLowerCase().includes(lowerFilter));
+                
+                if(filtered.length === 0) { drop.style.display = 'none'; return; }
+
+                filtered.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'smart-option';
+                    div.textContent = item;
+                    div.onmousedown = function(e) { e.preventDefault(); } // Evita que el input pierda el focus antes del click
+                    div.onclick = function() {
+                        input.value = item;
+                        drop.style.display = 'none';
+                    };
+                    drop.appendChild(div);
+                });
+                drop.style.display = 'block';
+            }
+
+            input.addEventListener('focus', () => renderOptions(input.value));
+            input.addEventListener('input', (e) => renderOptions(e.target.value));
+            input.addEventListener('blur', () => { drop.style.display = 'none'; });
+        }
+
+        setupAutocomplete('critCategoria', 'dropCategoria', dataCategoria);
+        setupAutocomplete('critCodigo', 'dropCodigo', dataCodigo);
+        setupAutocomplete('critNombre', 'dropNombre', dataNombre);
+
     </script>
 </body>
 </html>
