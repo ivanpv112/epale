@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 20-03-2026 a las 20:52:58
+-- Tiempo de generación: 23-04-2026 a las 01:02:35
 -- Versión del servidor: 8.0.36
 -- Versión de PHP: 8.3.14
 
@@ -49,6 +49,63 @@ INSERT INTO `alumnos` (`alumno_id`, `usuario_id`, `carrera`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `asistencias`
+--
+
+DROP TABLE IF EXISTS `asistencias`;
+CREATE TABLE IF NOT EXISTS `asistencias` (
+  `asistencia_id` int NOT NULL AUTO_INCREMENT,
+  `inscripcion_id` int NOT NULL,
+  `fecha` date NOT NULL,
+  `estatus` enum('ASISTENCIA','FALTA','RETARDO') NOT NULL,
+  PRIMARY KEY (`asistencia_id`),
+  UNIQUE KEY `unique_asistencia` (`inscripcion_id`,`fecha`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Volcado de datos para la tabla `asistencias`
+--
+
+INSERT INTO `asistencias` (`asistencia_id`, `inscripcion_id`, `fecha`, `estatus`) VALUES
+(1, 7, '2026-04-16', 'ASISTENCIA'),
+(2, 1, '2026-04-16', 'ASISTENCIA'),
+(3, 6, '2026-04-16', 'ASISTENCIA'),
+(4, 7, '2026-04-17', 'ASISTENCIA'),
+(5, 1, '2026-04-17', 'FALTA'),
+(6, 7, '2026-04-21', 'ASISTENCIA'),
+(7, 1, '2026-04-21', 'ASISTENCIA'),
+(8, 7, '2026-04-23', 'ASISTENCIA'),
+(9, 1, '2026-04-23', 'ASISTENCIA'),
+(10, 5, '2026-04-23', 'ASISTENCIA');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `avisos`
+--
+
+DROP TABLE IF EXISTS `avisos`;
+CREATE TABLE IF NOT EXISTS `avisos` (
+  `aviso_id` int NOT NULL AUTO_INCREMENT,
+  `titulo` varchar(150) DEFAULT NULL,
+  `cuerpo` text,
+  `tipo_audiencia` enum('GLOBAL','IDIOMA','MATERIA','GRUPO') DEFAULT NULL,
+  `audiencia_ref` varchar(100) DEFAULT NULL,
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_expiracion` datetime DEFAULT NULL,
+  PRIMARY KEY (`aviso_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Volcado de datos para la tabla `avisos`
+--
+
+INSERT INTO `avisos` (`aviso_id`, `titulo`, `cuerpo`, `tipo_audiencia`, `audiencia_ref`, `fecha_creacion`, `fecha_expiracion`) VALUES
+(4, 'XD', 'se cancela la clase de mañana', 'MATERIA', '3', '2026-04-23 00:32:15', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `calificaciones`
 --
 
@@ -60,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `calificaciones` (
   `puntaje` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`calificacion_id`),
   KEY `inscripcion_id` (`inscripcion_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `calificaciones`
@@ -70,7 +127,7 @@ INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`
 (1, 1, 'Q1', 8.00),
 (2, 1, 'Q2', 10.00),
 (3, 1, 'Q3', 8.00),
-(4, 1, 'QO1', 3.00),
+(4, 1, 'QO1', 4.00),
 (5, 1, 'QO2', 2.00),
 (6, 1, 'WRITING', 5.00),
 (7, 1, 'PLATAFORMA', 40.00),
@@ -84,7 +141,13 @@ INSERT INTO `calificaciones` (`calificacion_id`, `inscripcion_id`, `tipo_examen`
 (17, 6, 'Q2', 5.00),
 (18, 6, 'Q3', 5.00),
 (19, 6, 'QO1', 5.00),
-(20, 6, 'QO2', 5.00);
+(20, 6, 'QO2', 5.00),
+(22, 8, 'QO1', 5.00),
+(23, 2, 'TOEFL', 10.00),
+(24, 2, 'PLATAFORMA', 40.00),
+(25, 2, 'Q1', 10.00),
+(26, 8, 'TOEFL', 15.00),
+(27, 5, 'DELF', 14.00);
 
 -- --------------------------------------------------------
 
@@ -100,14 +163,15 @@ CREATE TABLE IF NOT EXISTS `certificaciones` (
   `nivel_obtenido` varchar(50) DEFAULT NULL,
   `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`certificacion_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Volcado de datos para la tabla `certificaciones`
 --
 
 INSERT INTO `certificaciones` (`certificacion_id`, `alumno_id`, `idioma`, `nivel_obtenido`, `fecha_registro`) VALUES
-(1, 1, 'Inglés', 'B2', '2026-03-20 19:04:32');
+(1, 1, 'Inglés', 'B2', '2026-03-20 19:04:32'),
+(2, 1, 'Francés', 'C1', '2026-04-15 22:10:18');
 
 -- --------------------------------------------------------
 
@@ -121,14 +185,15 @@ CREATE TABLE IF NOT EXISTS `ciclos` (
   `nombre` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `activo` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`ciclo_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `ciclos`
 --
 
 INSERT INTO `ciclos` (`ciclo_id`, `nombre`, `activo`) VALUES
-(1, '2026-A', 1);
+(1, '2026-A', 1),
+(2, '2026-B', 1);
 
 -- --------------------------------------------------------
 
@@ -148,7 +213,7 @@ CREATE TABLE IF NOT EXISTS `criterios_evaluacion` (
   `color` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'var(--udg-light)',
   PRIMARY KEY (`criterio_id`),
   KEY `materia_id` (`materia_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `criterios_evaluacion`
@@ -166,7 +231,35 @@ INSERT INTO `criterios_evaluacion` (`criterio_id`, `materia_id`, `categoria`, `c
 (9, 1, 'Certificación', 'TOEFL', 'Examen TOEFL', 15.00, 'fa-certificate', '#6f42c1'),
 (10, 2, 'Certificación', 'TOEFL', 'Examen TOEFL', 10.00, 'fa-certificate', '#6f42c1'),
 (11, 2, 'Quizzes', 'Q1', 'Quiz 1', 10.00, 'fa-book-open', 'var(--udg-light)'),
-(12, 2, 'Plataforma', 'PLATAFORMA', 'Actividades Moodle', 40.00, 'fa-laptop-code', '#dc3545');
+(12, 2, 'Plataforma', 'PLATAFORMA', 'Actividades Moodle', 40.00, 'fa-laptop-code', '#dc3545'),
+(13, 3, 'Certificación', 'DELF', 'Examen DELF', 15.00, 'fa-certificate', '#6f42c1'),
+(14, 3, 'Quizzes Orales', 'QO1', 'Quiz Oral 1', 5.00, 'fa-comments', '#28a745');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `examenes_diagnosticos`
+--
+
+DROP TABLE IF EXISTS `examenes_diagnosticos`;
+CREATE TABLE IF NOT EXISTS `examenes_diagnosticos` (
+  `examen_id` int NOT NULL AUTO_INCREMENT,
+  `alumno_id` int DEFAULT NULL,
+  `idioma` varchar(50) DEFAULT NULL,
+  `calificacion_texto` varchar(50) DEFAULT NULL,
+  `nivel_asignado` int DEFAULT NULL,
+  `fecha_realizacion` date DEFAULT NULL,
+  `periodo` varchar(20) DEFAULT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`examen_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Volcado de datos para la tabla `examenes_diagnosticos`
+--
+
+INSERT INTO `examenes_diagnosticos` (`examen_id`, `alumno_id`, `idioma`, `calificacion_texto`, `nivel_asignado`, `fecha_realizacion`, `periodo`, `fecha_registro`) VALUES
+(1, 1, 'Ingles', 'A2 INICAL', 2, '2022-08-16', '2022-B', '2026-04-16 22:39:49');
 
 -- --------------------------------------------------------
 
@@ -196,9 +289,12 @@ CREATE TABLE IF NOT EXISTS `grupos` (
 
 INSERT INTO `grupos` (`nrc`, `materia_id`, `profesor_id`, `ciclo_id`, `cupo`, `edicion_total`, `clave_grupo`, `estado`) VALUES
 (1, 1, 8, 1, 30, 0, 'grp_69af725cbcb61', 'ACTIVO'),
+(9, 3, 2, 1, 30, 0, 'grp_69e00c918e67b', 'ACTIVO'),
+(10, 3, 2, 1, 30, 0, 'grp_69e00c918e67b', 'ACTIVO'),
 (60495, 1, 2, 1, 30, 0, '60495', 'ACTIVO'),
-(60501, 2, 2, 1, 30, 0, '60501', 'ACTIVO'),
-(60966, 1, 2, 1, 30, 0, '60966', 'ACTIVO');
+(60501, 3, 2, 2, 3, 0, '60501', 'ACTIVO'),
+(60966, 1, 2, 1, 30, 0, '60966', 'ACTIVO'),
+(78909, 4, 11, 1, 30, 0, 'grp_69e7fc9d4ea7b', 'ACTIVO');
 
 -- --------------------------------------------------------
 
@@ -217,17 +313,20 @@ CREATE TABLE IF NOT EXISTS `horarios` (
   `aula` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`horario_id`),
   KEY `nrc` (`nrc`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `horarios`
 --
 
 INSERT INTO `horarios` (`horario_id`, `nrc`, `dias_patron`, `hora_inicio`, `hora_fin`, `modalidad`, `aula`) VALUES
-(1, 60495, 'M-J', '16:00:00', '18:00:00', 'PRESENCIAL', 'N-203'),
-(2, 60501, 'L-I', '09:00:00', '11:00:00', 'PRESENCIAL', 'N-204'),
-(5, 60966, 'V', '18:00:00', '20:00:00', 'PRESENCIAL', 'N-202'),
-(7, 1, 'V', '12:00:00', '15:00:00', 'PRESENCIAL', '');
+(1, 60495, 'L-I', '09:00:00', '11:00:00', 'PRESENCIAL', 'N-203'),
+(2, 60501, 'V', '20:00:00', '21:05:00', 'PRESENCIAL', 'N-301'),
+(5, 60966, 'M-J', '09:00:00', '11:00:00', 'PRESENCIAL', 'N-202'),
+(7, 1, 'V', '12:00:00', '15:00:00', 'PRESENCIAL', ''),
+(8, 9, 'V', '10:00:00', '12:00:00', 'PRESENCIAL', 'N-202'),
+(9, 10, 'V', '13:00:00', '15:00:00', 'VIRTUAL', 'Zoom'),
+(11, 78909, 'V', '16:00:00', '18:00:00', 'PRESENCIAL', 'N-209');
 
 -- --------------------------------------------------------
 
@@ -245,7 +344,7 @@ CREATE TABLE IF NOT EXISTS `inscripciones` (
   PRIMARY KEY (`inscripcion_id`),
   KEY `alumno_id` (`alumno_id`),
   KEY `nrc` (`nrc`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `inscripciones`
@@ -253,10 +352,12 @@ CREATE TABLE IF NOT EXISTS `inscripciones` (
 
 INSERT INTO `inscripciones` (`inscripcion_id`, `alumno_id`, `nrc`, `estatus`, `calificacion_final`) VALUES
 (1, 1, 60495, 'INSCRITO', 0.00),
-(2, 1, 60501, 'BAJA', 0.00),
+(2, 1, 60501, 'INSCRITO', 0.00),
 (5, 2, 60501, 'INSCRITO', 0.00),
 (6, 4, 60966, 'INSCRITO', 0.00),
-(7, 4, 60495, 'INSCRITO', 0.00);
+(7, 4, 60495, 'INSCRITO', 0.00),
+(8, 1, 9, 'INSCRITO', 0.00),
+(9, 4, 60501, 'INSCRITO', 0.00);
 
 -- --------------------------------------------------------
 
@@ -272,7 +373,7 @@ CREATE TABLE IF NOT EXISTS `materias` (
   `nivel` int NOT NULL,
   PRIMARY KEY (`materia_id`),
   UNIQUE KEY `clave` (`clave`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `materias`
@@ -281,7 +382,8 @@ CREATE TABLE IF NOT EXISTS `materias` (
 INSERT INTO `materias` (`materia_id`, `clave`, `nombre`, `nivel`) VALUES
 (1, 'I0004', 'Inglés', 4),
 (2, 'F0001', 'Francés', 1),
-(3, 'F0002', 'Francés', 1);
+(3, 'F0004', 'Francés', 4),
+(4, 'A0001', 'Aleman', 1);
 
 -- --------------------------------------------------------
 
@@ -337,7 +439,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   PRIMARY KEY (`usuario_id`),
   UNIQUE KEY `correo` (`correo`),
   UNIQUE KEY `codigo` (`codigo`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `usuarios`
@@ -350,7 +452,8 @@ INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `a
 (4, '2187345', 'Jorge', 'Ledezma', 'Paredes', 'test2@gmail.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3344553322', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-02-18 21:58:25'),
 (7, '2', 'Ivan Alejandro', 'Godinez', 'Padilla', 'test3@gmail.com', '$2y$10$WKAXb1YFEvwvBvEAFnt6GO2ujXXSOuU3YuxNvX3SJ5FZj9pDfvmGO', '222334456', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-05 20:43:36'),
 (8, '01092834', 'Martin', 'Padilla', 'Yunuem', 'test9@gmail.com', '$2y$10$O/UZX7omnuXb5xyfbQMQce4zjAeXzX8N1jmQJTpkJaXXHo2HZ7Kka', '3344222233', 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-03-05 23:03:29'),
-(10, '1', 'Valeria', 'Enriquez', 'Ruvalcaba', 'test10@gmail.com', '$2y$10$kyib1jrUJa/5J.AMnJCzIu53yUVFEQbEDCzGjuOIOlxNVJbPsjQl2', '', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-06 20:27:09');
+(10, '1', 'Valeria', 'Enriquez', 'Ruvalcaba', 'test10@gmail.com', '$2y$10$kyib1jrUJa/5J.AMnJCzIu53yUVFEQbEDCzGjuOIOlxNVJbPsjQl2', '', 'ALUMNO', 'ACTIVO', NULL, NULL, '2026-03-06 20:27:09'),
+(11, '200', 'pruebaprofe', 'test', 'test', 'testprofe@gmail.com', '$2y$10$TMceNURFhOrkJEvYwrVkMeDwqudabV.S.uwgWZno/PjLbB0PMTA6a', '3344224455', 'PROFESOR', 'ACTIVO', NULL, NULL, '2026-04-21 22:34:18');
 
 --
 -- Restricciones para tablas volcadas
@@ -361,6 +464,12 @@ INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `a
 --
 ALTER TABLE `alumnos`
   ADD CONSTRAINT `alumnos_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`usuario_id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `asistencias`
+--
+ALTER TABLE `asistencias`
+  ADD CONSTRAINT `asistencias_ibfk_1` FOREIGN KEY (`inscripcion_id`) REFERENCES `inscripciones` (`inscripcion_id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `calificaciones`
