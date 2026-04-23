@@ -48,12 +48,12 @@ $colores_asignados = []; $color_index = 0; $bloques_render = [];
 foreach ($horarios_db as $h) {
     if (!$h['hora_inicio'] || !$h['hora_fin'] || !$h['dias_patron']) continue;
 
-    // Asigna el mismo color a la misma materia para identificarlas fácil
-    if (!isset($colores_asignados[$h['materia_id']])) {
-        $colores_asignados[$h['materia_id']] = $paleta[$color_index % count($paleta)];
+    // AHORA ASIGNA EL COLOR POR CLAVE DEL GRUPO (Hace cada clase independiente visualmente)
+    if (!isset($colores_asignados[$h['clave_grupo']])) {
+        $colores_asignados[$h['clave_grupo']] = $paleta[$color_index % count($paleta)];
         $color_index++;
     }
-    $color = $colores_asignados[$h['materia_id']];
+    $color = $colores_asignados[$h['clave_grupo']];
 
     $hora_ini = (int)date('H', strtotime($h['hora_inicio']));
     $hora_fin = (int)date('H', strtotime($h['hora_fin']));
