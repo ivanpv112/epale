@@ -570,8 +570,8 @@ if ($es_profesor) {
                                 </div>
                                 <div style="font-size: 0.85rem; color: #666;"><i class="far fa-calendar-alt"></i> Semestre <?php echo htmlspecialchars($g['ciclo']); ?> &nbsp;|&nbsp; <i class="fas fa-users"></i> <?php echo $g['inscritos']; ?> Alumnos</div>
                                 <div style="margin-top: 5px;">
-                                    <?php if($g['nrc_p']): ?><span class="class-nrc"><strong style="color:#28a745;">P:</strong> <?php echo $g['nrc_p']; ?></span><?php endif; ?>
-                                    <?php if($g['nrc_v']): ?><span class="class-nrc"><strong style="color:#17a2b8;">V:</strong> <?php echo $g['nrc_v']; ?></span><?php endif; ?>
+                                    <?php if($g['nrc_p']): ?><span class="class-nrc"><strong style="color:#28a745;">NRC P:</strong> <?php echo $g['nrc_p']; ?></span><?php endif; ?>
+                                    <?php if($g['nrc_v']): ?><span class="class-nrc"><strong style="color:#17a2b8;">NRC V:</strong> <?php echo $g['nrc_v']; ?></span><?php endif; ?>
                                 </div>
                             </a>
                         <?php endforeach; ?>
