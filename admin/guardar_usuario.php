@@ -20,9 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $codigo = trim($_POST['codigo'] ?? '');
     $carrera = trim($_POST['carrera'] ?? '');
     $telefono = trim($_POST['telefono'] ?? '');
+    $genero = $_POST['genero'] ?? null;
     $password = $_POST['password'] ?? '';
 
     if ($codigo === '') $codigo = null;
+    if ($genero === '') $genero = null;
 
     try {
         $pdo->beginTransaction();
@@ -31,12 +33,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // ==========================================
             // MODO CREAR NUEVO USUARIO
             // ==========================================
+            // Validación de contraseña requerida al crear
+            if (empty($password)) {
+                $pdo->rollBack();
+                header("Location: usuarios.php?msg=error_password"); exit;
+            }
+
             $hash = password_hash($password, PASSWORD_DEFAULT);
 
-            $sql = "INSERT INTO usuarios (codigo, nombre, apellido_paterno, apellido_materno, correo, password, rol, estatus, telefono)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO usuarios (codigo, nombre, apellido_paterno, apellido_materno, correo, password, rol, estatus, telefono, genero)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $hash, $rol, $estatus, $telefono]);
+            $stmt->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $hash, $rol, $estatus, $telefono, $genero]);
 
             $nuevo_id = $pdo->lastInsertId();
 
@@ -51,11 +59,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // ==========================================
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $sql = "UPDATE usuarios SET codigo=?, nombre=?, apellido_paterno=?, apellido_materno=?, correo=?, password=?, rol=?, estatus=?, telefono=? WHERE usuario_id=?";
-                $pdo->prepare($sql)->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $hash, $rol, $estatus, $telefono, $usuario_id]);
+                $sql = "UPDATE usuarios SET codigo=?, nombre=?, apellido_paterno=?, apellido_materno=?, correo=?, password=?, rol=?, estatus=?, telefono=?, genero=? WHERE usuario_id=?";
+                $pdo->prepare($sql)->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $hash, $rol, $estatus, $telefono, $genero, $usuario_id]);
             } else {
-                $sql = "UPDATE usuarios SET codigo=?, nombre=?, apellido_paterno=?, apellido_materno=?, correo=?, rol=?, estatus=?, telefono=? WHERE usuario_id=?";
-                $pdo->prepare($sql)->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $rol, $estatus, $telefono, $usuario_id]);
+                $sql = "UPDATE usuarios SET codigo=?, nombre=?, apellido_paterno=?, apellido_materno=?, correo=?, rol=?, estatus=?, telefono=?, genero=? WHERE usuario_id=?";
+                $pdo->prepare($sql)->execute([$codigo, $nombre, $apellido_paterno, $apellido_materno, $correo, $rol, $estatus, $telefono, $genero, $usuario_id]);
             }
 
             if ($rol === 'ALUMNO') {
@@ -66,10 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $pdo->prepare("INSERT INTO alumnos (usuario_id, carrera) VALUES (?, ?)")->execute([$usuario_id, $carrera]);
                 }
+            } else {
+                 // Si se cambia el rol a otro que no sea alumno, se podría eliminar el registro de alumno (opcional)
+                 // $pdo->prepare("DELETE FROM alumnos WHERE usuario_id = ?")->execute([$usuario_id]);
             }
 
             // ==============================================================
-            // NUEVO: VERIFICAR SI EL ADMIN SE QUITÓ SUS PROPIOS PERMISOS
+            // VERIFICAR SI EL ADMIN SE QUITÓ SUS PROPIOS PERMISOS
             // ==============================================================
             if ($usuario_id == $_SESSION['user_id']) {
                 $_SESSION['rol'] = $rol; // Actualizamos la memoria
