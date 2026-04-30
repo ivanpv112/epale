@@ -135,8 +135,8 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <br>
                                     <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">
                                         <?php 
-                                            if($e['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#3b82f6;"></i> Masc';
-                                            elseif($e['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#e83e8c;"></i> Fem';
+                                            if($e['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#3b82f6;"></i> Masculino';
+                                            elseif($e['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#e83e8c;"></i> Femenino';
                                             elseif($e['genero'] == 'OTRO') echo '<i class="fas fa-transgender-alt" style="color:#6f42c1;"></i> Otro';
                                             else echo '<i class="fas fa-genderless" style="color:#aaa;"></i> N/E';
                                         ?>
