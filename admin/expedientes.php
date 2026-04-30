@@ -75,7 +75,7 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px;">
             <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
-            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre, correo o código..." value="<?php echo htmlspecialchars($search); ?>">
+            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre, correo o Código..." value="<?php echo htmlspecialchars($search); ?>">
             
             <select name="rol" class="filter-select" onchange="this.form.submit()">
                 <option value="">Ambos roles</option>
@@ -132,6 +132,15 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <?php else: ?>
                                         <i class="fas fa-chalkboard-teacher" style="color:#888;"></i> Profesor
                                     <?php endif; ?>
+                                    <br>
+                                    <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">
+                                        <?php 
+                                            if($e['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#3b82f6;"></i> Masc';
+                                            elseif($e['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#e83e8c;"></i> Fem';
+                                            elseif($e['genero'] == 'OTRO') echo '<i class="fas fa-transgender-alt" style="color:#6f42c1;"></i> Otro';
+                                            else echo '<i class="fas fa-genderless" style="color:#aaa;"></i> N/E';
+                                        ?>
+                                    </div>
                                 </td>
 
                                 <td style="padding: 15px;">
