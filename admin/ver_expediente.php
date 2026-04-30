@@ -169,13 +169,12 @@ if ($es_alumno) {
 }
 
 // ============================================
-// LÓGICA SI ES PROFESOR (Corregida para Historial)
+// LÓGICA SI ES PROFESOR
 // ============================================
 $grupos_profesor_activos = [];
 $grupos_profesor_historial = [];
 
 if ($es_profesor) {
-    // Ya NO filtramos por g.estado = 'ACTIVO', traemos todos
     $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, c.activo, g.estado,
                           MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                           MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -191,7 +190,6 @@ if ($es_profesor) {
     $stmt_g->execute([$usuario_id]);
     $todos_grupos_prof = $stmt_g->fetchAll(PDO::FETCH_ASSOC);
 
-    // Separamos en activos y cerrados
     foreach ($todos_grupos_prof as $g) {
         if ($g['estado'] == 'ACTIVO' && $g['activo'] == 1) {
             $grupos_profesor_activos[] = $g;
@@ -212,14 +210,6 @@ if ($es_profesor) {
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        .edit-diag-master-btn {
-            background: none; border: none; color: var(--udg-blue); cursor: pointer; font-size: 0.9rem; 
-            padding: 5px 10px; border-radius: 6px; border: 1px solid var(--udg-blue); transition: all 0.2s;
-            font-weight: bold;
-        }
-        .edit-diag-master-btn:hover { background: var(--udg-blue); color: white; }
-    </style>
 </head>
 <body>
 
@@ -241,7 +231,7 @@ if ($es_profesor) {
             <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
             <div>
                 <h1 style="margin: 0 0 10px 0; font-size: 2.2rem;"><?php echo htmlspecialchars($nombre_completo); ?></h1>
-                <p style="margin: 0; font-size: 1.1rem; opacity: 0.9; display: flex; align-items: center; gap: 15px;">
+                <p style="margin: 0; font-size: 1.1rem; opacity: 0.9; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                     <?php if($es_alumno): ?>
                         <span><i class="fas fa-user-graduate"></i> Alumno</span> | 
                         <span><i class="fas fa-book"></i> <?php echo htmlspecialchars($perfil['carrera'] ?? 'Sin Carrera'); ?></span>
@@ -249,6 +239,15 @@ if ($es_profesor) {
                         <span><i class="fas fa-chalkboard-teacher"></i> Docente</span>
                     <?php endif; ?>
                     | <span><i class="fas fa-id-badge"></i> Código: <?php echo htmlspecialchars($perfil['codigo'] ?: 'N/A'); ?></span>
+                    
+                    | <span>
+                        <?php 
+                            if ($perfil['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#60a5fa;"></i> Masculino';
+                            elseif ($perfil['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#f472b6;"></i> Femenino';
+                            elseif ($perfil['genero'] == 'OTRO') echo '<i class="fas fa-transgender-alt" style="color:#c084fc;"></i> Otro';
+                            else echo '<i class="fas fa-genderless" style="color:#ccc;"></i> No especificado';
+                        ?>
+                    </span>
                 </p>
             </div>
         </div>
@@ -362,25 +361,24 @@ if ($es_profesor) {
             </div>
 
             <div>
-                <div class="card" style="margin-top: 0; border-top: 4px solid var(--udg-blue); margin-bottom: 20px;">
-                    <div style="text-align: center; position: relative;">
-                        <div style="position: absolute; top: 0; right: 0;">
-                            <?php if(count($examenes_diagnosticos) > 0): 
-                                $diag = $examenes_diagnosticos[0]; 
-                            ?>
-                                <button class="edit-diag-master-btn" onclick="abrirModalDiag(<?php echo $diag['examen_id']; ?>, '<?php echo htmlspecialchars($diag['idioma']); ?>', '<?php echo htmlspecialchars($diag['periodo']); ?>', <?php echo $diag['nivel_asignado']; ?>, '<?php echo htmlspecialchars($diag['calificacion_texto']); ?>', '<?php echo $diag['fecha_realizacion']; ?>')" title="Editar Diagnóstico">
-                                    <i class="fas fa-pen"></i> Editar
-                                </button>
-                            <?php else: ?>
-                                <button class="edit-diag-master-btn" onclick="abrirModalDiag('', '', '', '', '', '')" title="Agregar Diagnóstico">
-                                    <i class="fas fa-plus"></i> Agregar
-                                </button>
-                            <?php endif; ?>
-                        </div>
+                <!-- TARJETA EXAMEN DIAGNÓSTICO (ESTILIZADA SIN ENPALMAR BOTONES) -->
+                <div class="card" style="margin-top: 0; border-top: 4px solid var(--udg-blue); margin-bottom: 20px; position: relative;">
+                    
+                    <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 8px;">
+                        <button class="btn-save" style="padding: 6px 12px; font-size: 0.85rem;" onclick="abrirModalDiag('', '', '', '', '', '')" title="Agregar Nuevo Diagnóstico">
+                            <i class="fas fa-plus"></i> Agregar
+                        </button>
+                        <?php if(count($examenes_diagnosticos) > 0): ?>
+                            <button class="btn-cancel" style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #ccc; background: #f8f9fa; color: #333; transition: 0.2s;" onmouseover="this.style.background='#e2e6ea'" onmouseout="this.style.background='#f8f9fa'" onclick="handleEditDiagnostico()" title="Editar Diagnóstico">
+                                <i class="fas fa-pen"></i> Editar
+                            </button>
+                        <?php endif; ?>
+                    </div>
 
-                        <i class="fas fa-clipboard-check" style="font-size: 3rem; color: var(--udg-blue); margin-bottom: 10px; margin-top: 20px;"></i>
+                    <div style="text-align: center; padding-top: 25px;">
+                        <i class="fas fa-clipboard-check" style="font-size: 2.5rem; color: var(--udg-blue); margin-bottom: 10px;"></i>
                         <h3 style="color: var(--udg-blue); margin: 0;">Examen Diagnóstico</h3>
-                        <p style="font-size: 0.85rem; color: #666;">Resultados de ubicación inicial</p>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Resultados de ubicación inicial</p>
                     </div>
                     
                     <div style="margin-top: 15px;">
@@ -616,6 +614,11 @@ if ($es_profesor) {
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <script>
+        <?php if($es_alumno): ?>
+            // Pasamos los diagnósticos de PHP a JS para el menú inteligente
+            const examenesGuardados = <?php echo json_encode($examenes_diagnosticos ?? []); ?>;
+        <?php endif; ?>
+
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
         
         function abrirModalCalif(id) { document.getElementById('modalCalif_' + id).style.display = 'flex'; }
@@ -637,6 +640,37 @@ if ($es_profesor) {
             
             document.getElementById('modalDiag').style.display = 'flex';
         }
+
+        // LÓGICA INTELIGENTE PARA EDITAR DIAGNÓSTICOS
+        function handleEditDiagnostico() {
+            if (examenesGuardados.length === 1) {
+                // Si solo hay uno, ábrelo directo
+                let ex = examenesGuardados[0];
+                abrirModalDiag(ex.examen_id, ex.idioma, ex.periodo, ex.nivel_asignado, ex.calificacion_texto, ex.fecha_realizacion);
+            } else if (examenesGuardados.length > 1) {
+                // Si hay varios, despliega menú
+                let opciones = {};
+                examenesGuardados.forEach(ex => {
+                    opciones[ex.examen_id] = `${ex.idioma} (${ex.periodo}) - Nivel ${ex.nivel_asignado}`;
+                });
+                Swal.fire({
+                    title: '¿Qué examen deseas editar?',
+                    input: 'select',
+                    inputOptions: opciones,
+                    inputPlaceholder: 'Selecciona un examen',
+                    showCancelButton: true,
+                    confirmButtonText: 'Editar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: 'var(--udg-blue)'
+                }).then((result) => {
+                    if (result.isConfirmed && result.value) {
+                        let ex = examenesGuardados.find(e => e.examen_id == result.value);
+                        abrirModalDiag(ex.examen_id, ex.idioma, ex.periodo, ex.nivel_asignado, ex.calificacion_texto, ex.fecha_realizacion);
+                    }
+                });
+            }
+        }
+
         function cerrarModalDiag() { document.getElementById('modalDiag').style.display = 'none'; }
 
         window.onclick = function(e) { if(e.target.classList.contains('modal-overlay')) e.target.style.display = 'none'; };
