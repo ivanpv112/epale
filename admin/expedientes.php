@@ -97,7 +97,7 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <tr>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Perfil / Usuario</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Código</th>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera / Genero</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estado</th>
                         </tr>
                     </thead>
