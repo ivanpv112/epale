@@ -220,3 +220,33 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 }
 .td-clean { padding: 15px 20px; }
 .td-center { padding: 15px 20px; text-align: center; }
+
+/* =========================================================
+   CARGA MASIVA Y TABLAS EXCEL (CSV)
+   ========================================================= */
+.import-section { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+/* Input de archivo */
+.file-input-wrapper { margin: 20px 0; position: relative; }
+.file-input-label { display: block; padding: 40px 20px; background-color: #f8f9fa; border: 2px dashed #ccc; border-radius: 8px; text-align: center; cursor: pointer; font-weight: 500; color: #555; transition: all 0.3s ease; }
+.file-input-label:hover { background-color: #e7f3ff; border-color: var(--udg-blue); color: var(--udg-blue); }
+.file-input-label i { font-size: 3rem; display: block; margin-bottom: 15px; color: var(--udg-light); }
+.file-input-hidden { position: absolute; left: -9999px; }
+.file-name { display: block; text-align: center; margin-top: 10px; color: #666; font-size: 0.95rem; font-weight: bold; }
+
+/* Pestañas */
+.csv-tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 25px; flex-wrap: wrap; }
+.csv-tab { padding: 15px 30px; cursor: pointer; font-weight: bold; color: #888; border-bottom: 3px solid transparent; transition: 0.3s; }
+.csv-tab:hover { color: var(--udg-blue); }
+.csv-tab.active { color: var(--udg-blue); border-bottom-color: var(--udg-blue); }
+.csv-tab-content { display: none; }
+.csv-tab-content.active { display: block; }
+
+/* Tablas estilo Excel */
+.excel-table-wrapper { display: none; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
+.excel-table-container { overflow-x: auto; }
+.excel-table { width: 100%; border-collapse: collapse; font-family: 'Calibri', sans-serif; font-size: 0.85rem; white-space: nowrap; }
+.excel-table th { background-color: #f3f3f3; border: 1px solid #ccc; padding: 6px 12px; text-align: left; font-weight: normal; color: #333; }
+.excel-table td { border: 1px solid #e1e1e1; padding: 6px 12px; color: #000; }
+.excel-col-header { background-color: #e6e6e6 !important; text-align: center !important; font-weight: bold !important; border-bottom: 2px solid #ccc !important; }
+.excel-info-box { padding: 12px 15px; background: #f8f9fa; border-top: 1px solid #ccc; font-size: 0.9rem; color: #555; line-height: 1.5; }
