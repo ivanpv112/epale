@@ -61,7 +61,7 @@ $badge_html = ($notif_bajas > 0) ? ' <span class="badge-notification">'.$notif_b
         <li><a href="materias.php" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Materias y Criterios</a></li>
         <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos y NRC</a></li>
         <li><a href="ciclos.php" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
-        <li><a href="importar_csv.php" class="<?php echo ($pagina_actual == 'importar_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
+        <li><a href="interfaz_csv.php" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
         <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>"><i class="fas fa-envelope-open-text"></i> Solicitudes <?php echo $badge_html; ?></a></li>
         <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos</a></li>
         <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
