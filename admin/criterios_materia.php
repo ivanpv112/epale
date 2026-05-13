@@ -303,7 +303,7 @@ $user_foto = $stmt_foto->fetchColumn();
         // LÓGICA DEL MENÚ DESPLEGABLE INTELIGENTE (AUTOCOMPLETE)
         // =====================================================================
         const dataCategoria = ['Quizzes', 'Examen Oral', 'Proyecto Final', 'Plataforma', 'Participación', 'Examen TOEFL', 'Examen Final'];
-        const dataCodigo = ['QZ1', 'QZ2', 'QZ3', 'ORAL1', 'ORAL2', 'WRITING', 'PLAT', 'PART', 'TOEFL', 'FINAL'];
+        const dataCodigo = ['Q1', 'Q2', 'Q3', 'QO1', 'QO2', 'WRITING', 'PLATAFORMA', 'PARTICIPACION', 'TOEFL', 'FINAL'];
         const dataNombre = ['Quiz 1', 'Quiz 2', 'Quiz 3', 'Quiz Oral 1', 'Quiz Oral 2', 'Writing Project', 'Actividades en Plataforma', 'Participación en Clase', 'Examen TOEFL', 'Examen Final'];
 
         function setupAutocomplete(inputId, dropId, list) {
