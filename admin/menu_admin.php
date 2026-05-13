@@ -76,6 +76,13 @@ $badge_html = ($notif_bajas > 0) ? ' <span class="badge-notification">'.$notif_b
 </aside>
 
 <script>
+    // 1. FUNCIÓN PARA ABRIR Y CERRAR EL MENÚ LATERAL
+    function toggleMobileMenu() {
+        document.getElementById('navWrapper').classList.toggle('active');
+        document.getElementById('menuOverlay').classList.toggle('active');
+    }
+
+    // 2. FUNCIÓN PARA CERRAR SESIÓN
     function confirmarSalida(event) {
         event.preventDefault(); 
         document.getElementById('navWrapper').classList.remove('active');
