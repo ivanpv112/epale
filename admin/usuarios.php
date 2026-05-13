@@ -7,36 +7,33 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
 $mensaje = ''; 
 $tipo_mensaje = '';
 
-// ===============================================
 // ELIMINACIÓN DE USUARIO
-// ===============================================
 if (isset($_GET['borrar'])) {
     $id = $_GET['borrar'];
     $root_admin_id = 1; 
-
-    if ($id == $root_admin_id) {
-        $mensaje = "Acceso denegado: No puedes eliminar al Administrador Principal."; $tipo_mensaje = "error";
-    } elseif ($id == $_SESSION['user_id']) {
-        $mensaje = "No puedes eliminar tu propia cuenta."; $tipo_mensaje = "error";
-    } else {
+    if ($id == $root_admin_id) { $mensaje = "Acceso denegado: No puedes eliminar al Administrador Principal."; $tipo_mensaje = "error"; } 
+    elseif ($id == $_SESSION['user_id']) { $mensaje = "No puedes eliminar tu propia cuenta."; $tipo_mensaje = "error"; } 
+    else {
         try {
             $pdo->prepare("DELETE FROM usuarios WHERE usuario_id = ?")->execute([$id]);
             $mensaje = "El usuario ha sido eliminado con éxito."; $tipo_mensaje = "success";
-        } catch(PDOException $e) {
-            $mensaje = "No se pudo eliminar el usuario. Verifica registros dependientes."; $tipo_mensaje = "error";
-        }
+        } catch(PDOException $e) { $mensaje = "No se pudo eliminar el usuario. Verifica registros dependientes."; $tipo_mensaje = "error"; }
     }
 }
 
-// MENSAJES DE RESPUESTA DE GUARDADO
+// MENSAJES DE RESPUESTA
 if (isset($_GET['msg'])) {
     if ($_GET['msg'] === 'ok') { $mensaje = "¡Usuario guardado correctamente!"; $tipo_mensaje = "success"; } 
     elseif ($_GET['msg'] === 'error') { $mensaje = "Hubo un error al intentar guardar el usuario."; $tipo_mensaje = "error"; } 
     elseif ($_GET['msg'] === 'dup') { $mensaje = "El correo o el código ya están registrados."; $tipo_mensaje = "error"; }
 }
 
-// CARGAMOS TODOS LOS USUARIOS (El buscador JS filtrará en tiempo real sin recargar)
-$sql = "SELECT u.*, a.carrera FROM usuarios u LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id ORDER BY u.usuario_id DESC";
+// CONSULTA EXTENDIDA PARA INCLUIR DATOS DE PROFESORES Y ALUMNOS
+$sql = "SELECT u.*, a.carrera, p.nacionalidad, p.experiencia 
+        FROM usuarios u 
+        LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
+        LEFT JOIN profesores p ON u.usuario_id = p.usuario_id
+        ORDER BY u.usuario_id DESC";
 $stmt = $pdo->prepare($sql); $stmt->execute(); $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_users = $pdo->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
@@ -56,18 +53,8 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* ANIMACIÓN HOVER PARA LAS FILAS CLICKEABLES */
-        .group-row {
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        .group-row:hover {
-            background-color: #f0f7ff !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            z-index: 10;
-            position: relative;
-        }
+        .group-row { transition: all 0.2s ease; cursor: pointer; }
+        .group-row:hover { background-color: #f0f7ff !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); z-index: 10; position: relative; }
     </style>
 </head>
 <body>
@@ -75,7 +62,6 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        
         <div class="page-title-center mb-30">
             <h1><i class="fas fa-users"></i> Gestión de Usuarios</h1>
             <p>Administra a los alumnos, profesores y personal del sistema.</p>
@@ -97,7 +83,6 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             <div class="stat-card"> <span class="stat-number"><?php echo $total_admins; ?></span> <span class="stat-label">Admins</span> </div>
         </div>
 
-        <!-- TOOLBAR CON BUSCADOR EN TIEMPO REAL (onsubmit="event.preventDefault();" evita recargar la página) -->
         <form class="toolbar mt-20" onsubmit="event.preventDefault();">
             <i class="fas fa-search icon-muted" style="align-self:center;"></i>
             <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, correo o código...">
@@ -127,7 +112,6 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                     </thead>
                     <tbody id="usersTableBody">
                         <?php foreach ($usuarios as $u): ?>
-                        <!-- LA FILA COMPLETA AHORA ES CLICKEABLE Y CONTIENE LA DATA PARA EL MODAL -->
                         <tr class="group-row" 
                             data-id="<?php echo $u['usuario_id']; ?>" 
                             data-nombre="<?php echo htmlspecialchars($u['nombre']); ?>" 
@@ -141,6 +125,9 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                             data-codigo="<?php echo htmlspecialchars($u['codigo'] ?? ''); ?>" 
                             data-carrera="<?php echo htmlspecialchars($u['carrera'] ?? ''); ?>" 
                             data-genero="<?php echo htmlspecialchars($u['genero'] ?? ''); ?>"
+                            data-periodo="<?php echo htmlspecialchars($u['periodo_ingreso'] ?? ''); ?>"
+                            data-nacionalidad="<?php echo htmlspecialchars($u['nacionalidad'] ?? ''); ?>"
+                            data-experiencia="<?php echo htmlspecialchars($u['experiencia'] ?? ''); ?>"
                             onclick="editUser(this)" title="Haz clic para editar">
                             
                             <td class="user-cell">
@@ -151,11 +138,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                                 <span class="user-email"><?php echo htmlspecialchars($u['correo']); ?></span>
                             </td>
                             <td><?php echo $u['codigo'] ? htmlspecialchars($u['codigo']) : '-'; ?></td>
-                            
-                            <td>
-                                <?php echo $u['telefono'] ? htmlspecialchars($u['telefono']) : '<span class="text-muted-italic">No registrado</span>'; ?>
-                            </td>
-
+                            <td><?php echo $u['telefono'] ? htmlspecialchars($u['telefono']) : '<span class="text-muted-italic">No registrado</span>'; ?></td>
                             <td>
                                 <?php 
                                     $ico = ($u['rol']=='ALUMNO') ? 'user-graduate' : (($u['rol']=='PROFESOR') ? 'chalkboard-teacher' : 'user-shield'); 
@@ -163,53 +146,27 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                                 ?>
                             </td>
                             <td>
-                                <?php if($u['estatus'] == 'ACTIVO'): ?>
-                                    <span class="tag-aprobado">Activo</span>
-                                <?php else: ?>
-                                    <span class="tag-inactivo">Inactivo</span>
-                                <?php endif; ?>
+                                <?php if($u['estatus'] == 'ACTIVO'): ?> <span class="tag-aprobado">Activo</span> <?php else: ?> <span class="tag-inactivo">Inactivo</span> <?php endif; ?>
                             </td>
                             <td style="text-align: center;">
-                                <!-- Solo queda el botón de basura y lleva stopPropagation para que no abra el modal de editar si le das clic aquí -->
                                 <?php if($u['usuario_id'] != $_SESSION['user_id'] && $u['usuario_id'] != 1): ?>
-                                    <?php $nombre_completo_u = htmlspecialchars($u['nombre'] . ' ' . ($u['apellido_paterno'] ?? '')); ?>
-                                    <a href="#" class="action-btn delete" onclick="event.stopPropagation(); confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo addslashes($nombre_completo_u); ?>'); return false;" title="Eliminar">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </a>
+                                    <a href="#" class="action-btn delete" onclick="event.stopPropagation(); confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo addslashes($u['nombre']); ?>'); return false;"><i class="fas fa-trash-alt"></i></a>
                                 <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        
-                        <!-- Fila oculta de "sin resultados" para el buscador JS -->
-                        <tr id="noResultsRow" style="display: none;">
-                            <td colspan="6" style="text-align:center; padding: 40px; color: #888; font-size: 1.1rem;">
-                                <i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 15px; display: block; color: #eee;"></i>
-                                No se encontraron usuarios con esa búsqueda.
-                            </td>
-                        </tr>
-                        
-                        <?php if(count($usuarios) == 0): ?>
-                            <tr><td colspan="6" class="empty-table-msg">No hay usuarios registrados en el sistema.</td></tr>
-                        <?php endif; ?>
+                        <tr id="noResultsRow" style="display: none;"><td colspan="6" style="text-align:center; padding: 40px; color: #888;"><i class="fas fa-search" style="font-size: 2.5rem; display: block; color: #eee; margin-bottom: 10px;"></i>No se encontraron usuarios.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
-
     <div id="userModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle" style="margin: 0;">Nuevo Usuario</h2>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
-            </div>
-            
+            <div class="modal-header"> <h2 id="modalTitle" style="margin: 0;">Usuario</h2> <button class="close-btn" onclick="closeModal()">&times;</button> </div>
             <form action="guardar_usuario.php" method="POST" style="margin: 0;">
                 <input type="hidden" name="usuario_id" id="userId">
-                
                 <div class="modal-body">
                     <div class="form-grid">
                         <div class="form-group full-width"> <label>Nombre(s)</label> <input type="text" name="nombre" id="userName" required> </div>
@@ -233,6 +190,11 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                         </div>
                         <div class="form-group code-field"> <label>Código</label> <input type="text" name="codigo" id="userCode"> </div>
                         <div class="form-group student-field"> <label>Carrera</label> <input type="text" name="carrera" id="userCareer" placeholder="Ej. LIME"> </div>
+                        
+                        <div class="form-group period-field"> <label>Periodo de Ingreso</label> <input type="text" name="periodo_ingreso" id="userPeriod" placeholder="Ej. 2024A"> </div>
+                        <div class="form-group teacher-field"> <label>Nacionalidad</label> <input type="text" name="nacionalidad" id="userNationality" placeholder="Ej. Mexicana"> </div>
+                        <div class="form-group teacher-field"> <label>Experiencia</label> <input type="text" name="experiencia" id="userExperience" placeholder="Ej. C1"> </div>
+                        
                         <div class="form-group"> <label>Teléfono</label> <input type="text" name="telefono" id="userPhone"> </div>
                         <div class="form-group gender-field">
                             <label>Género</label>
@@ -246,84 +208,66 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                         <div class="form-group full-width"> <label>Contraseña</label> <input type="password" name="password" id="userPassword" placeholder="(Dejar vacía para no cambiar)"> </div>
                     </div>
                 </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
-                </div>
+                <div class="modal-footer"> <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button> <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button> </div>
             </form>
         </div>
     </div>
 
     <script>
         const modal = document.getElementById('userModal');
-        const overlayMenu = document.getElementById('menuOverlay');
-
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
 
         function openModal() {
-            document.getElementById('userId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Usuario'; document.getElementById('userName').value = ''; document.getElementById('userLastnameP').value = ''; document.getElementById('userLastnameM').value = ''; document.getElementById('userEmail').value = ''; document.getElementById('userCode').value = ''; document.getElementById('userCareer').value = ''; document.getElementById('userPhone').value = ''; document.getElementById('userGender').value = ''; document.getElementById('userRole').value = 'ALUMNO'; document.getElementById('userStatus').value = 'ACTIVO'; document.getElementById('userPassword').setAttribute('required', 'required'); toggleFields(); modal.style.display = 'flex';
+            document.getElementById('userId').value = ''; document.getElementById('modalTitle').innerText = 'Nuevo Usuario';
+            document.getElementById('userName').value = ''; document.getElementById('userLastnameP').value = ''; document.getElementById('userLastnameM').value = '';
+            document.getElementById('userEmail').value = ''; document.getElementById('userCode').value = ''; document.getElementById('userCareer').value = '';
+            document.getElementById('userPeriod').value = ''; document.getElementById('userNationality').value = ''; document.getElementById('userExperience').value = '';
+            document.getElementById('userPhone').value = ''; document.getElementById('userGender').value = '';
+            document.getElementById('userRole').value = 'ALUMNO'; document.getElementById('userStatus').value = 'ACTIVO';
+            document.getElementById('userPassword').setAttribute('required', 'required'); toggleFields(); modal.style.display = 'flex';
         }
 
         function editUser(btn) {
-            document.getElementById('userId').value = btn.getAttribute('data-id'); document.getElementById('modalTitle').innerText = 'Editar Usuario'; document.getElementById('userName').value = btn.getAttribute('data-nombre');
-            const ap = btn.getAttribute('data-ap'); const am = btn.getAttribute('data-am'); const apellidos = btn.getAttribute('data-apellidos');
-            if (ap || am) { document.getElementById('userLastnameP').value = ap; document.getElementById('userLastnameM').value = am; } else if (apellidos) { const partes = apellidos.split(' '); document.getElementById('userLastnameP').value = partes[0]; document.getElementById('userLastnameM').value = partes.slice(1).join(' ') || ''; } else { document.getElementById('userLastnameP').value = ''; document.getElementById('userLastnameM').value = ''; }
-            document.getElementById('userEmail').value = btn.getAttribute('data-correo'); document.getElementById('userPhone').value = btn.getAttribute('data-tel'); document.getElementById('userRole').value = btn.getAttribute('data-rol'); document.getElementById('userStatus').value = btn.getAttribute('data-estatus'); document.getElementById('userCode').value = btn.getAttribute('data-codigo'); document.getElementById('userCareer').value = btn.getAttribute('data-carrera'); document.getElementById('userGender').value = btn.getAttribute('data-genero'); document.getElementById('userPassword').removeAttribute('required'); toggleFields(); modal.style.display = 'flex';
+            document.getElementById('userId').value = btn.getAttribute('data-id'); document.getElementById('modalTitle').innerText = 'Editar Usuario';
+            document.getElementById('userName').value = btn.getAttribute('data-nombre');
+            document.getElementById('userLastnameP').value = btn.getAttribute('data-ap');
+            document.getElementById('userLastnameM').value = btn.getAttribute('data-am');
+            document.getElementById('userEmail').value = btn.getAttribute('data-correo');
+            document.getElementById('userPhone').value = btn.getAttribute('data-tel');
+            document.getElementById('userRole').value = btn.getAttribute('data-rol');
+            document.getElementById('userStatus').value = btn.getAttribute('data-estatus');
+            document.getElementById('userCode').value = btn.getAttribute('data-codigo');
+            document.getElementById('userCareer').value = btn.getAttribute('data-carrera');
+            document.getElementById('userGender').value = btn.getAttribute('data-genero');
+            document.getElementById('userPeriod').value = btn.getAttribute('data-periodo');
+            document.getElementById('userNationality').value = btn.getAttribute('data-nacionalidad');
+            document.getElementById('userExperience').value = btn.getAttribute('data-experiencia');
+            document.getElementById('userPassword').removeAttribute('required'); toggleFields(); modal.style.display = 'flex';
         }
 
         function closeModal() { modal.style.display = 'none'; }
         
         function toggleFields() { 
             const role = document.getElementById('userRole').value; 
-            const studentFields = document.querySelectorAll('.student-field'); 
-            studentFields.forEach(f => f.style.display = (role === 'ALUMNO') ? 'block' : 'none'); 
-            const codeGroup = document.querySelector('.code-field'); 
-            if (codeGroup) { codeGroup.style.display = (role === 'ADMIN') ? 'none' : 'block'; } 
-            const genderFields = document.querySelectorAll('.gender-field'); 
-            genderFields.forEach(f => f.style.display = (role === 'ALUMNO' || role === 'PROFESOR') ? 'block' : 'none'); 
+            document.querySelectorAll('.student-field').forEach(f => f.style.display = (role === 'ALUMNO') ? 'block' : 'none'); 
+            document.querySelectorAll('.teacher-field').forEach(f => f.style.display = (role === 'PROFESOR') ? 'block' : 'none'); 
+            document.querySelectorAll('.period-field').forEach(f => f.style.display = (role === 'ALUMNO' || role === 'PROFESOR') ? 'block' : 'none'); 
+            document.querySelectorAll('.code-field').forEach(f => f.style.display = (role === 'ADMIN') ? 'none' : 'block'); 
+            document.querySelectorAll('.gender-field').forEach(f => f.style.display = (role === 'ADMIN') ? 'none' : 'block'); 
         }
 
-        function confirmarBorradoUsuario(url, nombre) { Swal.fire({ title: '¿Eliminar Usuario?', html: `Estás a punto de borrar a <b>${nombre}</b> del sistema.<br><br><small style="color:#dc3545;">⚠️ Esta acción es irreversible y eliminará toda su información.</small>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d', confirmButtonText: '<i class="fas fa-trash-alt"></i> Sí, eliminar', cancelButtonText: 'Cancelar', reverseButtons: true }).then((result) => { if (result.isConfirmed) { window.location.href = url; } }); }
+        function confirmarBorradoUsuario(url, nombre) { Swal.fire({ title: '¿Eliminar Usuario?', html: `Estás a punto de borrar a <b>${nombre}</b>.`, icon: 'error', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }).then((result) => { if (result.isConfirmed) { window.location.href = url; } }); }
 
-        window.onclick = function(e) { if(e.target == modal) closeModal(); if(e.target == overlayMenu) toggleMobileMenu(); };
-
-        // ==========================================
-        // LÓGICA DE BUSCADOR JS EN TIEMPO REAL
-        // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('searchInput');
-            const rolSelect = document.getElementById('rolSelect');
-            const rows = document.querySelectorAll('.group-row');
-            const noResultsRow = document.getElementById('noResultsRow');
-
+            const searchInput = document.getElementById('searchInput'); const rolSelect = document.getElementById('rolSelect'); const rows = document.querySelectorAll('.group-row');
             function filterTable() {
-                const term = searchInput.value.toLowerCase().trim();
-                const role = rolSelect.value.toUpperCase();
-                let hasVisibleRows = false;
-
+                const term = searchInput.value.toLowerCase(); const role = rolSelect.value;
                 rows.forEach(row => {
-                    const rowText = row.innerText.toLowerCase();
-                    const rowRole = row.getAttribute('data-rol').toUpperCase();
-                    
-                    const matchesText = rowText.includes(term);
-                    const matchesRole = role === '' || rowRole === role;
-
-                    if (matchesText && matchesRole) {
-                        row.style.display = '';
-                        hasVisibleRows = true;
-                    } else {
-                        row.style.display = 'none';
-                    }
+                    const txt = row.innerText.toLowerCase(); const r = row.getAttribute('data-rol');
+                    row.style.display = (txt.includes(term) && (role === '' || r === role)) ? '' : 'none';
                 });
-
-                if(noResultsRow) {
-                    noResultsRow.style.display = hasVisibleRows || rows.length === 0 ? 'none' : '';
-                }
             }
-
-            if (searchInput) searchInput.addEventListener('input', filterTable);
-            if (rolSelect) rolSelect.addEventListener('change', filterTable);
+            searchInput.addEventListener('input', filterTable); rolSelect.addEventListener('change', filterTable);
         });
     </script>
 </body>
