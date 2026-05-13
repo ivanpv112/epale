@@ -1,0 +1,90 @@
+// ==========================================
+// LÓGICA DE INTERFAZ: EXPEDIENTE ALUMNO
+// ==========================================
+
+function toggleMobileMenu() { 
+    document.getElementById('navWrapper').classList.toggle('active'); 
+    document.getElementById('menuOverlay').classList.toggle('active'); 
+}
+
+// Modal de Calificaciones
+function abrirModalCalif(id) { 
+    document.getElementById('modalCalif_' + id).style.display = 'flex'; 
+}
+function cerrarModalCalif(id) { 
+    document.getElementById('modalCalif_' + id).style.display = 'none'; 
+}
+
+// Modal de Certificaciones
+function abrirModalCert(idioma, nivel, puntaje, periodo, fecha) { 
+    document.getElementById('inputIdiomaCert').value = idioma; 
+    document.getElementById('textoIdiomaCert').innerText = idioma; 
+    document.getElementById('inputNivelCert').value = nivel; 
+    document.getElementById('inputPuntajeCert').value = puntaje; 
+    document.getElementById('inputPeriodoCert').value = periodo; 
+    document.getElementById('inputFechaCert').value = fecha; 
+    document.getElementById('modalCert').style.display = 'flex'; 
+}
+function cerrarModalCert() { 
+    document.getElementById('modalCert').style.display = 'none'; 
+}
+
+// Modal de Exámenes Diagnósticos
+function abrirModalDiag(id, idioma, periodo, nivel, calif, fecha) {
+    document.getElementById('inputExamenId').value = id;
+    document.getElementById('inputIdiomaDiag').value = idioma;
+    document.getElementById('inputPeriodoDiag').value = periodo;
+    document.getElementById('inputNivelDiag').value = nivel;
+    document.getElementById('inputCalifDiag').value = calif;
+    document.getElementById('inputFechaDiag').value = fecha;
+    
+    if(id) { 
+        document.getElementById('modalDiagTitle').innerHTML = '<i class="fas fa-clipboard-check"></i> Editar Diagnóstico'; 
+    } else { 
+        document.getElementById('modalDiagTitle').innerHTML = '<i class="fas fa-plus"></i> Agregar Diagnóstico'; 
+    }
+    
+    document.getElementById('modalDiag').style.display = 'flex';
+}
+
+function cerrarModalDiag() { 
+    document.getElementById('modalDiag').style.display = 'none'; 
+}
+
+// Interfaz Dinámica con SweetAlert para editar Diagnósticos
+function handleEditDiagnostico() {
+    if (typeof examenesGuardados === 'undefined' || examenesGuardados.length === 0) return;
+
+    if (examenesGuardados.length === 1) {
+        let ex = examenesGuardados[0];
+        abrirModalDiag(ex.examen_id, ex.idioma, ex.periodo, ex.nivel_asignado, ex.calificacion_texto, ex.fecha_realizacion);
+    } else if (examenesGuardados.length > 1) {
+        let opciones = {};
+        examenesGuardados.forEach(ex => { 
+            opciones[ex.examen_id] = `${ex.idioma} (${ex.periodo}) - Nivel ${ex.nivel_asignado}`; 
+        });
+        
+        Swal.fire({
+            title: '¿Qué examen deseas editar?', 
+            input: 'select', 
+            inputOptions: opciones, 
+            inputPlaceholder: 'Selecciona un examen',
+            showCancelButton: true, 
+            confirmButtonText: 'Editar', 
+            cancelButtonText: 'Cancelar', 
+            confirmButtonColor: 'var(--udg-blue)'
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                let ex = examenesGuardados.find(e => e.examen_id == result.value);
+                abrirModalDiag(ex.examen_id, ex.idioma, ex.periodo, ex.nivel_asignado, ex.calificacion_texto, ex.fecha_realizacion);
+            }
+        });
+    }
+}
+
+// Cerrar modales si se hace clic fuera del cuadro
+window.onclick = function(e) { 
+    if(e.target.classList.contains('modal-overlay')) {
+        e.target.style.display = 'none'; 
+    }
+};
