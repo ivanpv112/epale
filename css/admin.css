@@ -250,3 +250,86 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 .excel-table td { border: 1px solid #e1e1e1; padding: 6px 12px; color: #000; }
 .excel-col-header { background-color: #e6e6e6 !important; text-align: center !important; font-weight: bold !important; border-bottom: 2px solid #ccc !important; }
 .excel-info-box { padding: 12px 15px; background: #f8f9fa; border-top: 1px solid #ccc; font-size: 0.9rem; color: #555; line-height: 1.5; }
+
+/* =========================================================
+   MÓDULO DE EXPEDIENTES (ALUMNOS Y PROFESORES) - OPTIMIZADO
+   ========================================================= */
+
+/* Cabecera y Badges */
+.expediente-title { margin: 0 0 10px 0; font-size: 2.2rem; }
+.expediente-badges { margin: 0; font-size: 1.1rem; opacity: 0.9; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+
+/* Layout y Tarjetas */
+.expediente-grid-main { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.card-mb-20 { margin-bottom: 20px; }
+.card-mt-0 { margin-top: 0; }
+.card-highlighted { margin-top: 0; border-top: 4px solid var(--udg-blue); margin-bottom: 20px; position: relative; }
+.card-actions-top { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; }
+.card-header-center { text-align: center; padding-top: 25px; }
+.card-icon-large { font-size: 3rem; color: var(--udg-blue); margin-bottom: 10px; }
+.card-icon-medium { font-size: 2.5rem; color: var(--udg-blue); margin-bottom: 10px; }
+.section-title-border { color: var(--udg-blue); border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
+.section-subtitle { font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px; }
+
+/* Info Contacto */
+.info-contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 15px; }
+.info-label { color: #888; font-size: 0.85rem; text-transform: uppercase; font-weight: bold; }
+.info-value { font-size: 1.1rem; color: #333; margin-top: 5px; }
+.info-icon { color: #ccc; }
+
+/* Etiquetas / Tags */
+.tag-active-status { background-color: #d4edda; color: #155724; padding: 5px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; }
+.tag-inactive-status { background-color: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; }
+.tag-active-mini { background: #cce5ff; color: #004085; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 5px; }
+.tag-closed-mini { background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 5px; }
+
+/* Materias y Kárdex */
+.subject-card { border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 15px; transition: box-shadow 0.2s; }
+.subject-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.subject-actions { display: flex; align-items: center; gap: 15px; }
+.subject-score { font-weight: bold; color: var(--udg-blue); }
+.subject-meta { font-size: 0.8rem; color: #888; }
+
+/* Tabla limpia */
+.table-clean { width: 100%; border-collapse: collapse; }
+.table-clean th { padding: 10px; border-bottom: 2px solid #eee; text-align: left; }
+.table-clean td { padding: 10px; }
+.table-clean .text-center { text-align: center; }
+
+/* Barras de progreso */
+.progress-bar-bg { width: 100%; background-color: #eee; border-radius: 10px; height: 12px; margin-top: 8px; overflow: hidden; }
+.progress-bar-fill { height: 100%; transition: width 0.4s; }
+
+/* Diagnósticos y Certificaciones */
+.diag-card { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #17a2b8; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.diag-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.diag-title { color: var(--udg-blue); font-size: 1.05rem; font-weight: bold; }
+.diag-badge { background: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; border: 1px solid #b8daff; }
+.diag-details { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; color: #555; }
+
+.cert-card { background: #eaf4fc; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--udg-blue); }
+.cert-title { display:block; color: var(--udg-blue); font-size: 1rem; font-weight: bold; }
+.cert-meta { font-size: 0.85rem; color: #666; }
+.cert-details { font-size: 0.8rem; color: #555; margin-top: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.cert-locked { text-align: center; padding: 40px 20px; }
+
+/* Utilidades generales */
+.col-span-2 { grid-column: span 2; }
+.text-muted { color: #aaa; }
+.mb-0 { margin-bottom: 0; }
+.empty-state { text-align: center; padding: 20px 0; color: #888; }
+.empty-state i { font-size: 2rem; color: #ddd; display: block; margin-bottom: 10px; }
+.empty-state-box { text-align: center; padding: 20px 10px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ddd; color: #888; font-size: 0.85rem; }
+
+/* Botones utilitarios */
+.btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+.btn-cancel-sm { padding: 6px 12px; font-size: 0.85rem; border: 1px solid #ccc; background: #f8f9fa; color: #333; transition: 0.2s; cursor: pointer; border-radius: 6px; }
+.btn-cancel-sm:hover { background: #e2e6ea; }
+
+/* Modales optimizados (Clean Modal) */
+.clean-modal.modal-content { padding: 0; }
+.modal-header-clean { padding: 20px 30px; margin: 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.modal-header-clean h2 { margin: 0; font-size: 1.3rem; }
+.modal-body-scroll { padding: 20px 30px; max-height: 60vh; overflow-y: auto; }
+.modal-footer-clean { padding: 20px 30px; margin: 0; border-top: 1px solid #eee; background-color: #fcfcfc; display: flex; justify-content: flex-end; gap: 10px; }
+.alert-warning-mini { background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; border-left: 4px solid #ffc107; }
