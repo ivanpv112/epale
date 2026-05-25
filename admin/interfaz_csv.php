@@ -65,6 +65,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
                 <h3>Certificaciones</h3>
                 <p>Carga los niveles oficiales (TOEFL, Cambridge, etc.) obtenidos por los alumnos en cada idioma.</p>
             </a>
+
+            <a href="vista_csv_grupos.php" class="module-card">
+                <i class="fas fa-chalkboard"></i>
+                <h3>Grupos y Horarios</h3>
+                <p>Registra la oferta académica, asignando el NRC, materia, profesor y horarios correspondientes.</p>
+            </a>
         </div>
 
     </main>
