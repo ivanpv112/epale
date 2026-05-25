@@ -70,7 +70,7 @@ if ($mensaje === 'ok_profesores') {
                             <tr> <th style="background:#e6e6e6; text-align:center; font-weight:bold;">1</th> <th>CODIGO</th> <th>APELLIDO_PATERNO</th> <th>APELLIDO_MATERNO</th> <th>NOMBRE</th> <th>NACIONALIDAD</th> <th>EXPERIENCIA</th> <th>GENERO</th> <th>CORREO</th> <th>PERIODO</th> </tr>
                         </thead>
                         <tbody>
-                            <tr> <td style="background:#e6e6e6; text-align:center; font-weight:bold;">2</td> <td>28475638</td> <td>HERNANDEZ</td> <td>LOPEZ</td> <td>MARIA JOSE</td> <td>MEXICANA</td> <td>5 AÑOS</td> <td>FEMENINO</td> <td style="color:#0563c1; text-decoration:underline;">maria@ejemplo.com</td> <td>2020A</td> </tr>
+                            <tr> <td style="background:#e6e6e6; text-align:center; font-weight:bold;">2</td> <td>28475638</td> <td>HERNANDEZ</td> <td>LOPEZ</td> <td>MARIA JOSE</td> <td>MEXICANA</td> <td>C1</td> <td>FEMENINO</td> <td style="color:#0563c1; text-decoration:underline;">maria@ejemplo.com</td> <td>2020A</td> </tr>
                         </tbody>
                     </table>
                 </div>
