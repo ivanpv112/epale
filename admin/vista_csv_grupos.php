@@ -9,20 +9,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
 
 $mensaje = isset($_GET['msg']) ? $_GET['msg'] : '';
 $total = isset($_GET['total']) ? (int)$_GET['total'] : 0;
-$fila_error = isset($_GET['fila']) ? (int)$_GET['fila'] : 0;
 $detalle_error = isset($_GET['detalle']) ? htmlspecialchars($_GET['detalle']) : '';
 
 $tipo_mensaje = '';
 $texto_mensaje = '';
 
 if ($mensaje === 'ok_grupos') {
-    $tipo_mensaje = 'success'; $texto_mensaje = "¡Excelente! Se importaron correctamente <strong>$total grupos</strong> al sistema con sus respectivos horarios.";
-} elseif ($mensaje === 'error_foraneo') {
-    $tipo_mensaje = 'error'; $texto_mensaje = "<strong>Error de Dependencia (Fila $fila_error):</strong> $detalle_error. <br><small>Asegúrate de que el ciclo, materia o profesor existan primero.</small>";
+    $tipo_mensaje = 'success'; $texto_mensaje = "¡Excelente! Se importaron correctamente <strong>$total grupos</strong> al sistema con sus respectivos horarios y materias.";
+} elseif ($mensaje === 'error_datos') {
+    $tipo_mensaje = 'error'; $texto_mensaje = "<strong>Error detectado en el archivo:</strong><br>" . $detalle_error . "<br><small>Por favor, corrige este dato en tu archivo Excel y vuelve a subirlo.</small>";
 } elseif ($mensaje === 'error_file') {
     $tipo_mensaje = 'error'; $texto_mensaje = "Error: No se seleccionó ningún archivo o el formato es incorrecto.";
 } elseif ($mensaje === 'error_db') {
-    $tipo_mensaje = 'error'; $texto_mensaje = "Ocurrió un error de base de datos en la fila $fila_error. Verifica duplicados o datos inválidos.";
+    $tipo_mensaje = 'error'; $texto_mensaje = "Ocurrió un error grave de base de datos. Verifica duplicados o datos inválidos.";
 }
 ?>
 
@@ -47,7 +46,7 @@ if ($mensaje === 'ok_grupos') {
 
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-chalkboard"></i> Carga Masiva de Grupos y Horarios</h1>
-            <p>Sube el archivo CSV con la oferta académica basada en SIIAU para estructurar las clases.</p>
+            <p>Sube el archivo CSV con la oferta académica. El sistema creará automáticamente las materias faltantes.</p>
         </div>
 
         <?php if (!empty($texto_mensaje)): ?>
@@ -58,7 +57,7 @@ if ($mensaje === 'ok_grupos') {
 
         <div class="import-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--udg-blue);">Estructura del Archivo</h3>
+                <h3 style="margin: 0; color: var(--udg-blue);">Estructura del Archivo (12 Columnas)</h3>
                 <button type="button" class="btn-cancel-sm" onclick="toggleExcel('excelGrupos')"><i class="fas fa-file-excel"></i> Ver ejemplo visual</button>
             </div>
 
@@ -77,25 +76,25 @@ if ($mensaje === 'ok_grupos') {
                             </tr>
                             <tr> 
                                 <th style="background:#e6e6e6; text-align:center; font-weight:bold;">1</th> 
-                                <th>NRC</th> <th>COD_PROFE</th> <th>NOM_GRUPO</th> <th>CLAVE_IDIOMA</th> 
-                                <th>PERIODO</th> <th>NIVEL</th> <th>AULA</th> <th>HR_INICIO</th> 
-                                <th>HR_FINAL</th> <th>DIAS</th> <th>PRESENCIAL</th> <th>VIRTUAL</th>
+                                <th>NRC</th> <th>CLAVE_SIIAU</th> <th>IDIOMA</th> <th>NIVEL</th> 
+                                <th>NOM_GRUPO</th> <th>COD_PROFE</th> <th>PERIODO</th> <th>AULA</th> 
+                                <th>HR_INICIO</th> <th>HR_FINAL</th> <th>PRESENCIAL</th> <th>VIRTUAL</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr> 
                                 <td style="background:#e6e6e6; text-align:center; font-weight:bold;">2</td> 
-                                <td>199516</td> <td>29298377</td> <td>E.13.1.B</td> <td>CU182</td> 
-                                <td>2022B</td> <td style="text-align:center;">4</td> <td>N301</td> 
-                                <td>900</td> <td>1255</td> <td>M-J</td> <td style="color:#0056b3; font-weight:bold;">L-I</td> <td style="color:#17a2b8; font-weight:bold;">M-J</td>
+                                <td>199516</td> <td>CU182</td> <td>CROATA NEGOCIOS</td> <td style="text-align:center;">4</td> 
+                                <td>E.13.1.B</td> <td>29298377</td> <td>2026A</td> 
+                                <td>N301</td> <td>900</td> <td>1255</td> <td style="color:#0056b3; font-weight:bold;">L-J</td> <td style="color:#17a2b8; font-weight:bold;">V</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="excel-info-box">
-                    <i class="fas fa-info-circle" style="color:var(--udg-blue);"></i> <strong>Puntos Clave:</strong><br>
-                    1. <strong>NOM_GRUPO</strong> (Ej. E.13.1.B) se utilizará como la Clave Interna del grupo.<br>
-                    2. <strong>CLAVE_IDIOMA</strong> (Ej. CU182) conectará este grupo con la Materia registrada.<br>
+                    <i class="fas fa-info-circle" style="color:var(--udg-blue);"></i> <strong>Lógica Inteligente:</strong><br>
+                    1. <strong>IDIOMA y NIVEL:</strong> Si la materia no existe en el sistema, E-PALE la creará automáticamente generando una clave interna (Ej. Croata Negocios 4 = CN4).<br>
+                    2. <strong>CLAVE_SIIAU:</strong> Se guardará internamente para identificar el bloque de la materia en SIIAU.<br>
                     3. Si no hay clases de una modalidad, escribe <strong>NA</strong> en las columnas PRESENCIAL o VIRTUAL.
                 </div>
             </div>
