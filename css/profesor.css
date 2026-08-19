@@ -266,7 +266,7 @@
 /* ==========================================================================
    4. ESTILOS DE LA HOJA DE CALIFICACIONES (TIPO EXCEL)
    ========================================================================== */
-.excel-table-wrapper { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
+.excel-table-wrapper-profe { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; margin-bottom: 20px; }
 .excel-table { width: 100%; border-collapse: collapse; min-width: 900px; }
 .excel-table th:first-child { text-align: left; left: 0; z-index: 20; background-color: #f8f9fa; min-width: 260px; }
 .excel-table td:first-child { text-align: left; padding: 12px 15px; background-color: white; position: sticky; left: 0; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.02); white-space: nowrap; }
@@ -360,3 +360,61 @@
 
 .btn-close-modal { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #aaa; cursor: pointer; transition: 0.2s; }
 .btn-close-modal:hover { color: #dc3545; }
+
+/* --- Modales --- */
+.modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); align-items: center; justify-content: center; z-index: 999;
+}
+.modal-content-lg, .modal-content {
+    background: #fff; 
+    border-radius: 8px; 
+    padding: 25px; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%; 
+    max-height: 90vh; 
+    overflow-y: auto;
+    position: relative; /* <--- ESTO ES LO QUE ANCLA LA "X" AL RECUADRO */
+}
+.modal-content-lg { max-width: 1000px; }
+.modal-content { max-width: 600px; }
+
+.close-btn { 
+    position: absolute; /* Asegúrate de que esto esté así */
+    top: 15px; 
+    right: 20px; 
+    background: none; 
+    border: none; 
+    font-size: 1.8rem; 
+    cursor: pointer; 
+    color: #888; 
+}
+.close-btn:hover { color: #f00; }
+
+/* --- Botón del panel azul --- */
+.btn-sm-white { 
+    background: rgba(255,255,255,0.2); color: white; border: 1px solid white; border-radius: 4px; padding: 5px 12px; cursor: pointer; transition: 0.3s;
+}
+.btn-sm-white:hover { background: white; color: var(--udg-blue); }
+
+/* --- Badges de Estatus --- */
+.badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: white; }
+.badge-gray { background-color: #6c757d; } /* Pendiente */
+.badge-warning { background-color: #ffc107; color: #000; } /* Próxima */
+.badge-success { background-color: #28a745; } /* Activa */
+.badge-danger { background-color: #dc3545; } /* Finalizada */
+
+/* --- Utilidades --- */
+.mb-15 { margin-bottom: 15px; }
+.form-group-inline { display: flex; gap: 20px; align-items: center; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+.table-modern { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.table-modern th, .table-modern td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+.table-modern th { background: #f4f4f4; color: #333; }
+.action-btn { background: none; border: none; padding: 5px; margin: 0 2px; cursor: pointer; border-radius: 4px; }
+.edit-btn { color: #0056b3; } .edit-btn:hover { background: #e6f0ff; }
+.delete-btn { color: #dc3545; } .delete-btn:hover { background: #ffe6e6; }
+
+.publish-btn { color: #28a745; } 
+.publish-btn:hover { background: #e6f9ed; }
+.finish-btn { color: #fd7e14; } /* Naranja para advertencia de cierre */
+.finish-btn:hover { background: #fff2e8; }
