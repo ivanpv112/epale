@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
 $profesor_id = $_SESSION['user_id'];
 $nombre_profesor = $_SESSION['nombre'] . ' ' . $_SESSION['apellido_paterno'];
 
-// 1. OBTENER GRUPOS ACTIVOS (AHORA TAMBIÉN FILTRA g.estado = 'ACTIVO')
+// 1. OBTENER GRUPOS ACTIVOS
 $sql_grupos = "SELECT g.clave_grupo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.materia_id, g.ciclo_id, g.profesor_id,
                       MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
                       MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g.nrc END) AS nrc_v,
@@ -40,7 +40,7 @@ $total_alumnos = 0;
 $total_grupos = count($grupos);
 foreach ($grupos as $g) { $total_alumnos += $g['inscritos']; }
 
-// 3. DETERMINAR QUÉ CLASES TIENE "HOY"
+// 3. DETERMINAR CLASES DE HOY
 $dia_num = date('N'); 
 $letra_hoy = '';
 switch($dia_num) {
@@ -78,6 +78,7 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/profesor.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <?php include 'menu_profesor.php'; ?>
@@ -116,27 +117,115 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
                 </table>
             </div>
 
+            <!-- TARJETA DE TAREAS CORREGIDA -->
             <div class="content-card">
-                <h3 class="card-title"><i class="fas fa-tasks"></i> Tareas Pendientes</h3>
-                <div class="task-item task-urgent"><div class="task-title">Calificar Quizzes</div><div class="task-meta">Fecha límite: Hoy</div></div>
-                <div class="task-item"><div class="task-title">Revisión Writing</div><div class="task-meta">Próximamente</div></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 class="card-title" style="margin: 0;"><i class="fas fa-tasks"></i> Tareas Pendientes</h3>
+                    <button onclick="abrirPanelTareas()" class="btn-save" style="padding: 6px 12px; font-size: 0.85rem; background-color: var(--udg-blue); border: none; color: white; cursor: pointer; border-radius: 4px;"><i class="fas fa-edit"></i> Gestionar</button>
+                </div>
+                <div id="lista_resumen_tareas">
+                    <p style="color: #888; margin: 0;">No hay tareas próximas.</p>
+                </div>
+            </div>
+
+            <div class="content-card" style="grid-column: span 2;">
+                <h3 class="card-title"><i class="far fa-calendar-check"></i> Próximas Clases (Hoy)</h3>
+                <?php if(count($clases_hoy) > 0): ?>
+                    <div class="today-classes">
+                        <?php foreach($clases_hoy as $c): ?>
+                            <div class="class-card">
+                                <div><div class="class-name"><?php echo htmlspecialchars($c['materia']); ?></div><div class="class-room"><?php echo ($c['tipo'] == 'Presencial') ? '<i class="fas fa-building" style="color:#28a745;"></i>' : '<i class="fas fa-laptop-house" style="color:#17a2b8;"></i>'; ?> <?php echo htmlspecialchars($c['aula']); ?></div></div>
+                                <div class="class-time"><?php echo date('H:i', strtotime($c['inicio'])) . ' - ' . date('H:i', strtotime($c['fin'])); ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?><p style="color: #888; margin: 0;">No tienes clases programadas para hoy.</p><?php endif; ?>
             </div>
         </div>
-
-        <div class="content-card">
-            <h3 class="card-title"><i class="far fa-calendar-check"></i> Próximas Clases (Hoy)</h3>
-            <?php if(count($clases_hoy) > 0): ?>
-                <div class="today-classes">
-                    <?php foreach($clases_hoy as $c): ?>
-                        <div class="class-card">
-                            <div><div class="class-name"><?php echo htmlspecialchars($c['materia']); ?></div><div class="class-room"><?php echo ($c['tipo'] == 'Presencial') ? '<i class="fas fa-building" style="color:#28a745;"></i>' : '<i class="fas fa-laptop-house" style="color:#17a2b8;"></i>'; ?> <?php echo htmlspecialchars($c['aula']); ?></div></div>
-                            <div class="class-time"><?php echo date('H:i', strtotime($c['inicio'])) . ' - ' . date('H:i', strtotime($c['fin'])); ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?><p style="color: #888; margin: 0;">No tienes clases programadas para hoy.</p><?php endif; ?>
-        </div>
     </main>
+
+    <!-- ESTRUCTURA DE MODALES PARA LA GESTIÓN DE TAREAS -->
+    <div id="modalGestionTareas" class="modal-overlay">
+        <div class="modal-content-lg">
+            <div class="modal-header">
+                <h2><i class="fas fa-clipboard-list"></i> Panel de Avisos y Asignaciones</h2>
+                <button class="close-btn" onclick="cerrarPanelTareas()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button onclick="abrirFormularioTarea()" class="btn-save mb-15" style="background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;"><i class="fas fa-plus"></i> Crear Nuevo</button>
+                <div style="overflow-x: auto;">
+                    <table class="table-modern">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th><th>Título</th><th>Clase</th><th>Inicio</th><th>Fin</th><th>Estatus</th><th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTareasBody">
+                            <!-- JS insertará el contenido -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalFormTarea" class="modal-overlay" style="z-index: 1000;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="tituloModalTarea">Nueva Publicación</h2>
+                <button class="close-btn" onclick="cerrarFormularioTarea()">&times;</button>
+            </div>
+            <form id="formTarea" onsubmit="guardarTarea(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="tarea_id" name="tarea_id">
+                    
+                    <div class="form-group-inline mb-15">
+                        <label style="margin-right: 15px; cursor: pointer;">
+                            <input type="radio" name="tipo" value="AVISO" checked> 📢 Aviso
+                        </label>
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="tipo" value="ASIGNACION"> 📝 Asignación / Tarea
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Título</label>
+                        <input type="text" id="tarea_titulo" name="titulo" required placeholder="Ej. Tarea 1: Ensayo" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">Descripción</label>
+                        <textarea id="tarea_descripcion" name="descripcion" rows="3" required placeholder="Detalles de lo que deben hacer..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:bold;">¿A qué clase va dirigido?</label>
+                        <select id="tarea_nrc" name="nrc" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                            <!-- JS insertará el contenido -->
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label style="display:block; margin-bottom:5px; font-weight:bold;">Fecha/Hora de Publicación</label>
+                            <input type="datetime-local" id="tarea_inicio" name="fecha_inicio" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display:block; margin-bottom:5px; font-weight:bold;">Fecha/Hora Límite (Cierre)</label>
+                            <input type="datetime-local" id="tarea_fin" name="fecha_fin" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-cancel" onclick="cerrarFormularioTarea()" style="padding: 8px 15px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                    <button type="submit" class="btn-save" style="padding: 8px 15px; background: var(--udg-blue); color: #fff; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-paper-plane"></i> Publicar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal de Profesores</div></footer>
+
+    <script src="../js/tareas_profesor.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
