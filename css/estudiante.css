@@ -284,3 +284,49 @@ body {
     .dashboard-grid { grid-template-columns: 1fr; }
     .footer-content { flex-direction: column; }
 }
+
+/* =========================================
+   10. MODALES DETALLADOS Y PROTECCIÓN DE TEXTO (Avisos/Tareas)
+   ========================================= */
+
+/* Protección contra desbordamiento de textos sin espacios (palabras muy largas) */
+.texto-seguro { 
+    word-break: break-word; 
+    overflow-wrap: break-word; 
+}
+
+/* Tarjetas interactivas para abrir el modal */
+.aviso-clickable { 
+    cursor: pointer; 
+    transition: all 0.2s ease; 
+    border-radius: 6px; 
+}
+.aviso-clickable:hover { 
+    background-color: #f4f8fb; 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06); 
+    padding-right: 5px; 
+}
+
+/* Modal Específico para Leer el Detalle Completo */
+.modal-card { 
+    background: #fff; 
+    border-radius: 12px; 
+    padding: 25px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+    width: 100%; 
+    max-width: 550px; 
+    position: relative; 
+    max-height: 85vh; 
+    display: flex; 
+    flex-direction: column; 
+}
+.modal-card-body { 
+    overflow-y: auto; 
+    padding-right: 10px; 
+}
+.modal-card-body::-webkit-scrollbar { width: 6px; }
+.modal-card-body::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+
+.close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #aaa; transition: 0.2s; }
+.close-btn:hover { color: #dc3545; }
