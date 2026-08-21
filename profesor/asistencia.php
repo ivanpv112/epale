@@ -92,82 +92,85 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
             </button>
         </div>
 
-        <div class="card table-card-asist">
-            <div class="table-wrapper">
-                <table class="history-table admin-table">
-                    <thead>
-                        <tr>
-                            <th class="th-alumno">Alumno</th>
-                            <?php foreach($fechas_clase as $f): ?>
-                                <th class="th-fecha"><?php echo date('d/m', strtotime($f)); ?></th>
-                            <?php endforeach; ?>
-                            <th class="th-total">Total Asist.</th>
-                            <th class="th-total">% Asistencia</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        foreach($alumnos as $a): 
-                            $id_ins = $a['inscripcion_id'];
-                            $conteo_asist = 0; 
-                            
-                            foreach($fechas_clase as $f) {
-                                $st = $asistencias_log[$id_ins][$f] ?? '';
-                                if($st == 'ASISTENCIA' || $st == 'RETARDO') {
-                                    $conteo_asist++;
-                                }
-                            }
-                            
-                            $porcentaje_asist = ($total_sesiones > 0) ? ($conteo_asist / $total_sesiones) * 100 : 100;
-                            
-                            $row_class = 'status-row-good';
-                            $color_porcentaje = '#28a745'; 
-
-                            if ($total_sesiones > 0) {
-                                if ($porcentaje_asist < 90) {
-                                    $row_class = 'status-row-fail';
-                                    $color_porcentaje = '#dc3545';
-                                } elseif ($porcentaje_asist < 95) {
-                                    $row_class = 'status-row-risk';
-                                    $color_porcentaje = '#d39e00'; 
-                                }
-                            }
-                        ?>
-                        <tr class="<?php echo $row_class; ?>">
-                            <td class="td-alumno">
-                                <img src="<?php echo $a['foto_url']; ?>" class="td-foto">
-                                <div>
-                                    <div class="td-nombre"><?php echo htmlspecialchars($a['apellido_paterno'] . " " . $a['apellido_materno'] . " " . $a['nombre']); ?></div>
-                                    <div class="td-codigo">Código: <?php echo htmlspecialchars($a['codigo']); ?></div>
-                                </div>
-                            </td>
-                            <?php foreach($fechas_clase as $f): 
-                                $st = $asistencias_log[$id_ins][$f] ?? 'DEFAULT';
-                            ?>
-                                <td class="td-center">
-                                    <select class="select-asist sel-<?php echo $st; ?>" onchange="cambiarAsistencia(this, <?php echo $id_ins; ?>, '<?php echo $f; ?>')" title="Cambiar estado">
-                                        <option value="DEFAULT" style="display:none;" <?php echo ($st == 'DEFAULT' || $st == '') ? 'selected' : ''; ?>>---</option>
-                                        <option value="ASISTENCIA" class="opt-asist" <?php echo ($st == 'ASISTENCIA') ? 'selected' : ''; ?>>Asistencia</option>
-                                        <option value="RETARDO" class="opt-retar" <?php echo ($st == 'RETARDO') ? 'selected' : ''; ?>>Retardo</option>
-                                        <option value="FALTA" class="opt-falta" <?php echo ($st == 'FALTA') ? 'selected' : ''; ?>>Falta</option>
-                                    </select>
-                                </td>
-                            <?php endforeach; ?>
-                            <td class="td-total-num">
-                                <?php echo $conteo_asist; ?>
-                            </td>
-                            <td class="td-porcentaje" style="color: <?php echo $color_porcentaje; ?>;">
-                                <?php echo round($porcentaje_asist, 1); ?>%
-                            </td>
-                        </tr>
+        <div class="content-card table-card-asist">
+            <table style="width: 100%; border-collapse: collapse; min-width: 1100px;">
+                <thead>
+                    <tr>
+                        <th class="th-alumno">Alumno</th>
+                        <?php foreach($fechas_clase as $f): ?>
+                            <th class="th-fecha"><?php echo date('d/m', strtotime($f)); ?></th>
                         <?php endforeach; ?>
+                        <th class="th-total">Total Asist.</th>
+                        <th class="th-total">% Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    foreach($alumnos as $a): 
+                        $id_ins = $a['inscripcion_id'];
+                        $conteo_asist = 0; 
                         
-                        <?php if(count($alumnos) == 0): ?>
-                            <tr><td colspan="<?php echo count($fechas_clase) + 3; ?>" class="empty-table-msg">No hay alumnos inscritos en este grupo.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        foreach($fechas_clase as $f) {
+                            $st = $asistencias_log[$id_ins][$f] ?? '';
+                            if($st == 'ASISTENCIA' || $st == 'RETARDO') {
+                                $conteo_asist++;
+                            }
+                        }
+                        
+                        $porcentaje_asist = ($total_sesiones > 0) ? ($conteo_asist / $total_sesiones) * 100 : 100;
+                        
+                        // Lógica de colores directos y Regla Universitaria UdeG (80% mínimo)
+                        $row_class = 'status-row-good';
+                        $color_porcentaje = '#28a745'; 
+                        $bg_celda_congelada = '#ffffff';
+
+                        if ($total_sesiones > 0) {
+                            if ($porcentaje_asist < 80) { // Menos de 80% pierde derecho
+                                $row_class = 'status-row-fail';
+                                $color_porcentaje = '#dc3545';
+                                $bg_celda_congelada = '#fdf0f1';
+                            } elseif ($porcentaje_asist < 86) { // Menos de 86% está en riesgo
+                                $row_class = 'status-row-risk';
+                                $color_porcentaje = '#d39e00'; 
+                                $bg_celda_congelada = '#fffaf0';
+                            }
+                        }
+                    ?>
+                    <tr class="<?php echo $row_class; ?>">
+                        <!-- Inyectamos el color de fondo directo para que no se transparente en ningún navegador -->
+                        <td class="td-alumno" style="background-color: <?php echo $bg_celda_congelada; ?>;">
+                            <img src="<?php echo $a['foto_url']; ?>" class="td-foto">
+                            <div>
+                                <div class="td-nombre"><?php echo htmlspecialchars($a['apellido_paterno'] . " " . $a['apellido_materno'] . " " . $a['nombre']); ?></div>
+                                <div class="td-codigo">Código: <?php echo htmlspecialchars($a['codigo']); ?></div>
+                            </div>
+                        </td>
+                        <?php foreach($fechas_clase as $f): 
+                            $st = $asistencias_log[$id_ins][$f] ?? 'DEFAULT';
+                        ?>
+                            <td class="td-center">
+                                <select class="select-asist sel-<?php echo $st; ?>" onchange="cambiarAsistencia(this, <?php echo $id_ins; ?>, '<?php echo $f; ?>')" title="Cambiar estado">
+                                    <option value="DEFAULT" style="display:none;" <?php echo ($st == 'DEFAULT' || $st == '') ? 'selected' : ''; ?>>---</option>
+                                    <option value="ASISTENCIA" class="opt-asist" <?php echo ($st == 'ASISTENCIA') ? 'selected' : ''; ?>>Asistencia</option>
+                                    <option value="RETARDO" class="opt-retar" <?php echo ($st == 'RETARDO') ? 'selected' : ''; ?>>Retardo</option>
+                                    <option value="FALTA" class="opt-falta" <?php echo ($st == 'FALTA') ? 'selected' : ''; ?>>Falta</option>
+                                </select>
+                            </td>
+                        <?php endforeach; ?>
+                        <td class="td-total-num">
+                            <?php echo $conteo_asist; ?>
+                        </td>
+                        <td class="td-porcentaje" style="color: <?php echo $color_porcentaje; ?>;">
+                            <?php echo round($porcentaje_asist, 1); ?>%
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    
+                    <?php if(count($alumnos) == 0): ?>
+                        <tr><td colspan="<?php echo count($fechas_clase) + 3; ?>" class="empty-table-msg">No hay alumnos inscritos en este grupo.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </main>
 
