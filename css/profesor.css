@@ -293,23 +293,76 @@
 .btn-tomar-asist { padding: 12px 25px; font-size: 1.05rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 .btn-tomar-asist:disabled { background: #6c757d; cursor: not-allowed; border: none; box-shadow: none; }
 
-/* Tabla de Asistencia */
-.table-card-asist { padding: 0; overflow: hidden; border-top: 4px solid var(--udg-light); }
-.th-alumno { padding: 15px; text-align: left; background: #f8f9fa; border-bottom: 2px solid #eee; }
-.th-fecha { padding: 10px; text-align: center; background: #f8f9fa; font-size: 0.8rem; border-bottom: 2px solid #eee; }
-.th-total { padding: 15px; text-align: center; background: #eaf4fc; color: var(--udg-blue); border-bottom: 2px solid #d0e3ff; }
+/* TABLA DE ASISTENCIA - SCROLL HORIZONTAL OBLIGATORIO */
+.table-card-asist { 
+    padding: 0; 
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto; /* Habilita la barra de desplazamiento horizontal */
+    -webkit-overflow-scrolling: touch; /* Suavidad en dispositivos móviles */
+    border-top: 4px solid var(--udg-light); 
+    background-color: white;
+    display: block; /* Obliga al contenedor a respetar los límites y activar el scroll */
+}
+.table-card-asist table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1100px; /* Obliga a la tabla a ser más ancha que la pantalla */
+}
 
-/* Filas de la tabla según riesgo de reprobación */
-.status-row-good { background-color: rgba(40, 167, 69, 0.03); border-bottom: 1px solid #eee; }
-.status-row-risk { background-color: rgba(255, 193, 7, 0.1); border-left: 5px solid #ffc107; border-bottom: 1px solid #eee; }
-.status-row-fail { background-color: rgba(220, 53, 69, 0.1); border-left: 5px solid #dc3545; border-bottom: 1px solid #eee; }
+/* COLUMNA FIJA ENCABEZADO (Sticky) */
+.th-alumno { 
+    padding: 15px; 
+    text-align: left; 
+    background: #f8f9fa; 
+    border-bottom: 2px solid #eee; 
+    position: sticky; 
+    left: 0; 
+    z-index: 20; 
+    box-shadow: 4px 0 8px rgba(0,0,0,0.06); /* Sombra para dividir visualmente */
+    min-width: 320px; /* Más espacio para la foto grande */
+}
+.th-fecha { padding: 10px; text-align: center; background: #f8f9fa; font-size: 0.8rem; border-bottom: 2px solid #eee; white-space: nowrap; }
+.th-total { padding: 15px; text-align: center; background: #eaf4fc; color: var(--udg-blue); border-bottom: 2px solid #d0e3ff; white-space: nowrap; }
 
-/* Celdas de Alumno */
-.td-alumno { padding: 15px; display: flex; align-items: center; gap: 15px; }
-.td-foto { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+/* FILAS DE LA TABLA - COLORES SÓLIDOS (Para que no se transparente el texto debajo) */
+.status-row-good { background-color: #ffffff; border-bottom: 1px solid #eee; }
+.status-row-risk { background-color: #fffaf0; border-left: 5px solid #ffc107; border-bottom: 1px solid #eee; }
+.status-row-fail { background-color: #fdf0f1; border-left: 5px solid #dc3545; border-bottom: 1px solid #eee; }
+
+/* CELDA DEL ALUMNO (Sticky) */
+.td-alumno { 
+    padding: 15px; 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    position: sticky; 
+    left: 0; 
+    z-index: 10; 
+    background-color: inherit; /* Hereda el color sólido de su fila */
+    box-shadow: 4px 0 8px rgba(0,0,0,0.04); 
+}
+
+/* FOTO MÁS GRANDE Y BLINDADA */
+.td-foto { 
+    width: 75px; 
+    height: 75px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 2px solid #ddd;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1); 
+    flex-shrink: 0; /* ¡CLAVE! Evita que el navegador apachurre la foto por falta de espacio */
+}
+
 .td-nombre { font-weight: bold; color: var(--udg-blue); font-size: 1.05rem; }
 .td-codigo { font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 3px; }
-.td-center { text-align: center; }
+
+/* CELDAS DE ASISTENCIA Y TOTALES */
+.td-center { 
+    text-align: center; 
+    padding: 10px; 
+    white-space: nowrap; /* Evita que los selectores se compriman */
+} 
 .td-total-num { text-align: center; font-weight: bold; color: #333; font-size: 1.1rem; }
 .td-porcentaje { text-align: center; font-weight: bold; font-size: 1.1rem; }
 
