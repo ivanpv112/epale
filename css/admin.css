@@ -338,13 +338,13 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
    REPORTES GENERALES (admin/reportes.php)
    ========================================================= */
 
-/* Barra de Filtros */
-.filter-bar { background-color: #0d2366; color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-.filter-group { flex: 1; min-width: 200px; }
-.filter-label { display: block; font-size: 0.85rem; margin-bottom: 8px; font-weight: bold; color: #a4b3df; }
-.filter-select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a4392; background-color: #1a327e; color: white; outline: none; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
-.filter-select:disabled { opacity: 0.5; cursor: not-allowed; }
-.filter-select:focus { border-color: #4a6ee0; }
+/* Barra de Filtros Exclusiva para Reportes */
+.reportes-filter-bar { background-color: #0d2366; color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.reportes-filter-group { flex: 1; min-width: 200px; }
+.reportes-filter-label { display: block; font-size: 0.85rem; margin-bottom: 8px; font-weight: bold; color: #a4b3df; }
+.reportes-filter-select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a4392; background-color: #1a327e; color: white; outline: none; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+.reportes-filter-select:disabled { opacity: 0.5; cursor: not-allowed; }
+.reportes-filter-select:focus { border-color: #4a6ee0; }
 
 /* KPIs Superiores */
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
