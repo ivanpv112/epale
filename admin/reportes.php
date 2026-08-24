@@ -29,23 +29,23 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
         </div>
 
         <!-- BARRA DE FILTROS -->
-        <div class="filter-bar">
+        <div class="reportes-filter-bar">
             <div style="width: 100%; font-size: 0.8rem; font-weight: bold; margin-bottom: -10px;"><i class="fas fa-filter"></i> FILTROS DE ANÁLISIS</div>
-            <div class="filter-group">
-                <label class="filter-label">1. Ciclo Escolar</label>
-                <select id="sel_ciclo" class="filter-select" onchange="cargarIdiomas()">
+            <div class="reportes-filter-group">
+                <label class="reportes-filter-label">1. Ciclo Escolar</label>
+                <select id="sel_ciclo" class="reportes-filter-select" onchange="cargarIdiomas()">
                     <option value="">Cargando...</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label class="filter-label">2. Idioma</label>
-                <select id="sel_idioma" class="filter-select" onchange="cargarNiveles()" disabled>
+            <div class="reportes-filter-group">
+                <label class="reportes-filter-label">2. Idioma</label>
+                <select id="sel_idioma" class="reportes-filter-select" onchange="cargarNiveles()" disabled>
                     <option value="">— Seleccionar idioma —</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label class="filter-label">3. Nivel</label>
-                <select id="sel_nivel" class="filter-select" onchange="cargarDashboard()" disabled>
+            <div class="reportes-filter-group">
+                <label class="reportes-filter-label">3. Nivel</label>
+                <select id="sel_nivel" class="reportes-filter-select" onchange="cargarDashboard()" disabled>
                     <option value="">— Seleccionar nivel —</option>
                 </select>
             </div>
