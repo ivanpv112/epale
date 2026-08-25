@@ -35,21 +35,10 @@ if (isset($_GET['del_clave'])) {
     }
 }
 
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$filtro_materia = isset($_GET['materia']) ? $_GET['materia'] : '';
-
-// FILTRO MAESTRO: Solo grupos ACTIVOS
-$where = "g.estado = 'ACTIVO'"; 
-$params = [];
-
-if ($search !== '') {
-    $where .= " AND (m.nombre LIKE :q1 OR m.clave LIKE :q2 OR g.nrc LIKE :q3)";
-    $termino = "%" . $search . "%"; $params[':q1'] = $termino; $params[':q2'] = $termino; $params[':q3'] = $termino;
-}
-if ($filtro_materia !== '') { $where .= " AND m.nombre = :materia"; $params[':materia'] = $filtro_materia; }
-
+// Extraemos los nombres de las materias para llenar el <select>
 $materias_unicas = $pdo->query("SELECT DISTINCT nombre FROM materias ORDER BY nombre")->fetchAll(PDO::FETCH_COLUMN);
 
+// Extraemos todos los grupos activos
 $sql = "SELECT g.clave_grupo, c.nombre AS periodo, c.ciclo_id,
                m.clave AS curso, m.materia_id, m.nombre AS materia, m.nivel AS nivel,
                u.nombre AS profesor, u.apellido_paterno AS prof_ap, u.usuario_id AS profesor_id,
@@ -70,10 +59,10 @@ $sql = "SELECT g.clave_grupo, c.nombre AS periodo, c.ciclo_id,
         JOIN usuarios u ON g.profesor_id = u.usuario_id AND u.rol = 'PROFESOR'
         JOIN ciclos c ON g.ciclo_id = c.ciclo_id
         LEFT JOIN horarios h ON g.nrc = h.nrc
-        WHERE $where
+        WHERE g.estado = 'ACTIVO'
         GROUP BY g.clave_grupo, g.materia_id, g.profesor_id, g.ciclo_id, c.nombre, m.clave, m.nombre, m.nivel, u.nombre, u.apellido_paterno, u.usuario_id
         ORDER BY c.nombre DESC, m.nivel ASC, u.nombre ASC";
-$stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare($sql); $stmt->execute(); $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -99,23 +88,22 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
         <?php elseif(isset($_GET['success_del'])): ?><div class="alert alert-success mb-20" style="background-color: #f8d7da; color: #721c24; border-color:#f5c6cb;"><i class="fas fa-trash"></i> ¡El grupo fue eliminado con éxito!</div>
         <?php elseif(isset($_GET['error'])): ?><div class="alert mb-20" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px;"><i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> <?php echo htmlspecialchars($_GET['error']); ?></div><?php endif; ?>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-            <form method="GET" action="grupos_nrc.php" class="toolbar" style="margin-bottom: 0; flex-grow: 1; max-width: 800px; padding: 10px;">
-                <div style="display: flex; align-items: center; flex-grow: 1; border: 1px solid #ddd; border-radius: 6px; padding: 0 10px;">
-                    <i class="fas fa-search icon-muted"></i>
-                    <input type="text" name="q" placeholder="Buscar por Nombre o NRC..." value="<?php echo htmlspecialchars($search); ?>" style="border: none; outline: none; padding: 10px; width: 100%;">
-                </div>
-                <select name="materia" class="filter-select" style="padding: 10px;">
-                    <option value="">Todas las materias</option>
-                    <?php foreach($materias_unicas as $mat_name): ?>
-                        <option value="<?php echo htmlspecialchars($mat_name); ?>" <?php if($filtro_materia == $mat_name) echo 'selected'; ?>><?php echo htmlspecialchars($mat_name); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="submit" class="btn-save" style="padding: 10px 20px;"><i class="fas fa-search"></i> Buscar</button>
-                <?php if($search !== '' || $filtro_materia !== ''): ?><a href="grupos_nrc.php" class="btn-cancel" style="text-decoration: none; display:flex; align-items:center; padding: 10px 15px;">Limpiar</a><?php endif; ?>
-            </form>
-            <a href="gestionar_grupo.php" class="btn-save" style="text-decoration: none; display: flex; align-items: center; height: 44px;"><i class="fas fa-plus-circle"></i> Nuevo Grupo</a>
-        </div>
+        <!-- BARRA DE BÚSQUEDA DINÁMICA GRUPOS -->
+        <form class="toolbar" onsubmit="event.preventDefault();">
+            <i class="fas fa-search icon-muted" style="align-self:center;"></i>
+            <input type="text" id="buscadorGrupos" class="search-input" placeholder="Buscar por Nombre, NRC o Profesor...">
+            
+            <select id="filtroMateria" class="filter-select">
+                <option value="">Todas las materias</option>
+                <?php foreach($materias_unicas as $mat_name): ?>
+                    <option value="<?php echo htmlspecialchars($mat_name); ?>"><?php echo htmlspecialchars($mat_name); ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <a href="gestionar_grupo.php" class="btn-save" style="margin-left: auto; text-decoration: none; display: flex; align-items: center; height: 44px;">
+                <i class="fas fa-plus-circle"></i> Nuevo Grupo
+            </a>
+        </form>
 
         <div class="card" style="padding: 0; overflow: hidden;">
             <div class="table-wrapper">
@@ -138,7 +126,7 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
                             elseif ($inscritos >= $cupo) { $badge_bg = '#f8d7da'; $badge_color = '#dc3545'; $txt_cupo = "Llena"; } 
                             else { $badge_bg = '#d4edda'; $badge_color = '#28a745'; $txt_cupo = "Con cupo"; }
                         ?>
-                            <tr class="group-row" onclick="window.location.href='gestionar_grupo.php?clave=<?php echo $g['clave_grupo']; ?>'">
+                            <tr class="group-row" data-materia="<?php echo htmlspecialchars($g['materia']); ?>" onclick="window.location.href='gestionar_grupo.php?clave=<?php echo $g['clave_grupo']; ?>'">
                                 <td class="td-clean">
                                     <div class="user-name" style="font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
                                     <div class="user-email">Ciclo: <?php echo htmlspecialchars($g['periodo']); ?> | Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
@@ -165,9 +153,8 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="6" class="empty-table-msg"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos activos. Las clases finalizadas están en Ciclos Escolares.</td></tr>
                     <?php endif; ?>
+                    <tr id="noResultsRow" style="display: none;"><td colspan="6" class="empty-table-msg"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron grupos.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -193,6 +180,34 @@ $stmt = $pdo->prepare($sql); $stmt->execute($params); $grupos = $stmt->fetchAll(
                 window.history.replaceState({path:url.href}, '', url.href);
             }
         }
+
+        // FILTRO EN TIEMPO REAL
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('buscadorGrupos'); 
+            const matSelect = document.getElementById('filtroMateria'); 
+            const rows = document.querySelectorAll('.group-row');
+            
+            function filterTable() {
+                const term = searchInput.value.toLowerCase(); 
+                const mat = matSelect.value;
+                let found = false;
+                
+                rows.forEach(row => {
+                    const txt = row.innerText.toLowerCase(); 
+                    const m = row.getAttribute('data-materia');
+                    if (txt.includes(term) && (mat === '' || m === mat)) {
+                        row.style.display = '';
+                        found = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                document.getElementById('noResultsRow').style.display = found ? 'none' : '';
+            }
+            
+            searchInput.addEventListener('input', filterTable); 
+            matSelect.addEventListener('change', filterTable);
+        });
     </script>
 </body>
 </html>
