@@ -2,7 +2,6 @@
 session_start();
 require '../db.php';
 
-// SEGURIDAD: Solo alumnos
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
@@ -48,13 +47,14 @@ function descifrarDias($cadena) {
     return array_unique($columnas);
 }
 
+// Paleta de colores para el horario que se ve bien en ambos modos
 $paleta = [
-    ['bg' => '#e7f3ff', 'border' => '#8bb9ff', 'text' => '#0056b3'], 
-    ['bg' => '#e6f8ec', 'border' => '#89dfa9', 'text' => '#0f5132'], 
-    ['bg' => '#fff3cd', 'border' => '#ffe69c', 'text' => '#664d03'], 
-    ['bg' => '#f8d7da', 'border' => '#f1aeb5', 'text' => '#842029'], 
-    ['bg' => '#f3e8ff', 'border' => '#c29ffa', 'text' => '#432874'], 
-    ['bg' => '#cff4fc', 'border' => '#9eeaf9', 'text' => '#055160']  
+    ['bg' => 'rgba(0, 86, 179, 0.1)', 'border' => '#8bb9ff', 'text' => 'var(--udg-blue)'], 
+    ['bg' => 'rgba(25, 135, 84, 0.1)', 'border' => '#89dfa9', 'text' => '#198754'], 
+    ['bg' => 'rgba(255, 193, 7, 0.1)', 'border' => '#ffe69c', 'text' => '#d39e00'], 
+    ['bg' => 'rgba(220, 53, 69, 0.1)', 'border' => '#f1aeb5', 'text' => '#dc3545'], 
+    ['bg' => 'rgba(111, 66, 193, 0.1)', 'border' => '#c29ffa', 'text' => '#6f42c1'], 
+    ['bg' => 'rgba(23, 162, 184, 0.1)', 'border' => '#9eeaf9', 'text' => '#17a2b8']  
 ];
 
 $colores_asignados = [];
@@ -118,7 +118,7 @@ foreach ($horarios_db as $h) {
             <h1 style="color: var(--udg-blue); margin: 0; font-size: 2rem;">
                 <i class="far fa-calendar-alt"></i> Mi Horario
             </h1>
-            <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Ciclo: <?php echo htmlspecialchars($ciclo_actual); ?></p>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 5px;">Ciclo: <?php echo htmlspecialchars($ciclo_actual); ?></p>
         </div>
 
         <div class="schedule-wrapper">
@@ -167,6 +167,6 @@ foreach ($horarios_db as $h) {
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal de Estudiantes</div></footer>
+    <?php include 'footer_estudiante.php'; ?>
 </body>
 </html>
