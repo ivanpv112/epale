@@ -13,73 +13,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $usuario_id = $_GET['id'];
 
-// PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actualizar_calificaciones'])) {
-    $insc_id = $_POST['inscripcion_id'];
-    if (isset($_POST['calificaciones']) && is_array($_POST['calificaciones'])) {
-        foreach ($_POST['calificaciones'] as $codigo_examen => $puntaje) {
-            $check = $pdo->prepare("SELECT calificacion_id FROM calificaciones WHERE inscripcion_id = ? AND tipo_examen = ?");
-            $check->execute([$insc_id, $codigo_examen]);
-            $exists = $check->fetchColumn();
-
-            $puntaje_str = (string)$puntaje;
-            if (trim($puntaje_str) === '') {
-                if ($exists) $pdo->prepare("DELETE FROM calificaciones WHERE calificacion_id = ?")->execute([$exists]);
-            } else {
-                $puntaje_val = floatval($puntaje);
-                if ($exists) {
-                    $pdo->prepare("UPDATE calificaciones SET puntaje = ? WHERE calificacion_id = ?")->execute([$puntaje_val, $exists]);
-                } else {
-                    $pdo->prepare("INSERT INTO calificaciones (inscripcion_id, tipo_examen, puntaje) VALUES (?, ?, ?)")->execute([$insc_id, $codigo_examen, $puntaje_val]);
-                }
-            }
-        }
-    }
-    header("Location: ver_expediente_alumno.php?id=" . $usuario_id . "&exito=calificaciones"); exit;
-}
-
-// PROCESAR REGISTRO DE CERTIFICACIONES
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_certificacion'])) {
-    $alum_id_cert = $_POST['alumno_id_cert'];
-    $idioma_cert = $_POST['idioma_cert'];
-    $nivel_cert = strtoupper(trim($_POST['nivel_cert'] ?? ''));
-    $puntaje_cert = trim($_POST['puntaje_cert'] ?? '');
-    $periodo_cert = strtoupper(trim($_POST['periodo_cert'] ?? ''));
-    $fecha_cert = !empty($_POST['fecha_cert']) ? $_POST['fecha_cert'] : null;
-    
-    $stmt_chk = $pdo->prepare("SELECT certificacion_id FROM certificaciones WHERE alumno_id = ? AND idioma = ?");
-    $stmt_chk->execute([$alum_id_cert, $idioma_cert]);
-    $exists = $stmt_chk->fetchColumn();
-    
-    if ($exists) {
-        $pdo->prepare("UPDATE certificaciones SET nivel_obtenido = ?, puntaje = ?, periodo = ?, fecha_aplicacion = ? WHERE certificacion_id = ?")->execute([$nivel_cert, $puntaje_cert, $periodo_cert, $fecha_cert, $exists]);
-    } else {
-        $pdo->prepare("INSERT INTO certificaciones (alumno_id, idioma, nivel_obtenido, puntaje, periodo, fecha_aplicacion) VALUES (?, ?, ?, ?, ?, ?)")->execute([$alum_id_cert, $idioma_cert, $nivel_cert, $puntaje_cert, $periodo_cert, $fecha_cert]);
-    }
-    header("Location: ver_expediente_alumno.php?id=" . $usuario_id . "&exito=certificacion"); exit;
-}
-
-// PROCESAR GUARDADO/EDICIÓN DE EXAMEN DIAGNÓSTICO
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_diagnostico'])) {
-    $examen_id = $_POST['examen_id'] ?? '';
-    $alum_id = $_POST['alumno_id_diag'];
-    $idioma = trim($_POST['idioma_diag'] ?? '');
-    $periodo = strtoupper(trim($_POST['periodo_diag'] ?? ''));
-    $nivel = intval($_POST['nivel_diag'] ?? 0);
-    $calificacion = strtoupper(trim($_POST['calif_diag'] ?? ''));
-    $fecha = $_POST['fecha_diag'];
-
-    if (!empty($examen_id)) {
-        $pdo->prepare("UPDATE examenes_diagnosticos SET idioma=?, periodo=?, nivel_asignado=?, calificacion_texto=?, fecha_realizacion=? WHERE examen_id=?")
-            ->execute([$idioma, $periodo, $nivel, $calificacion, $fecha, $examen_id]);
-    } else {
-        $pdo->prepare("INSERT INTO examenes_diagnosticos (alumno_id, idioma, periodo, nivel_asignado, calificacion_texto, fecha_realizacion) VALUES (?, ?, ?, ?, ?, ?)")
-            ->execute([$alum_id, $idioma, $periodo, $nivel, $calificacion, $fecha]);
-    }
-    header("Location: ver_expediente_alumno.php?id=" . $usuario_id . "&exito=diagnostico"); exit;
-}
-
-// OBTENER DATOS DEL USUARIO
+// 1. OBTENER DATOS DEL USUARIO (PERFIL)
 $sql_perfil = "SELECT u.*, a.carrera, a.alumno_id 
                FROM usuarios u 
                LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
@@ -98,12 +32,14 @@ if($perfil['foto_perfil'] && file_exists("../img/perfiles/" . $perfil['foto_perf
 
 $alumno_id = $perfil['alumno_id'];
 
-// OBTENER MATERIAS E HISTORIAL
-$sql_materias = "SELECT i.*, m.nombre as materia, m.nivel, m.materia_id, c.nombre as ciclo, c.activo, g.estado as grupo_estado, g.nrc 
+// 2. OBTENER MATERIAS E HISTORIAL CON EL PROFESOR
+$sql_materias = "SELECT i.*, m.nombre as materia, m.nivel, m.materia_id, c.nombre as ciclo, c.activo, g.estado as grupo_estado, g.nrc,
+                 u.nombre as prof_nombre, u.apellido_paterno as prof_ap
                  FROM inscripciones i
                  JOIN grupos g ON i.nrc = g.nrc
                  JOIN materias m ON g.materia_id = m.materia_id
                  JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                 LEFT JOIN usuarios u ON g.profesor_id = u.usuario_id
                  WHERE i.alumno_id = ?
                  ORDER BY c.nombre DESC, m.nivel DESC";
 $stmt_mat = $pdo->prepare($sql_materias);
@@ -132,6 +68,7 @@ foreach ($todas_materias as $mat) {
 
 $idiomas_nivel_4 = array_keys($idiomas_nivel_4);
 
+// 3. OBTENER CERTIFICACIONES Y DIAGNÓSTICOS
 $stmt_cert = $pdo->prepare("SELECT * FROM certificaciones WHERE alumno_id = ?");
 $stmt_cert->execute([$alumno_id]);
 $certificaciones_bd = [];
@@ -164,15 +101,27 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         <?php if(isset($_GET['exito'])): ?>
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({ title: '¡Éxito!', text: 'Los cambios fueron guardados correctamente.', icon: 'success', confirmButtonColor: 'var(--udg-blue)' });
+                    let msg = 'Los cambios fueron guardados correctamente.';
+                    <?php if($_GET['exito'] == 'foto'): ?> msg = 'La foto de perfil inapropiada ha sido eliminada.'; <?php endif; ?>
+                    
+                    Swal.fire({ title: '¡Éxito!', text: msg, icon: 'success', confirmButtonColor: 'var(--udg-blue)' });
                     const currentUrl = new URL(window.location.href); currentUrl.searchParams.delete('exito');
                     window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
                 });
             </script>
         <?php endif; ?>
 
+        <!-- SECCIÓN PERFIL -->
         <div class="expediente-header">
-            <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
+            <div class="avatar-wrapper">
+                <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
+                <?php if($perfil['foto_perfil']): ?>
+                    <a href="#" onclick="confirmarBorrarFoto('acciones_expediente.php?id=<?php echo $usuario_id; ?>&borrar_foto=1')" class="btn-delete-avatar" title="Eliminar foto inapropiada">
+                        <i class="fas fa-trash-alt"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
+
             <div>
                 <h1 class="expediente-title"><?php echo htmlspecialchars($nombre_completo); ?></h1>
                 <p class="expediente-badges">
@@ -192,6 +141,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
+        <!-- INFORMACIÓN DE CONTACTO -->
         <div class="card card-mb-20">
             <h3 class="section-title-border"><i class="fas fa-info-circle"></i> Información de Contacto</h3>
             <div class="info-contact-grid">
@@ -217,7 +167,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="expediente-grid-main">
-            
+            <!-- COLUMNA IZQUIERDA (ACADÉMICA) -->
             <div>
                 <div class="card card-mt-0">
                     <h3><i class="fas fa-book-reader"></i> Cursando Actualmente</h3>
@@ -228,7 +178,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                             $max_puntos = $stmt_max->fetchColumn() ?: 0;
                             $puntos_actuales = $mat['calificacion_final'];
                             $porcentaje = ($max_puntos > 0) ? ($puntos_actuales / $max_puntos) * 100 : 0;
-                            $color_bar = ($porcentaje >= 60) ? 'var(--udg-light)' : '#dc3545';
+                            $color_bar = ($porcentaje >= 80) ? 'var(--udg-light)' : '#dc3545';
                         ?>
                             <div class="subject-card">
                                 <div class="subject-header">
@@ -238,7 +188,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                         <button class="btn-save btn-sm" onclick="abrirModalCalif(<?php echo $mat['inscripcion_id']; ?>)"><i class="fas fa-edit"></i> Calificar</button>
                                     </div>
                                 </div>
-                                <span class="subject-meta">Ciclo: <?php echo htmlspecialchars($mat['ciclo']); ?> | NRC: <?php echo $mat['nrc']; ?></span>
+                                <span class="subject-meta">Ciclo: <?php echo htmlspecialchars($mat['ciclo']); ?> | NRC: <?php echo $mat['nrc']; ?> | Prof. <?php echo htmlspecialchars($mat['prof_nombre'] . ' ' . $mat['prof_ap']); ?></span>
                                 <div class="progress-bar-bg">
                                     <div class="progress-bar-fill" style="background-color: <?php echo $color_bar; ?>; width: <?php echo min($porcentaje, 100); ?>%;"></div>
                                 </div>
@@ -255,27 +205,36 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                     <div style="overflow-x:auto;">
                         <table class="table-clean history-table">
                             <thead>
-                                <tr><th>Ciclo</th><th>Materia</th><th class="text-center">Calificación</th><th class="text-center">Estado y Resultado</th></tr>
+                                <tr><th>Ciclo</th><th>Materia y Detalles</th><th class="text-center">Calificación</th><th class="text-center">Estado y Resultado</th></tr>
                             </thead>
                             <tbody>
                                 <?php if(count($historial) > 0): ?>
                                     <?php foreach($historial as $h): $calif = floatval($h['calificacion_final']); ?>
                                         <tr class="clickable-row" onclick="abrirModalCalif(<?php echo $h['inscripcion_id']; ?>)">
                                             <td><?php echo htmlspecialchars($h['ciclo']); ?></td>
-                                            <td class="subject-score"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
+                                            
+                                            <td class="subject-score">
+                                                <?php echo htmlspecialchars($h['materia'] . ' Nivel ' . $h['nivel']); ?><br>
+                                                <span style="font-size: 0.8rem; color: #888; font-weight: normal;">NRC: <?php echo htmlspecialchars($h['nrc']); ?> | Prof. <?php echo htmlspecialchars($h['prof_nombre'] . ' ' . $h['prof_ap']); ?></span>
+                                            </td>
+                                            
                                             <td class="text-center" style="font-size:1.1rem; font-weight:bold;"><?php echo $calif; ?></td>
                                             <td class="text-center">
-                                                <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
-                                                    <span class="tag-active-mini"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span><br>
-                                                <?php else: ?>
-                                                    <span class="tag-closed-mini"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span><br>
-                                                <?php endif; ?>
                                                 
-                                                <?php if($calif >= 60): ?>
-                                                    <span class="tag-aprobado" style="padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Aprobado</span>
+                                                <?php if($h['estatus'] == 'BAJA'): ?>
+                                                    <span style="background:#e2e3e5; color:#383d41; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-arrow-down" style="font-size:0.7rem;"></i> Baja</span>
                                                 <?php else: ?>
-                                                    <span class="tag-rechazada" style="padding: 3px 8px; border-radius: 10px; font-size: 0.8rem;">Reprobado</span>
+                                                    <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
+                                                        <span style="background:#cce5ff; color:#004085; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span>
+                                                    <?php else: ?>
+                                                        <?php if($calif >= 80): ?>
+                                                            <span style="background:#d4edda; color:#155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Aprobada</span>
+                                                        <?php else: ?>
+                                                            <span style="background:#f8d7da; color:#721c24; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Reprobada</span>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
+
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -288,13 +247,11 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
 
+            <!-- COLUMNA DERECHA (DIAGNÓSTICOS Y CERTIFICACIONES) -->
             <div>
                 <div class="card card-highlighted">
                     <div class="card-actions-top">
                         <button class="btn-save btn-sm" onclick="abrirModalDiag('', '', '', '', '', '')" title="Agregar Nuevo Diagnóstico"><i class="fas fa-plus"></i> Agregar</button>
-                        <?php if(count($examenes_diagnosticos) > 0): ?>
-                            <button class="btn-cancel-sm" onclick="handleEditDiagnostico()" title="Editar Diagnóstico"><i class="fas fa-pen"></i> Editar</button>
-                        <?php endif; ?>
                     </div>
 
                     <div class="card-header-center">
@@ -306,7 +263,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                     <div style="margin-top: 15px;">
                         <?php if(count($examenes_diagnosticos) > 0): ?>
                             <?php foreach($examenes_diagnosticos as $diag): ?>
-                                <div class="diag-card">
+                                <div class="diag-card card-editable" onclick='editarDiagnostico(<?php echo json_encode($diag); ?>)' title="Haz clic para editar este diagnóstico">
                                     <div class="diag-header">
                                         <strong class="diag-title"><?php echo htmlspecialchars($diag['idioma']); ?></strong>
                                         <span class="diag-badge"><?php echo htmlspecialchars($diag['periodo']); ?></span>
@@ -345,7 +302,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                 $periodo_obt = $cert['periodo'] ?? '';
                                 $fecha_obt = (!empty($cert['fecha_aplicacion']) && $cert['fecha_aplicacion'] !== '0000-00-00') ? $cert['fecha_aplicacion'] : '';
                             ?>
-                                <div class="cert-card">
+                                <div class="cert-card card-editable" onclick="abrirModalCert('<?php echo htmlspecialchars((string)$idioma); ?>', '<?php echo htmlspecialchars((string)($nivel_obt == 'Sin registrar' ? '' : $nivel_obt)); ?>', '<?php echo htmlspecialchars((string)$puntaje_obt); ?>', '<?php echo htmlspecialchars((string)$periodo_obt); ?>', '<?php echo htmlspecialchars((string)$fecha_obt); ?>')" title="Haz clic para actualizar nivel oficial">
                                     <div>
                                         <strong class="cert-title"><?php echo htmlspecialchars((string)$idioma); ?></strong>
                                         <span class="cert-meta">Nivel: <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars((string)$nivel_obt); ?></strong></span>
@@ -358,9 +315,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                             </div>
                                         <?php endif; ?>
                                     </div>
-                                    <button class="btn-save btn-sm" onclick="abrirModalCert('<?php echo htmlspecialchars((string)$idioma); ?>', '<?php echo htmlspecialchars((string)($nivel_obt == 'Sin registrar' ? '' : $nivel_obt)); ?>', '<?php echo htmlspecialchars((string)$puntaje_obt); ?>', '<?php echo htmlspecialchars((string)$periodo_obt); ?>', '<?php echo htmlspecialchars((string)$fecha_obt); ?>')">
-                                        <i class="fas fa-edit"></i> Asignar
-                                    </button>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -375,112 +329,45 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <?php foreach ($todas_materias as $mat): 
-            $stmt_crit = $pdo->prepare("SELECT * FROM criterios_evaluacion WHERE materia_id = ? ORDER BY categoria ASC");
-            $stmt_crit->execute([$mat['materia_id']]);
-            $criterios_materia = $stmt_crit->fetchAll(PDO::FETCH_ASSOC);
-            
-            $stmt_cal_exist = $pdo->prepare("SELECT tipo_examen, puntaje FROM calificaciones WHERE inscripcion_id = ?");
-            $stmt_cal_exist->execute([$mat['inscripcion_id']]);
-            $calif_existentes = [];
-            while($row = $stmt_cal_exist->fetch(PDO::FETCH_ASSOC)) { $calif_existentes[$row['tipo_examen']] = $row['puntaje']; }
-        ?>
-        <div id="modalCalif_<?php echo $mat['inscripcion_id']; ?>" class="modal-overlay" style="display:none;">
-            <div class="modal-content clean-modal">
-                <div class="modal-header-clean">
-                    <h2><i class="fas fa-edit"></i> <?php echo htmlspecialchars((string)($mat['materia'] . ' ' . $mat['nivel'])); ?></h2>
-                    <button class="close-btn" onclick="cerrarModalCalif(<?php echo $mat['inscripcion_id']; ?>)">&times;</button>
-                </div>
-                <form method="POST" class="form-margin-0">
-                    <input type="hidden" name="actualizar_calificaciones" value="1">
-                    <input type="hidden" name="inscripcion_id" value="<?php echo $mat['inscripcion_id']; ?>">
-                    <div class="modal-body-scroll">
-                        <?php if($mat['grupo_estado'] == 'CERRADO' || $mat['activo'] == 0): ?>
-                            <div class="alert-warning-mini">
-                                <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Estás editando las calificaciones de una clase finalizada.
-                            </div>
-                        <?php endif; ?>
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
-                            <?php foreach($criterios_materia as $crit): 
-                                $codigo = $crit['codigo_examen'];
-                                $val = isset($calif_existentes[$codigo]) ? floatval($calif_existentes[$codigo]) : '';
-                            ?>
-                                <div class="form-group mb-0">
-                                    <label><i class="fas <?php echo htmlspecialchars((string)$crit['icono']); ?>" style="color: <?php echo htmlspecialchars((string)$crit['color']); ?>;"></i> <?php echo htmlspecialchars((string)$crit['nombre_examen']); ?> <span class="text-muted">(Máx: <?php echo floatval($crit['puntos_maximos']); ?>)</span></label>
-                                    <input type="number" step="0.01" min="0" max="<?php echo floatval($crit['puntos_maximos']); ?>" name="calificaciones[<?php echo htmlspecialchars((string)$codigo); ?>]" value="<?php echo htmlspecialchars((string)$val); ?>" placeholder="Sin evaluar">
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <div class="modal-footer-clean">
-                        <button type="button" class="btn-cancel" onclick="cerrarModalCalif(<?php echo $mat['inscripcion_id']; ?>)">Cancelar</button>
-                        <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php endforeach; ?>
-
-        <div id="modalCert" class="modal-overlay" style="display:none;">
-            <div class="modal-content clean-modal">
-                <div class="modal-header-clean">
-                    <h2><i class="fas fa-award"></i> Asignar Certificación</h2>
-                    <button class="close-btn" onclick="cerrarModalCert()">&times;</button>
-                </div>
-                <form method="POST" class="form-margin-0">
-                    <input type="hidden" name="guardar_certificacion" value="1">
-                    <input type="hidden" name="alumno_id_cert" value="<?php echo $alumno_id; ?>">
-                    <input type="hidden" name="idioma_cert" id="inputIdiomaCert">
-                    <div class="modal-body-scroll">
-                        <p style="font-size: 0.9rem; color: #666; margin-top: 0; margin-bottom: 15px;">Actualizando nivel oficial obtenido en: <strong id="textoIdiomaCert" style="color: var(--udg-blue);"></strong></p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group mb-0"><label>Nivel (Ej. B1, B2, C1)</label><input type="text" name="nivel_cert" id="inputNivelCert" required placeholder="Ej. B2" style="text-transform: uppercase;"></div>
-                            <div class="form-group mb-0"><label>Puntaje Obtenido</label><input type="text" name="puntaje_cert" id="inputPuntajeCert" placeholder="Ej. 550"></div>
-                            <div class="form-group mb-0"><label>Periodo</label><input type="text" name="periodo_cert" id="inputPeriodoCert" placeholder="Ej. 2022B" style="text-transform: uppercase;"></div>
-                            <div class="form-group mb-0"><label>Fecha de Aplicación</label><input type="date" name="fecha_cert" id="inputFechaCert"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer-clean">
-                        <button type="button" class="btn-cancel" onclick="cerrarModalCert()">Cancelar</button>
-                        <button type="submit" class="btn-save" style="background:var(--udg-blue); color:white;"><i class="fas fa-save"></i> Guardar Nivel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div id="modalDiag" class="modal-overlay" style="display:none;">
-            <div class="modal-content clean-modal">
-                <div class="modal-header-clean">
-                    <h2 id="modalDiagTitle"><i class="fas fa-clipboard-check"></i> Examen Diagnóstico</h2>
-                    <button class="close-btn" onclick="cerrarModalDiag()">&times;</button>
-                </div>
-                <form method="POST" class="form-margin-0">
-                    <input type="hidden" name="guardar_diagnostico" value="1">
-                    <input type="hidden" name="examen_id" id="inputExamenId">
-                    <input type="hidden" name="alumno_id_diag" value="<?php echo $alumno_id; ?>">
-                    <div class="modal-body-scroll">
-                        <div class="form-group"><label>Idioma</label><input type="text" name="idioma_diag" id="inputIdiomaDiag" required placeholder="Ej. Inglés"></div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group mb-0"><label>Nivel Asignado</label><input type="number" name="nivel_diag" id="inputNivelDiag" required min="1" max="10"></div>
-                            <div class="form-group mb-0"><label>Calificación Textual</label><input type="text" name="calif_diag" id="inputCalifDiag" required placeholder="Ej. A2 INICIAL" style="text-transform: uppercase;"></div>
-                            <div class="form-group mb-0"><label>Periodo</label><input type="text" name="periodo_diag" id="inputPeriodoDiag" required placeholder="Ej. 2022-B" style="text-transform: uppercase;"></div>
-                            <div class="form-group mb-0"><label>Fecha de Realización</label><input type="date" name="fecha_diag" id="inputFechaDiag" required></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer-clean">
-                        <button type="button" class="btn-cancel" onclick="cerrarModalDiag()">Cancelar</button>
-                        <button type="submit" class="btn-save" style="background:#17a2b8; color:white;"><i class="fas fa-save"></i> Guardar Diagnóstico</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <!-- ==========================================
+             AQUÍ IMPORTAMOS TODOS LOS MODALES HTML
+             ========================================== -->
+        <?php include 'modales_expediente.php'; ?>
 
     </main>
 
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <script>
-        const examenesGuardados = <?php echo json_encode($examenes_diagnosticos ?? []); ?>;
+        // Función para atrapar los datos del diagnóstico y abrir el modal
+        function editarDiagnostico(diag) {
+            document.getElementById('inputExamenId').value = diag.examen_id;
+            document.getElementById('inputIdiomaDiag').value = diag.idioma;
+            document.getElementById('inputNivelDiag').value = diag.nivel_asignado;
+            document.getElementById('inputCalifDiag').value = diag.calificacion_texto;
+            document.getElementById('inputPeriodoDiag').value = diag.periodo;
+            document.getElementById('inputFechaDiag').value = diag.fecha_realizacion;
+            document.getElementById('modalDiagTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Diagnóstico';
+            document.getElementById('modalDiag').style.display = 'flex';
+        }
+
+        // Alerta elegante para confirmar el borrado de la foto
+        function confirmarBorrarFoto(url) {
+            Swal.fire({
+                title: '¿Borrar foto de perfil?',
+                text: "Si la foto contiene contenido inapropiado o viola las normas, se eliminará permanentemente.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, borrar foto',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
     </script>
     <script src="../js/expediente_alumno.js?v=<?php echo time(); ?>"></script>
 </body>
