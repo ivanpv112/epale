@@ -1,4 +1,4 @@
-/* css/admin.css - VERSIÓN MAESTRA OPTIMIZADA */
+/* css/admin.css */
 /* Nota: Este archivo trabaja en conjunto con estudiante.css. 
    Aquí solo van los estilos exclusivos del panel de administrador. */
 
@@ -16,6 +16,20 @@
 .toolbar { background: var(--white); padding: 15px; border-radius: 12px; display: flex; gap: 15px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap; }
 .search-input { flex: 1; padding: 10px 15px; border: 1px solid #ced4da; border-radius: 6px; min-width: 200px; font-family: inherit; font-size: 0.95rem; }
 .filter-select { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; background-color: var(--white); font-family: inherit; font-size: 0.95rem; cursor: pointer; }
+/* EFECTO HOVER/FOCUS PARA LAS BÚSQUEDAS Y FILTROS */
+.search-input:hover, .filter-select:hover,
+.search-input:focus, .filter-select:focus {
+    border-color: var(--udg-blue);
+    box-shadow: 0 0 0 3px rgba(13, 35, 102, 0.15);
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.filter-select:focus {
+    background-color: #f8fbff;
+    color: var(--udg-blue);
+    font-weight: 600;
+}
 
 /* =========================================
    3. TABLAS DE ADMINISTRACIÓN
@@ -397,3 +411,16 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
     box-shadow: 0 6px 15px rgba(111, 66, 193, 0.3);
     background: linear-gradient(135deg, #8a2be2 0%, #6f42c1 100%);
 }
+
+/* =========================================================
+   COMPLEMENTOS PARA EXPEDIENTE (Edición In-situ y Avatar)
+   ========================================================= */
+.card-editable { position: relative; cursor: pointer; transition: all 0.2s ease; }
+.card-editable:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+/* Icono de lápiz que aparece mágicamente */
+.card-editable::after { content: '\f304'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; top: 80px; right: 15px; color: #ccc; opacity: 0; transition: opacity 0.2s; }
+.card-editable:hover::after { opacity: 1; color: var(--udg-blue); }
+
+.avatar-wrapper { position: relative; display: inline-block; }
+.btn-delete-avatar { position: absolute; bottom: 5px; right: 5px; background: #dc3545; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; text-decoration: none; }
+.btn-delete-avatar:hover { background: #c82333; transform: scale(1.1); color: white; }
