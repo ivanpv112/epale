@@ -6,50 +6,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
-$limite_por_pagina = 25;
-$pagina_actual = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
-$offset = ($pagina_actual - 1) * $limite_por_pagina;
-
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$rol_filter = isset($_GET['rol']) ? $_GET['rol'] : '';
-
-// Por defecto mostramos a Alumnos y Profesores (Excluimos a los ADMIN de esta vista)
-$where = "u.rol IN ('ALUMNO', 'PROFESOR')"; 
-$params = [];
-
-if ($rol_filter === 'ALUMNO') {
-    $where = "u.rol = 'ALUMNO'";
-} elseif ($rol_filter === 'PROFESOR') {
-    $where = "u.rol = 'PROFESOR'";
-}
-
-if ($search !== '') {
-    $where .= " AND (u.nombre LIKE :q1 OR u.apellido_paterno LIKE :q2 OR u.apellido_materno LIKE :q3 OR u.codigo LIKE :q4 OR a.carrera LIKE :q5)";
-    $termino = "%" . $search . "%";
-    $params[':q1'] = $termino;
-    $params[':q2'] = $termino;
-    $params[':q3'] = $termino;
-    $params[':q4'] = $termino;
-    $params[':q5'] = $termino;
-}
-
-$sql_count = "SELECT COUNT(*) FROM usuarios u LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id WHERE $where";
-$stmt_count = $pdo->prepare($sql_count);
-$stmt_count->execute($params);
-$total_estudiantes = $stmt_count->fetchColumn();
-
-$total_paginas = ceil($total_estudiantes / $limite_por_pagina);
-
-// OBTENER RESULTADOS
+// Para que el filtro en tiempo real funcione, cargamos todos los perfiles a la vez.
 $sql = "SELECT u.*, a.carrera 
         FROM usuarios u 
         LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
-        WHERE $where 
-        ORDER BY u.rol ASC, u.nombre ASC, u.apellido_paterno ASC 
-        LIMIT $limite_por_pagina OFFSET $offset";
+        WHERE u.rol IN ('ALUMNO', 'PROFESOR') 
+        ORDER BY u.rol ASC, u.nombre ASC, u.apellido_paterno ASC";
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+$stmt->execute();
 $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -73,21 +38,16 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <p>Consulta el historial de los alumnos y las asignaciones de los profesores.</p>
         </div>
 
-        <form class="toolbar" method="GET" action="expedientes.php" style="margin-top: 20px;">
-            <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
-            <input type="text" name="q" class="search-input" placeholder="Buscar por nombre, correo o Código..." value="<?php echo htmlspecialchars($search); ?>">
+        <!-- BARRA DE BÚSQUEDA DINÁMICA EXPEDIENTES -->
+        <form class="toolbar mt-20" onsubmit="event.preventDefault();">
+            <i class="fas fa-search icon-muted" style="align-self:center;"></i>
+            <input type="text" id="buscadorExpedientes" class="search-input" placeholder="Buscar por nombre, correo o código...">
             
-            <select name="rol" class="filter-select" onchange="this.form.submit()">
+            <select id="filtroRol" class="filter-select">
                 <option value="">Ambos roles</option>
-                <option value="ALUMNO" <?php if($rol_filter=='ALUMNO') echo 'selected'; ?>>Alumnos</option>
-                <option value="PROFESOR" <?php if($rol_filter=='PROFESOR') echo 'selected'; ?>>Profesores</option>
+                <option value="ALUMNO">Alumnos</option>
+                <option value="PROFESOR">Profesores</option>
             </select>
-
-            <?php if($search !== '' || $rol_filter !== ''): ?>
-                <a href="expedientes.php" class="btn-cancel" style="margin-left: auto; text-decoration: none; padding: 10px 15px; border-radius: 6px;">Limpiar Filtros</a>
-            <?php else: ?>
-                <button type="submit" style="display:none;"></button>
-            <?php endif; ?>
         </form>
 
         <div class="card" style="padding: 0; overflow: hidden; margin-top: 20px;">
@@ -97,14 +57,16 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <tr>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Perfil / Usuario</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Código</th>
-                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera / Genero</th>
+                            <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Rol / Carrera</th>
                             <th style="padding: 15px; text-align: left; background-color: #f8f9fa; border-bottom: 2px solid #eee;">Estado</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tablaExpedientes">
                         <?php if (count($estudiantes) > 0): ?>
-                            <?php foreach ($estudiantes as $e): ?>
-                            <tr class="clickable-row" style="border-bottom: 1px solid #eee;" onclick="window.location.href='ver_expediente.php?id=<?php echo $e['usuario_id']; ?>'">
+                            <?php foreach ($estudiantes as $e): 
+                                $ruta_destino = ($e['rol'] == 'ALUMNO') ? 'ver_expediente_alumno.php' : 'ver_expediente_profesor.php';
+                            ?>
+                            <tr class="clickable-row" data-rol="<?php echo $e['rol']; ?>" style="border-bottom: 1px solid #eee;" onclick="window.location.href='<?php echo $ruta_destino; ?>?id=<?php echo $e['usuario_id']; ?>'">
                                 
                                 <td class="user-cell" style="padding: 15px;">
                                     <h4 style="margin: 0; color: var(--udg-blue);">
@@ -135,8 +97,8 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <br>
                                     <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">
                                         <?php 
-                                            if($e['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#3b82f6;"></i> Masculino';
-                                            elseif($e['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#e83e8c;"></i> Femenino';
+                                            if($e['genero'] == 'MASCULINO') echo '<i class="fas fa-mars" style="color:#3b82f6;"></i> Masc';
+                                            elseif($e['genero'] == 'FEMENINO') echo '<i class="fas fa-venus" style="color:#e83e8c;"></i> Fem';
                                             elseif($e['genero'] == 'OTRO') echo '<i class="fas fa-transgender-alt" style="color:#6f42c1;"></i> Otro';
                                             else echo '<i class="fas fa-genderless" style="color:#aaa;"></i> N/E';
                                         ?>
@@ -152,42 +114,45 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </td>
                             </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-light);">
-                                    <i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
-                                    No se encontraron perfiles con esa búsqueda.
-                                </td>
-                            </tr>
                         <?php endif; ?>
+                        <tr id="noResultsRow" style="display: none;"><td colspan="4" class="empty-table-msg"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron perfiles.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <?php if ($total_paginas > 1): ?>
-            <div class="google-pagination">
-                <?php 
-                $qs = urlencode($search); 
-                if ($pagina_actual > 1) { echo '<a href="?q='.$qs.'&rol='.$rol_filter.'&page='.($pagina_actual - 1).'" class="btn-nav"><i class="fas fa-chevron-left" style="font-size:0.8rem;"></i> Anterior</a>'; }
-                $inicio = max(1, $pagina_actual - 4);
-                $fin = min($total_paginas, $pagina_actual + 5);
-                for ($i = $inicio; $i <= $fin; $i++) {
-                    $activeClass = ($i == $pagina_actual) ? 'class="active"' : '';
-                    echo '<a href="?q='.$qs.'&rol='.$rol_filter.'&page='.$i.'" '.$activeClass.'>'.$i.'</a>';
-                }
-                if ($pagina_actual < $total_paginas) { echo '<a href="?q='.$qs.'&rol='.$rol_filter.'&page='.($pagina_actual + 1).'" class="btn-nav">Siguiente <i class="fas fa-chevron-right" style="font-size:0.8rem;"></i></a>'; }
-                ?>
-            </div>
-        <?php endif; ?>
-
     </main>
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    
     <script>
-        function toggleMobileMenu() {
-            document.getElementById('navWrapper').classList.toggle('active');
-            document.getElementById('menuOverlay').classList.toggle('active');
-        }
+        function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
+        
+        // FILTRO EN TIEMPO REAL
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('buscadorExpedientes'); 
+            const rolSelect = document.getElementById('filtroRol'); 
+            const rows = document.querySelectorAll('.clickable-row');
+            
+            function filterTable() {
+                const term = searchInput.value.toLowerCase(); 
+                const role = rolSelect.value;
+                let found = false;
+                
+                rows.forEach(row => {
+                    const txt = row.innerText.toLowerCase(); 
+                    const r = row.getAttribute('data-rol');
+                    if (txt.includes(term) && (role === '' || r === role)) {
+                        row.style.display = '';
+                        found = true;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                document.getElementById('noResultsRow').style.display = found ? 'none' : '';
+            }
+            
+            searchInput.addEventListener('input', filterTable); 
+            rolSelect.addEventListener('change', filterTable);
+        });
     </script>
 </body>
 </html>
