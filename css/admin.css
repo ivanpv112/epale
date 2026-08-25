@@ -424,3 +424,87 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 .avatar-wrapper { position: relative; display: inline-block; }
 .btn-delete-avatar { position: absolute; bottom: 5px; right: 5px; background: #dc3545; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; text-decoration: none; }
 .btn-delete-avatar:hover { background: #c82333; transform: scale(1.1); color: white; }
+
+/* =========================================================
+   MENÚ LATERAL DEL ADMINISTRADOR (SIDEBAR Y MENÚ HAMBURGUESA)
+   ========================================================= */
+
+/* Fondo oscuro translúcido */
+.menu-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0, 0, 0, 0.6); 
+    z-index: 1999; 
+    display: none; 
+    backdrop-filter: blur(2px); 
+}
+.menu-overlay.active { display: block; }
+
+/* Contenedor del Menú Lateral */
+.yt-sidebar { 
+    position: fixed; 
+    top: 0; 
+    right: -320px; 
+    width: 280px; 
+    max-width: 85vw; 
+    height: 100vh; 
+    background-color: #0f0f0f; /* Fondo negro elegante */
+    box-shadow: -5px 0 25px rgba(0,0,0,0.8); 
+    display: flex; 
+    flex-direction: column; 
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    z-index: 2000; 
+    overflow-y: auto; 
+}
+.yt-sidebar.active { right: 0; }
+
+/* Cabecera del menú lateral (Con el botón de la "X") */
+.yt-sidebar-header { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 15px 25px; 
+    border-bottom: 1px solid #272727; 
+    height: 65px; 
+    box-sizing: border-box; 
+}
+
+/* Enlaces del menú lateral */
+.yt-sidebar-menu { 
+    list-style: none; 
+    padding: 15px 0; 
+    margin: 0; 
+}
+.yt-sidebar-menu a { 
+    display: flex; 
+    align-items: center; 
+    gap: 20px; 
+    padding: 12px 25px; 
+    color: #f1f1f1; 
+    text-decoration: none; 
+    font-size: 1rem; 
+    font-weight: 500; 
+    transition: background 0.2s; 
+}
+.yt-sidebar-menu a:hover, 
+.yt-sidebar-menu a.active { 
+    background-color: #272727; 
+}
+.yt-sidebar-menu a.active { font-weight: bold; }
+.yt-sidebar-menu a i { 
+    font-size: 1.3rem; 
+    width: 24px; 
+    text-align: center; 
+    color: #aaa; 
+}
+.yt-sidebar-menu a.active i { color: white; }
+
+/* Línea separadora */
+.sidebar-divider { 
+    height: 1px; 
+    background-color: #272727; 
+    margin: 10px 0; 
+}
