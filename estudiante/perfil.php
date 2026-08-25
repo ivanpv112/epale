@@ -131,7 +131,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
-        .clickable-row:hover { background-color: #f1f8ff; }
+        .clickable-row:hover { background-color: var(--bg-gray); }
     </style>
 </head>
 <body>
@@ -150,9 +150,9 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="profile-basic-info">
-            <h2 style="margin:0; color:var(--udg-blue);"><?php echo htmlspecialchars($nombre_completo); ?></h2>
+            <h2 style="margin:0; color:var(--text-dark);"><?php echo htmlspecialchars($nombre_completo); ?></h2>
             <span class="profile-role-badge"><i class="fas fa-graduation-cap"></i> Alumno</span>
-            <p style="color:#666; margin-top:5px; font-size:0.9rem;"><?php echo htmlspecialchars($user['correo']); ?></p>
+            <p style="color:var(--text-muted); margin-top:5px; font-size:0.9rem;"><?php echo htmlspecialchars($user['correo']); ?></p>
         </div>
 
         <?php if(!empty($mensaje_exito)): ?>
@@ -164,20 +164,20 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
 
         <?php if(count($examenes_diagnosticos) > 0): ?>
             <div class="card" style="border-top: 4px solid #17a2b8; margin-bottom: 25px;">
-                <h3 style="margin-top: 0; color: #17a2b8;"><i class="fas fa-clipboard-check" style="color: #17a2b8;"></i> Examen Diagnóstico</h3>
-                <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Resultados de tu evaluación inicial para la asignación de nivel.</p>
+                <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-clipboard-check" style="color: #17a2b8;"></i> Examen Diagnóstico</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Resultados de tu evaluación inicial para la asignación de nivel.</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                     <?php foreach($examenes_diagnosticos as $diag): ?>
-                        <div style="border: 1px solid #eee; border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px; background: #f8f9fa; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                        <div style="border: 1px solid rgba(128,128,128,0.2); border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px; background: var(--bg-gray); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                                <h4 style="margin: 0; color: var(--udg-blue); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
-                                <span style="background: #e7f3ff; color: var(--udg-blue); padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid #b8daff;"><?php echo htmlspecialchars($diag['periodo']); ?></span>
+                                <h4 style="margin: 0; color: var(--text-dark); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
+                                <span style="background: rgba(23, 162, 184, 0.1); color: #17a2b8; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(23, 162, 184, 0.2);"><?php echo htmlspecialchars($diag['periodo']); ?></span>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem; color: #555;">
-                                <div><i class="fas fa-layer-group" style="color:#aaa;"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
-                                <div><i class="fas fa-star" style="color:#aaa;"></i> Calif: <strong style="color:#333;"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
-                                <div style="grid-column: span 2;"><i class="far fa-calendar-alt" style="color:#aaa;"></i> Fecha de aplicación: <span style="color:#333; font-weight:500;"><?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></span></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem; color: var(--text-muted);">
+                                <div><i class="fas fa-layer-group" style="color:var(--text-muted);"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
+                                <div><i class="fas fa-star" style="color:var(--text-muted);"></i> Calif: <strong style="color:var(--text-dark);"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
+                                <div style="grid-column: span 2;"><i class="far fa-calendar-alt" style="color:var(--text-muted);"></i> Fecha de aplicación: <span style="color:var(--text-dark); font-weight:500;"><?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></span></div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -187,17 +187,17 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
 
         <?php if(count($idiomas_nivel_4) > 0): ?>
             <div class="card" style="border-top: 4px solid var(--udg-blue); margin-bottom: 25px;">
-                <h3 style="margin-top: 0; color: var(--udg-blue);"><i class="fas fa-award" style="color: var(--udg-blue);"></i> Mis Certificaciones Oficiales</h3>
-                <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Niveles obtenidos en los idiomas en los que has cursado el Nivel 4 o superior.</p>
+                <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-award" style="color: var(--udg-blue);"></i> Mis Certificaciones Oficiales</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Niveles obtenidos en los idiomas en los que has cursado el Nivel 4 o superior.</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <?php foreach($idiomas_nivel_4 as $idioma): 
                         $nivel_obt = $certificaciones_bd[$idioma] ?? null;
                     ?>
-                        <div style="border: 1px solid <?php echo $nivel_obt ? 'var(--udg-light)' : '#eee'; ?>; border-radius: 8px; padding: 20px; text-align: center; background: <?php echo $nivel_obt ? '#eaf4fc' : '#f8f9fa'; ?>; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: 0.2s;">
-                            <i class="fas fa-certificate" style="font-size: 2.5rem; color: <?php echo $nivel_obt ? 'var(--udg-light)' : '#ccc'; ?>; margin-bottom: 10px;"></i>
-                            <h4 style="margin: 0 0 5px 0; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : '#666'; ?>;"><?php echo htmlspecialchars($idioma); ?></h4>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : '#888'; ?>;">
+                        <div style="border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 20px; text-align: center; background: <?php echo $nivel_obt ? 'rgba(0, 86, 179, 0.05)' : 'var(--bg-gray)'; ?>; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: 0.2s;">
+                            <i class="fas fa-certificate" style="font-size: 2.5rem; color: <?php echo $nivel_obt ? 'var(--udg-light)' : 'var(--text-muted)'; ?>; margin-bottom: 10px;"></i>
+                            <h4 style="margin: 0 0 5px 0; color: <?php echo $nivel_obt ? 'var(--text-dark)' : 'var(--text-muted)'; ?>;"><?php echo htmlspecialchars($idioma); ?></h4>
+                            <span style="font-size: 1.2rem; font-weight: bold; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : 'var(--text-muted)'; ?>;">
                                 <?php echo $nivel_obt ? htmlspecialchars(strtoupper($nivel_obt)) : '<span style="font-size:0.8rem; font-weight:normal; font-style:italic;">Pendiente de registro</span>'; ?>
                             </span>
                         </div>
@@ -209,35 +209,35 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         <div class="profile-grid">
             
             <div class="card">
-                <h3>
-                    <i class="far fa-user"></i> Información Personal 
+                <h3 style="color: var(--text-dark);">
+                    <i class="far fa-user" style="color: var(--udg-blue);"></i> Información Personal 
                     <button onclick="abrirModalEditar()" style="margin-left:auto; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--udg-blue);" title="Editar Información">
                         <i class="fas fa-pen"></i>
                     </button>
                 </h3>
                 <div class="info-section">
                     <span class="info-label">Nombre Completo</span>
-                    <span class="info-value"><?php echo htmlspecialchars($nombre_completo); ?></span>
+                    <span class="info-value" style="color: var(--text-dark);"><?php echo htmlspecialchars($nombre_completo); ?></span>
                 </div>
                 <div class="info-section">
                     <span class="info-label">Correo Electrónico</span>
-                    <span class="info-value"><?php echo htmlspecialchars($user['correo']); ?></span>
+                    <span class="info-value" style="color: var(--text-dark);"><?php echo htmlspecialchars($user['correo']); ?></span>
                 </div>
                 <div class="info-section">
                     <span class="info-label">Teléfono</span>
-                    <span class="info-value"><?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span style="color:#aaa;">No registrado</span>'; ?></span>
+                    <span class="info-value" style="color: var(--text-dark);"><?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span style="color:var(--text-muted); font-style:italic;">No registrado</span>'; ?></span>
                 </div>
             </div>
 
             <div class="card">
-                <h3><i class="fas fa-graduation-cap"></i> Información Académica</h3>
+                <h3 style="color: var(--text-dark);"><i class="fas fa-graduation-cap" style="color: var(--udg-blue);"></i> Información Académica</h3>
                 <div class="info-section">
                     <span class="info-label">Código de Estudiante</span>
-                    <span class="info-value"><?php echo isset($user['codigo']) && $user['codigo'] ? htmlspecialchars($user['codigo']) : '---'; ?></span>
+                    <span class="info-value" style="color: var(--text-dark);"><?php echo isset($user['codigo']) && $user['codigo'] ? htmlspecialchars($user['codigo']) : '---'; ?></span>
                 </div>
                 <div class="info-section">
                     <span class="info-label">Carrera / Programa</span>
-                    <span class="info-value"><?php echo isset($user['carrera']) && $user['carrera'] ? htmlspecialchars($user['carrera']) : 'Sin asignar'; ?></span>
+                    <span class="info-value" style="color: var(--text-dark);"><?php echo isset($user['carrera']) && $user['carrera'] ? htmlspecialchars($user['carrera']) : 'Sin asignar'; ?></span>
                 </div>
                 <div class="info-section">
                     <span class="info-label">Estatus en el Sistema</span>
@@ -247,8 +247,8 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="card">
-            <h3><i class="fas fa-history"></i> Historial Académico (Kárdex)</h3>
-            <p style="font-size: 0.85rem; color: #666; margin-top: -10px; margin-bottom: 15px;">Haz clic en cualquier materia para ver el desglose de tu calificación final.</p>
+            <h3 style="color: var(--text-dark);"><i class="fas fa-history" style="color: var(--udg-blue);"></i> Historial Académico (Kárdex)</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Haz clic en cualquier materia para ver el desglose de tu calificación final.</p>
             <div style="overflow-x:auto;">
                 <table class="history-table">
                     <thead>
@@ -265,21 +265,21 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                 $calif = floatval($h['calificacion_final']);
                             ?>
                                 <tr class="clickable-row" onclick="window.location.href='calificaciones.php?ins=<?php echo $h['inscripcion_id']; ?>'">
-                                    <td><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
-                                    <td><?php echo htmlspecialchars($h['ciclo']); ?></td>
+                                    <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
+                                    <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['ciclo']); ?></td>
                                     <td style="text-align: center; font-size: 1.1rem; color: var(--udg-blue);"><strong><?php echo $calif; ?></strong></td>
                                     <td style="text-align: center;">
-                                        <div style="margin-bottom: 5px;"><span style="background: #e2e3e5; color: #383d41; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold;"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
+                                        <div style="margin-bottom: 5px;"><span style="background: rgba(108,117,125,0.1); color: #6c757d; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; border: 1px solid rgba(108,117,125,0.2);"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
                                         <?php if($calif >= 60): ?>
-                                            <span class="tag-aprobado" style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">Aprobado</span>
+                                            <span class="tag-aprobado" style="background: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2);">Aprobado</span>
                                         <?php else: ?>
-                                            <span class="tag-rechazada" style="background: #f8d7da; color: #721c24; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold;">Reprobado</span>
+                                            <span class="tag-rechazada" style="background: rgba(220,53,69,0.1); color: #dc3545; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(220,53,69,0.2);">Reprobado</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="4" style="text-align:center; padding: 30px; color:#888;">Aún no tienes materias finalizadas.</td></tr>
+                            <tr><td colspan="4" style="text-align:center; padding: 30px; color:var(--text-muted);">Aún no tienes materias finalizadas.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -288,11 +288,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
 
     </main>
 
-    <footer class="main-footer">
-        <div class="address-bar">
-            Copyright © 2026 E-PALE
-        </div>
-    </footer>
+    <?php include 'footer_estudiante.php'; ?>
 
     <div id="modalEditar" class="modal-overlay">
         <div class="modal-content">
@@ -327,10 +323,10 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 <button class="close-btn" onclick="cerrarModalFoto()">&times;</button>
             </div>
             <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
-                <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
                 <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
                     <div class="form-group">
-                        <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none;">
+                        <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none; color: var(--text-dark);">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn-cancel" onclick="cerrarModalFoto()">Cancelar</button>
@@ -342,11 +338,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script>
-        function toggleMobileMenu() {
-            document.getElementById('navWrapper').classList.toggle('active');
-            document.getElementById('menuOverlay').classList.toggle('active');
-        }
-
         const modalEditar = document.getElementById('modalEditar');
         const modalFoto = document.getElementById('modalFoto');
         const overlayMenu = document.getElementById('menuOverlay');
@@ -359,7 +350,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         window.onclick = function(e) { 
             if(e.target == modalEditar) cerrarModalEditar(); 
             if(e.target == modalFoto) cerrarModalFoto(); 
-            if(e.target == overlayMenu) toggleMobileMenu(); 
         }
     </script>
 </body>
