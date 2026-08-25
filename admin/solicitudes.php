@@ -19,9 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         if ($_POST['action'] === 'aprobar') {
             $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'APROBADA', respuesta_admin = ?, fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$respuesta, $solicitud_id]);
+            // Solo cambiamos el estatus a BAJA, ya NO borramos las calificaciones del Kárdex
             $pdo->prepare("UPDATE inscripciones SET estatus = 'BAJA' WHERE inscripcion_id = ?")->execute([$inscripcion_id]);
-            $pdo->prepare("DELETE FROM calificaciones WHERE inscripcion_id = ?")->execute([$inscripcion_id]);
-            $mensaje = "Solicitud aprobada: El alumno ha sido dado de baja y sus calificaciones fueron eliminadas."; $tipo_mensaje = "success";
+            
+            $mensaje = "Solicitud aprobada: El alumno ha sido dado de baja, pero sus calificaciones se conservan en el Kárdex."; $tipo_mensaje = "success";
             
         } elseif ($_POST['action'] === 'rechazar') {
             $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'RECHAZADA', respuesta_admin = ?, fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$respuesta, $solicitud_id]);
@@ -171,7 +172,7 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE es
 
     </main>
 
-    <div id="modalReview" class="modal-overlay">
+    <div id="modalReview" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 style="margin:0; color:var(--udg-blue);" id="modalTitle"><i class="fas fa-clipboard-list"></i> Detalles de la Solicitud</h3>
@@ -206,7 +207,7 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE es
                         <textarea name="respuesta_admin" rows="2" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;" placeholder="Mensaje visible para el alumno..."></textarea>
                         
                         <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-top: 15px;">
-                            <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Si apruebas esta solicitud, el alumno será expulsado de la clase y todas sus calificaciones registradas se borrarán permanentemente.
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Si apruebas esta solicitud, el alumno será dado de baja de la clase, pero sus calificaciones actuales se conservarán en su Kárdex para temas de auditoría.
                         </div>
                     </div>
 
@@ -250,29 +251,25 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE es
             const closeFooter = document.getElementById('close_footer');
             
             if (solicitud.estatus === 'PENDIENTE') {
-                // Modo Evaluar
                 document.getElementById('modalTitle').innerHTML = '<i class="fas fa-clipboard-list"></i> Evaluar Solicitud';
                 adminInputArea.style.display = 'block';
                 adminResponseArea.style.display = 'none';
                 actionFooter.style.display = 'flex';
                 closeFooter.style.display = 'none';
             } else {
-                // Modo Lectura Histórica
                 document.getElementById('modalTitle').innerHTML = '<i class="fas fa-archive"></i> Archivo Histórico';
                 adminInputArea.style.display = 'none';
                 adminResponseArea.style.display = 'block';
                 actionFooter.style.display = 'none';
                 closeFooter.style.display = 'flex';
                 
-                // Formatear Estatus
                 let tagHtml = '';
-                if(solicitud.estatus === 'APROBADA') tagHtml = '<span class="tag-aprobada"><i class="fas fa-check-circle"></i> Aprobada</span>';
-                else if(solicitud.estatus === 'RECHAZADA') tagHtml = '<span class="tag-rechazada"><i class="fas fa-times-circle"></i> Rechazada</span>';
-                else if(solicitud.estatus === 'CANCELADA') tagHtml = '<span class="tag-cancelada"><i class="fas fa-ban"></i> Cancelada</span>';
+                if(solicitud.estatus === 'APROBADA') tagHtml = '<span class="tag-aprobada" style="background:#d4edda; color:#155724; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;"><i class="fas fa-check-circle"></i> Aprobada</span>';
+                else if(solicitud.estatus === 'RECHAZADA') tagHtml = '<span class="tag-rechazada" style="background:#f8d7da; color:#721c24; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;"><i class="fas fa-times-circle"></i> Rechazada</span>';
+                else if(solicitud.estatus === 'CANCELADA') tagHtml = '<span class="tag-cancelada" style="background:#e2e3e5; color:#383d41; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:bold;"><i class="fas fa-ban"></i> Cancelada</span>';
                 
                 document.getElementById('resp_estatus').innerHTML = tagHtml;
                 
-                // Formatear Fecha
                 let fechaResp = solicitud.fecha_respuesta;
                 if(fechaResp) {
                     let d = new Date(fechaResp);
