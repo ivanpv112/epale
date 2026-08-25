@@ -32,13 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 1. Obtener SOLO materias ACTIVAS para el selector desplegable
+// 1. Obtener SOLO materias ACTIVAS ordenadas por Idioma y Nivel
 $sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo
                          FROM inscripciones i
                          JOIN grupos g ON i.nrc = g.nrc
                          JOIN materias m ON g.materia_id = m.materia_id
                          JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-                         WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'";
+                         WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'
+                         ORDER BY m.nombre ASC, m.nivel ASC";
 $stmt_mat = $pdo->prepare($sql_materias_activas); $stmt_mat->execute([$alumno_id]);
 $materias_activas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
 
@@ -130,7 +131,7 @@ if (!function_exists('format_score')) {
                         </a>
                     </div>
                     <div>
-                        <span style="background: #e2e3e5; color: #383d41; padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <span style="background: rgba(108,117,125,0.1); color: #6c757d; border: 1px solid rgba(108,117,125,0.2); padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 6px;">
                             <i class="fas fa-archive"></i> Clase Finalizada
                         </span>
                     </div>
@@ -162,7 +163,7 @@ if (!function_exists('format_score')) {
         </div>
 
         <?php if($mensaje): ?>
-            <div style="padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; background: <?php echo ($tipo_mensaje == 'success') ? '#d4edda' : '#f8d7da'; ?>; color: <?php echo ($tipo_mensaje == 'success') ? '#155724' : '#721c24'; ?>;">
+            <div style="padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; background: <?php echo ($tipo_mensaje == 'success') ? 'rgba(40,167,69,0.1)' : 'rgba(220,53,69,0.1)'; ?>; color: <?php echo ($tipo_mensaje == 'success') ? '#28a745' : '#dc3545'; ?>; border: 1px solid <?php echo ($tipo_mensaje == 'success') ? 'rgba(40,167,69,0.2)' : 'rgba(220,53,69,0.2)'; ?>;">
                 <i class="fas fa-info-circle"></i> <?php echo htmlspecialchars($mensaje); ?>
             </div>
         <?php endif; ?>
@@ -171,7 +172,7 @@ if (!function_exists('format_score')) {
             <div class="page-title-center">
                 <h1><i class="fas fa-award"></i> Calificaciones</h1>
                 <p><?php echo htmlspecialchars($materia_actual['materia'] . ' ' . $materia_actual['nivel'] . ' - ' . $materia_actual['ciclo']); ?></p>
-                <p style="color: var(--text-dark); font-weight: 500; margin-top: 10px;"><i class="fas fa-chalkboard-teacher" style="color:#aaa;"></i> Profesor: <?php echo htmlspecialchars(trim($materia_actual['prof_nombre'] . ' ' . $materia_actual['prof_ap_pat'])); ?></p>
+                <p style="color: var(--text-dark); font-weight: 500; margin-top: 10px;"><i class="fas fa-chalkboard-teacher" style="color:var(--text-muted);"></i> Profesor: <?php echo htmlspecialchars(trim($materia_actual['prof_nombre'] . ' ' . $materia_actual['prof_ap_pat'])); ?></p>
 
                 <?php if($materia_actual['grupo_estado'] == 'ACTIVO' && count($materias_activas) > 0): ?>
                     <div style="margin-top: 20px;">
@@ -185,7 +186,7 @@ if (!function_exists('format_score')) {
             </div>
 
             <?php if(empty($evaluacion)): ?>
-                <div style="text-align:center; padding:50px; background:white; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05);"><i class="fas fa-tools" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i><h3 style="color:#666;">Criterios no disponibles</h3></div>
+                <div style="text-align:center; padding:50px; background:var(--white); border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--text-muted);"><i class="fas fa-tools" style="font-size: 3rem; color: var(--text-muted); opacity:0.5; margin-bottom: 15px;"></i><h3 style="color:var(--text-muted);">Criterios no disponibles</h3></div>
             <?php else: ?>
                 <div class="total-score-banner" style="<?php if($materia_actual['grupo_estado'] == 'CERRADO') echo 'background: #6c757d;'; ?>">
                     <h3>Calificación Total Obtenida</h3>
@@ -201,8 +202,8 @@ if (!function_exists('format_score')) {
                             $esta_registrada = array_key_exists($codigo, $calificaciones_bd);
                             $puntaje = $esta_registrada ? $calificaciones_bd[$codigo] : null;
                             $max = $item['max'];
-                            if ($puntaje === null) { $html_score = '<span class="badge-pending" style="color:#aaa; font-style:italic;">Sin registro</span>'; $html_progress = ''; } 
-                            else { $porcentaje = ($puntaje / $max) * 100; $color = ($porcentaje >= 60) ? '#28a745' : '#dc3545'; $html_score = '<span class="score-text">' . format_score($puntaje) . ' / ' . $max . '</span>'; $html_progress = '<div class="progress-mini"><div class="progress-bar" style="width: ' . $porcentaje . '%; background-color:' . $color . ';"></div></div>'; }
+                            if ($puntaje === null) { $html_score = '<span class="badge-pending" style="color:var(--text-muted); font-style:italic;">Sin registro</span>'; $html_progress = ''; } 
+                            else { $porcentaje = ($puntaje / $max) * 100; $color = ($porcentaje >= 60) ? '#28a745' : '#dc3545'; $html_score = '<span class="score-text" style="color:var(--text-dark);">' . format_score($puntaje) . ' / ' . $max . '</span>'; $html_progress = '<div class="progress-mini"><div class="progress-bar" style="width: ' . $porcentaje . '%; background-color:' . $color . ';"></div></div>'; }
                         ?>
                             <div class="detailed-grade-item"><div class="dg-info"><strong><?php echo $item['nombre']; ?></strong><span><?php echo ($puntaje !== null) ? 'Evaluado' : '---'; ?></span></div><div class="dg-score"><?php echo $html_score . $html_progress; ?></div></div>
                         <?php endforeach; ?>
@@ -213,32 +214,34 @@ if (!function_exists('format_score')) {
             <?php if($materia_actual['grupo_estado'] == 'ACTIVO'): ?>
                 <div id="modalSolicitarBaja" class="modal-overlay">
                     <div class="modal-content">
-                        <div class="modal-header"><h3 style="margin:0; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> Solicitar Baja</h3><button style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="cerrarModal('modalSolicitarBaja')">&times;</button></div>
+                        <div class="modal-header"><h3 style="margin:0; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> Solicitar Baja</h3><button class="close-btn" onclick="cerrarModal('modalSolicitarBaja')">&times;</button></div>
                         <form method="POST">
                             <input type="hidden" name="action" value="solicitar_baja">
                             <input type="hidden" name="inscripcion_id" value="<?php echo $ins_activa; ?>">
                             <div class="modal-body">
-                                <p style="font-size:0.9rem; color:#666; margin-bottom:15px;">Estás solicitando la baja de la materia <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
-                                <label style="font-weight:bold; display:block; margin-bottom:5px;">Motivo Principal</label>
-                                <select name="motivo" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:15px;">
-                                    <option value="">Selecciona un motivo...</option>
-                                    <option value="Choque de horario">Choque de horario</option>
-                                    <option value="Problemas laborales/personales">Problemas laborales o personales</option>
-                                    <option value="Cambio de carrera/institución">Cambio de carrera/institución</option>
-                                    <option value="Inscripción por error">Inscripción por error</option>
-                                    <option value="Otro">Otro</option>
-                                </select>
-                                
-                                <label style="font-weight:bold; display:block; margin-bottom:5px;">Descripción Breve</label>
-                                <textarea name="descripcion" id="descBajaInput" rows="4" maxlength="250" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; resize:none;" placeholder="Explica tu situación (Máx. 250 caracteres)..."></textarea>
-                                
-                                <div style="text-align: right; font-size: 0.8rem; color: #888; margin-top: 5px; font-weight: bold;">
-                                    <span id="charCount">0</span> / 250
+                                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:15px;">Estás solicitando la baja de la materia <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
+                                <div class="form-group">
+                                    <label>Motivo Principal</label>
+                                    <select name="motivo" required>
+                                        <option value="">Selecciona un motivo...</option>
+                                        <option value="Choque de horario">Choque de horario</option>
+                                        <option value="Problemas laborales/personales">Problemas laborales o personales</option>
+                                        <option value="Cambio de carrera/institución">Cambio de carrera/institución</option>
+                                        <option value="Inscripción por error">Inscripción por error</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción Breve</label>
+                                    <textarea name="descripcion" id="descBajaInput" rows="4" maxlength="250" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; box-sizing:border-box; resize:none;" placeholder="Explica tu situación (Máx. 250 caracteres)..."></textarea>
+                                    <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted); margin-top: 5px; font-weight: bold;">
+                                        <span id="charCount">0</span> / 250
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" style="padding:8px 15px; background:#fff; border:1px solid #ccc; border-radius:6px; cursor:pointer;" onclick="cerrarModal('modalSolicitarBaja')">Cancelar</button>
-                                <button type="submit" style="padding:8px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Enviar Solicitud</button>
+                                <button type="button" class="btn-cancel" onclick="cerrarModal('modalSolicitarBaja')">Cancelar</button>
+                                <button type="submit" style="padding:10px 20px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Enviar Solicitud</button>
                             </div>
                         </form>
                     </div>
@@ -247,21 +250,23 @@ if (!function_exists('format_score')) {
                 <?php if($solicitud_pendiente): ?>
                 <div id="modalRetirarBaja" class="modal-overlay">
                     <div class="modal-content">
-                        <div class="modal-header"><h3 style="margin:0; color:#856404;"><i class="fas fa-clock"></i> Solicitud en Proceso</h3><button style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="cerrarModal('modalRetirarBaja')">&times;</button></div>
+                        <div class="modal-header"><h3 style="margin:0; color:#856404;"><i class="fas fa-clock"></i> Solicitud en Proceso</h3><button class="close-btn" onclick="cerrarModal('modalRetirarBaja')">&times;</button></div>
                         <form method="POST">
                             <input type="hidden" name="action" value="cancelar_baja">
                             <input type="hidden" name="solicitud_id" value="<?php echo $solicitud_pendiente['solicitud_id']; ?>">
                             <div class="modal-body">
-                                <p style="margin-top:0;">Tu solicitud fue enviada el <strong><?php echo date('d/m/Y', strtotime($solicitud_pendiente['fecha_solicitud'])); ?></strong>.</p>
-                                <div style="background:#f8f9fa; padding:10px; border-radius:6px; border-left:4px solid #ffc107; font-size:0.9rem;">
+                                <p style="margin-top:0; color:var(--text-dark);">Tu solicitud fue enviada el <strong><?php echo date('d/m/Y', strtotime($solicitud_pendiente['fecha_solicitud'])); ?></strong>.</p>
+                                <div style="background:rgba(255,193,7,0.1); padding:15px; border-radius:6px; border-left:4px solid #ffc107; font-size:0.9rem; color:var(--text-dark);">
                                     <strong>Motivo:</strong> <?php echo htmlspecialchars($solicitud_pendiente['motivo']); ?><br>
                                     <?php if($solicitud_pendiente['descripcion']) echo "<strong>Descripción:</strong> " . htmlspecialchars($solicitud_pendiente['descripcion']); ?>
                                 </div>
-                                <p style="font-size:0.85rem; color:#888; margin-top:15px;">Si cambiaste de opinión, puedes retirar tu solicitud ahora mismo.</p>
+                                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:15px;">Si cambiaste de opinión, puedes retirar tu solicitud ahora mismo.</p>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" style="padding:8px 15px; background:#fff; border:1px solid #ccc; border-radius:6px; cursor:pointer;" onclick="cerrarModal('modalRetirarBaja')">Cerrar</button>
-                                <button type="submit" style="padding:8px 15px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Retirar mi solicitud</button>
+                                <button type="button" class="btn-cancel" onclick="cerrarModal('modalRetirarBaja')">Mantener Solicitud</button>
+                                <button type="submit" style="padding:10px 20px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#c82333'" onmouseout="this.style.background='#dc3545'">
+                                    <i class="fas fa-trash-alt"></i> Retirar mi solicitud
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -273,10 +278,10 @@ if (!function_exists('format_score')) {
                     <div class="modal-content" style="max-width: 600px;">
                         <div class="modal-header">
                             <h3 style="margin:0; color:var(--udg-blue);"><i class="fas fa-history"></i> Historial de Solicitudes</h3>
-                            <button style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="cerrarModal('modalHistorial')">&times;</button>
+                            <button class="close-btn" onclick="cerrarModal('modalHistorial')">&times;</button>
                         </div>
                         <div class="modal-body">
-                            <p style="font-size:0.9rem; color:#666; margin-top:0;">Historial de peticiones de baja para <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
+                            <p style="font-size:0.9rem; color:var(--text-muted); margin-top:0;">Historial de peticiones de baja para <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
                             
                             <?php foreach($historial_solicitudes as $h): 
                                 $class_card = strtolower($h['estatus']);
@@ -291,19 +296,19 @@ if (!function_exists('format_score')) {
                             ?>
                                 <div class="history-card <?php echo $class_card; ?>">
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;"><?php echo htmlspecialchars($h['motivo']); ?></div>
-                                        <div style="font-size: 0.8rem; font-weight: bold; color: <?php echo $color_estatus; ?>; background: white; padding: 3px 8px; border-radius: 12px; border: 1px solid <?php echo $color_estatus; ?>;">
+                                        <div style="font-weight: bold; color: var(--text-dark); font-size: 0.95rem;"><?php echo htmlspecialchars($h['motivo']); ?></div>
+                                        <div style="font-size: 0.8rem; font-weight: bold; color: <?php echo $color_estatus; ?>; padding: 3px 8px; border-radius: 12px; border: 1px solid <?php echo $color_estatus; ?>;">
                                             <i class="fas <?php echo $icono_estatus; ?>"></i> <?php echo $h['estatus']; ?>
                                         </div>
                                     </div>
-                                    <div style="font-size: 0.85rem; color: #666; margin-bottom: 10px;"><i class="far fa-calendar-alt"></i> Solicitada el: <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?></div>
+                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;"><i class="far fa-calendar-alt"></i> Solicitada el: <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?></div>
                                     <?php if(!empty($h['descripcion'])): ?>
-                                        <div style="font-size: 0.85rem; color: #555; background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-style: italic;">"<?php echo htmlspecialchars($h['descripcion']); ?>"</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-style: italic;">"<?php echo htmlspecialchars($h['descripcion']); ?>"</div>
                                     <?php endif; ?>
                                     <?php if($h['estatus'] !== 'PENDIENTE' && $h['estatus'] !== 'CANCELADA'): ?>
-                                        <div style="border-top: 1px dashed #ddd; padding-top: 10px; margin-top: 10px;">
-                                            <div style="font-size: 0.8rem; color: #888; margin-bottom: 4px;"><i class="fas fa-reply"></i> Respuesta de Administración (<?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>):</div>
-                                            <div style="font-size: 0.9rem; color: #333; font-weight: 500;"><?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?></div>
+                                        <div style="border-top: 1px dashed var(--text-muted); padding-top: 10px; margin-top: 10px;">
+                                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;"><i class="fas fa-reply"></i> Respuesta de Administración (<?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>):</div>
+                                            <div style="font-size: 0.9rem; color: var(--text-dark); font-weight: 500;"><?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?></div>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -315,17 +320,18 @@ if (!function_exists('format_score')) {
             <?php endif; ?>
 
         <?php else: ?>
-            <div style="text-align:center; padding:50px; color:#888;">
-                <i class="fas fa-search" style="font-size: 3rem; color: #ddd; margin-bottom: 15px; display: block;"></i>
-                <h2>Información no encontrada</h2>
+            <div style="text-align:center; padding:50px; color:var(--text-muted);">
+                <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); opacity: 0.5; margin-bottom: 15px; display: block;"></i>
+                <h2 style="color:var(--text-dark);">Información no encontrada</h2>
                 <p>No estás inscrito en esta materia o no existe.</p>
                 <a href="perfil.php" class="btn-cancel" style="text-decoration:none; margin-top:15px; display:inline-block;"><i class="fas fa-arrow-left"></i> Volver al Kárdex</a>
             </div>
         <?php endif; ?>
     </main>
 
+    <?php include 'footer_estudiante.php'; ?>
+
     <script>
-        function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
         function abrirModal(id) { document.getElementById(id).style.display = 'flex'; }
         function cerrarModal(id) { document.getElementById(id).style.display = 'none'; }
         
@@ -334,7 +340,7 @@ if (!function_exists('format_score')) {
         if (descInput && charCount) {
             descInput.addEventListener('input', function() {
                 charCount.textContent = this.value.length;
-                if(this.value.length >= 250) { charCount.style.color = '#dc3545'; } else { charCount.style.color = '#888'; }
+                if(this.value.length >= 250) { charCount.style.color = '#dc3545'; } else { charCount.style.color = 'var(--text-muted)'; }
             });
         }
         if (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }
