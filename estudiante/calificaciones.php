@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 1. Obtener SOLO materias ACTIVAS ordenadas por Idioma y Nivel
-$sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo
+// 1. Obtener SOLO materias ACTIVAS ordenadas por Idioma y Nivel (Añadido g.nrc)
+$sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.nrc
                          FROM inscripciones i
                          JOIN grupos g ON i.nrc = g.nrc
                          JOIN materias m ON g.materia_id = m.materia_id
@@ -43,13 +43,12 @@ $sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, 
 $stmt_mat = $pdo->prepare($sql_materias_activas); $stmt_mat->execute([$alumno_id]);
 $materias_activas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
 
-// Definir qué clase vamos a mostrar
 $ins_activa = isset($_GET['ins']) ? $_GET['ins'] : (count($materias_activas) > 0 ? $materias_activas[0]['inscripcion_id'] : null);
 
-// 2. Obtener los detalles de la materia ESPECÍFICA (Puede ser Activa O Cerrada)
+// 2. Obtener los detalles de la materia ESPECÍFICA (Añadido g.nrc)
 $materia_actual = null;
 if ($ins_activa) {
-    $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado,
+    $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado, g.nrc,
                                          u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap_pat
                                   FROM inscripciones i
                                   JOIN grupos g ON i.nrc = g.nrc
@@ -171,14 +170,20 @@ if (!function_exists('format_score')) {
         <?php if($materia_actual): ?>
             <div class="page-title-center">
                 <h1><i class="fas fa-award"></i> Calificaciones</h1>
-                <p><?php echo htmlspecialchars($materia_actual['materia'] . ' ' . $materia_actual['nivel'] . ' - ' . $materia_actual['ciclo']); ?></p>
+                <!-- AQUÍ AGREGAMOS EL NRC DE LA MATERIA AL TÍTULO -->
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 5px;">
+                    <?php echo htmlspecialchars($materia_actual['materia'] . ' ' . $materia_actual['nivel'] . ' - NRC: ' . $materia_actual['nrc'] . ' - ' . $materia_actual['ciclo']); ?>
+                </p>
                 <p style="color: var(--text-dark); font-weight: 500; margin-top: 10px;"><i class="fas fa-chalkboard-teacher" style="color:var(--text-muted);"></i> Profesor: <?php echo htmlspecialchars(trim($materia_actual['prof_nombre'] . ' ' . $materia_actual['prof_ap_pat'])); ?></p>
 
                 <?php if($materia_actual['grupo_estado'] == 'ACTIVO' && count($materias_activas) > 0): ?>
                     <div style="margin-top: 20px;">
                         <select class="subject-selector" style="font-size: 1rem; padding: 10px 20px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;" onchange="window.location.href='calificaciones.php?ins='+this.value">
                             <?php foreach($materias_activas as $m): ?>
-                                <option value="<?php echo $m['inscripcion_id']; ?>" <?php echo ($m['inscripcion_id'] == $ins_activa) ? 'selected' : ''; ?>><?php echo htmlspecialchars($m['materia'] . ' ' . $m['nivel'] . ' - ' . $m['ciclo']); ?></option>
+                                <!-- AQUÍ AGREGAMOS EL NRC AL SELECTOR DESPLEGABLE -->
+                                <option value="<?php echo $m['inscripcion_id']; ?>" <?php echo ($m['inscripcion_id'] == $ins_activa) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($m['materia'] . ' ' . $m['nivel']); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -202,10 +207,25 @@ if (!function_exists('format_score')) {
                             $esta_registrada = array_key_exists($codigo, $calificaciones_bd);
                             $puntaje = $esta_registrada ? $calificaciones_bd[$codigo] : null;
                             $max = $item['max'];
-                            if ($puntaje === null) { $html_score = '<span class="badge-pending" style="color:var(--text-muted); font-style:italic;">Sin registro</span>'; $html_progress = ''; } 
-                            else { $porcentaje = ($puntaje / $max) * 100; $color = ($porcentaje >= 60) ? '#28a745' : '#dc3545'; $html_score = '<span class="score-text" style="color:var(--text-dark);">' . format_score($puntaje) . ' / ' . $max . '</span>'; $html_progress = '<div class="progress-mini"><div class="progress-bar" style="width: ' . $porcentaje . '%; background-color:' . $color . ';"></div></div>'; }
+                            if ($puntaje === null) { 
+                                $html_score = '<span class="badge-pending" style="color:var(--text-muted); font-style:italic;">Sin registro</span>'; 
+                                $html_progress = ''; 
+                            } else { 
+                                $porcentaje = ($puntaje / $max) * 100; 
+                                $color = ($porcentaje >= 60) ? '#28a745' : '#dc3545'; 
+                                $html_score = '<span class="score-text" style="color:var(--text-dark);">' . format_score($puntaje) . ' / ' . $max . '</span>'; 
+                                $html_progress = '<div class="progress-mini"><div class="progress-bar" style="width: ' . $porcentaje . '%; background-color:' . $color . ';"></div></div>'; 
+                            }
                         ?>
-                            <div class="detailed-grade-item"><div class="dg-info"><strong><?php echo $item['nombre']; ?></strong><span><?php echo ($puntaje !== null) ? 'Evaluado' : '---'; ?></span></div><div class="dg-score"><?php echo $html_score . $html_progress; ?></div></div>
+                            <div class="detailed-grade-item">
+                                <div class="dg-info">
+                                    <strong><?php echo $item['nombre']; ?></strong>
+                                    <span><?php echo ($puntaje !== null) ? 'Evaluado' : '---'; ?></span>
+                                </div>
+                                <div class="dg-score">
+                                    <?php echo $html_score . $html_progress; ?>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
