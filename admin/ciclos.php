@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
 $mensaje = ''; $tipo_mensaje = '';
 
 // =======================================================
-// ABRIR O CERRAR UN CICLO COMPLETO
+// ABRIR O CERRAR UN CICLO COMPLETO (REGLA DE ORO)
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['cerrar_grupos'])) {
@@ -16,15 +16,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE grupos SET estado = 'CERRADO' WHERE ciclo_id = ? AND estado = 'ACTIVO'")->execute([$id_cerrar]);
         // Marca el ciclo en sí como inactivo
         $pdo->prepare("UPDATE ciclos SET activo = 0 WHERE ciclo_id = ?")->execute([$id_cerrar]);
-        $mensaje = "Las clases han sido finalizadas y movidas al archivo."; $tipo_mensaje = "success";
+        $mensaje = "El ciclo ha sido finalizado y mandado al archivo histórico."; $tipo_mensaje = "success";
     }
     if (isset($_POST['abrir_grupos'])) {
         $id_abrir = $_POST['ciclo_id'];
-        // Reactiva todos los grupos cerrados de este ciclo
-        $pdo->prepare("UPDATE grupos SET estado = 'ACTIVO' WHERE ciclo_id = ? AND estado = 'CERRADO'")->execute([$id_abrir]);
-        // Marca el ciclo como activo
+        
+        // LA REGLA DE ORO: Solo puede existir un ciclo actual a la vez.
+        // 1. Apagamos TODOS los ciclos
+        $pdo->exec("UPDATE ciclos SET activo = 0");
+        // 2. Mandamos al historial (CERRADO) todos los grupos que estuvieran activos en otros ciclos
+        $pdo->exec("UPDATE grupos SET estado = 'CERRADO' WHERE estado = 'ACTIVO'");
+        
+        // 3. Encendemos ÚNICAMENTE el ciclo seleccionado y reactivamos sus grupos
         $pdo->prepare("UPDATE ciclos SET activo = 1 WHERE ciclo_id = ?")->execute([$id_abrir]);
-        $mensaje = "Las clases han sido reabiertas y regresaron a los paneles activos."; $tipo_mensaje = "success";
+        $pdo->prepare("UPDATE grupos SET estado = 'ACTIVO' WHERE ciclo_id = ?")->execute([$id_abrir]);
+        
+        $mensaje = "¡Listo! Este es ahora el Ciclo Actual. Los demás se han archivado automáticamente."; $tipo_mensaje = "success";
     }
 }
 
@@ -33,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // =======================================================
 // Agrupamos usando g.estado (ACTIVO/CERRADO)
 $sql = "SELECT c.ciclo_id, c.nombre as ciclo_nombre, c.activo,
-               COALESCE(g.estado, 'ACTIVO') as grupo_estado,
+               COALESCE(g.estado, 'CERRADO') as grupo_estado,
                m.nombre as idioma, m.nivel,
                g.clave_grupo, g.nrc, g.cupo,
                u.nombre as prof_nombre, u.apellido_paterno as prof_ap,
@@ -42,24 +49,24 @@ $sql = "SELECT c.ciclo_id, c.nombre as ciclo_nombre, c.activo,
         LEFT JOIN grupos g ON c.ciclo_id = g.ciclo_id
         LEFT JOIN materias m ON g.materia_id = m.materia_id
         LEFT JOIN usuarios u ON g.profesor_id = u.usuario_id
-        ORDER BY c.nombre DESC, grupo_estado ASC, m.nombre ASC, m.nivel ASC";
+        ORDER BY c.activo DESC, c.nombre DESC, m.nombre ASC, m.nivel ASC";
 
 $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
-// Procesar los datos separando las carpetas raíz por ESTADO (Activo vs Cerrado)
+// Procesar los datos separando las carpetas raíz por ESTADO (Activo vs Inactivo)
 $tree = [];
 foreach ($rows as $row) {
     $c_name = $row['ciclo_nombre'];
-    $estado_grupo = $row['grupo_estado'];
+    $es_activo = $row['activo'];
     
-    // Generamos una clave única combinando el Ciclo y el Estado (Ej. "2026-A_ACTIVO")
-    $root_key = $c_name . '_' . $estado_grupo;
+    // Generamos una clave única combinando el Ciclo y si es el actual
+    $root_key = $c_name . '_' . $es_activo;
 
     if (!isset($tree[$root_key])) {
         $tree[$root_key] = [
             'id' => $row['ciclo_id'],
             'nombre' => $c_name,
-            'estado' => $estado_grupo,
+            'es_activo' => $es_activo,
             'idiomas' => []
         ];
     }
@@ -104,7 +111,7 @@ foreach ($rows as $row) {
     <main class="main-content">
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-calendar-alt"></i> Ciclos Escolares</h1>
-            <p>Administra los ciclos, cierra los semestres terminados y navega por el historial de clases.</p>
+            <p>Administra los ciclos, finaliza los semestres terminados y prepara los próximos ciclos.</p>
         </div>
 
         <?php if($mensaje): ?>
@@ -124,32 +131,32 @@ foreach ($rows as $row) {
         <?php else: ?>
             <?php foreach ($tree as $root_key => $folder): ?>
                 
-                <details class="tree-node" <?php echo ($folder['estado'] === 'ACTIVO') ? 'open' : ''; ?>>
+                <details class="tree-node" <?php echo ($folder['es_activo'] == 1) ? 'open' : ''; ?>>
                     <summary>
                         <div style="display: flex; align-items: center;">
-                            <i class="fas fa-folder" style="margin-right: 10px; color: var(--udg-blue);"></i>
+                            <i class="fas <?php echo ($folder['es_activo'] == 1) ? 'fa-folder-open' : 'fa-folder'; ?>" style="margin-right: 10px; color: var(--udg-blue);"></i>
                             <?php echo htmlspecialchars($folder['nombre']); ?> 
                             
-                            <?php if ($folder['estado'] === 'ACTIVO'): ?>
+                            <?php if ($folder['es_activo'] == 1): ?>
                                 <span style="background-color: #d1e7dd; color: #0f5132; border-radius: 20px; padding: 2px 8px; font-size: 0.75rem; font-weight: bold; margin-left: 10px;">
-                                    <i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle; margin-right: 3px;"></i>ACTIVO
+                                    <i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle; margin-right: 3px;"></i>CICLO ACTUAL
                                 </span>
                             <?php else: ?>
                                 <span style="background-color: #e2e3e5; color: #383d41; border-radius: 20px; padding: 2px 8px; font-size: 0.75rem; font-weight: bold; margin-left: 10px;">
-                                    <i class="fas fa-archive" style="font-size: 0.6rem; vertical-align: middle; margin-right: 3px;"></i>FINALIZADO
+                                    <i class="fas fa-archive" style="font-size: 0.6rem; vertical-align: middle; margin-right: 3px;"></i>INACTIVO / HISTÓRICO
                                 </span>
                             <?php endif; ?>
                         </div>
                         
                         <form method="POST" style="margin:0;" onclick="event.stopPropagation();">
                             <input type="hidden" name="ciclo_id" value="<?php echo $folder['id']; ?>">
-                            <?php if ($folder['estado'] === 'ACTIVO'): ?>
-                                <button type="submit" name="cerrar_grupos" style="background: white; border: 1px solid #dc3545; color: #dc3545; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#dc3545';" onclick="return confirm('¿Finalizar TODAS las clases activas de este ciclo?');">
-                                    <i class="fas fa-power-off"></i> Terminar Ciclo
+                            <?php if ($folder['es_activo'] == 1): ?>
+                                <button type="submit" name="cerrar_grupos" style="background: white; border: 1px solid #dc3545; color: #dc3545; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#dc3545';" onclick="return confirm('¿Estás seguro de finalizar el semestre actual? Esto mandará todo al historial.');">
+                                    <i class="fas fa-power-off"></i> Finalizar Ciclo
                                 </button>
                             <?php else: ?>
-                                <button type="submit" name="abrir_grupos" style="background: white; border: 1px solid #28a745; color: #28a745; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#28a745'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#28a745';">
-                                    <i class="fas fa-undo"></i> Reabrir Ciclo
+                                <button type="submit" name="abrir_grupos" style="background: white; border: 1px solid #28a745; color: #28a745; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#28a745'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#28a745';" onclick="return confirm('ATENCIÓN: Al establecer este ciclo como ACTUAL, todos los demás ciclos activos se cerrarán automáticamente. ¿Deseas continuar?');">
+                                    <i class="fas fa-check-circle"></i> Establecer como Ciclo Actual
                                 </button>
                             <?php endif; ?>
                         </form>
@@ -182,7 +189,7 @@ foreach ($rows as $row) {
                                                                         <?php echo $clase['inscritos']; ?> / <?php echo $clase['cupo']; ?>
                                                                     </div>
                                                                 </div>
-                                                                <a href="gestionar_grupo.php?clave=<?php echo urlencode($clase['clave']); ?>" class="btn-save" style="padding: 8px 15px; font-size: 0.85rem; text-decoration: none; <?php if($folder['estado'] == 'CERRADO') echo 'background:#6c757d;'; ?>">
+                                                                <a href="gestionar_grupo.php?clave=<?php echo urlencode($clase['clave']); ?>" class="btn-save" style="padding: 8px 15px; font-size: 0.85rem; text-decoration: none; <?php if($folder['es_activo'] == 0) echo 'background:#6c757d;'; ?>">
                                                                     <i class="fas fa-eye"></i> Ver Clase
                                                                 </a>
                                                             </div>
