@@ -23,7 +23,8 @@ if($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['f
 
 $stmt_notif = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'");
 $notif_bajas = $stmt_notif->fetchColumn();
-$badge_html = ($notif_bajas > 0) ? ' <span class="badge-notification">'.$notif_bajas.'</span>' : '';
+// Burbuja roja elegante (Pegada al texto)
+$badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_bajas.'</span>' : '';
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -58,12 +59,14 @@ $badge_html = ($notif_bajas > 0) ? ' <span class="badge-notification">'.$notif_b
     <ul class="yt-sidebar-menu">
         <li><a href="usuarios.php" class="<?php echo ($pagina_actual == 'usuarios.php') ? 'active' : ''; ?>"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
         <li><a href="expedientes.php" class="<?php echo ($pagina_actual == 'expedientes.php' || $pagina_actual == 'ver_expediente.php') ? 'active' : ''; ?>"><i class="fas fa-folder-open"></i> Expedientes</a></li>
-        <li><a href="materias.php" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Materias y Criterios</a></li>
-        <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos y NRC</a></li>
+        <li><a href="materias.php" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Idiomas y Criterios</a></li>
+        <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos </a></li>
         <li><a href="ciclos.php" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
         <li><a href="interfaz_csv.php" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
-        <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>"><i class="fas fa-envelope-open-text"></i> Solicitudes <?php echo $badge_html; ?></a></li>
-        <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos</a></li>
+        <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
+            <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
+        </a></li>
+        <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
         <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
     </ul>
 
@@ -76,17 +79,31 @@ $badge_html = ($notif_bajas > 0) ? ' <span class="badge-notification">'.$notif_b
 </aside>
 
 <script>
-    // 1. FUNCIÓN PARA ABRIR Y CERRAR EL MENÚ LATERAL
+    // 1. FUNCIÓN PARA ABRIR Y CERRAR EL MENÚ LATERAL (Con Scroll Lock nativo)
     function toggleMobileMenu() {
-        document.getElementById('navWrapper').classList.toggle('active');
-        document.getElementById('menuOverlay').classList.toggle('active');
+        const sidebar = document.getElementById('navWrapper');
+        const overlay = document.getElementById('menuOverlay');
+        
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        // Imitamos el comportamiento de SweetAlert para el Scroll Lock
+        if (sidebar.classList.contains('active')) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
     }
 
     // 2. FUNCIÓN PARA CERRAR SESIÓN
     function confirmarSalida(event) {
         event.preventDefault(); 
+        
         document.getElementById('navWrapper').classList.remove('active');
         document.getElementById('menuOverlay').classList.remove('active');
+        
+        // Liberamos el scroll de la página para que SweetAlert tome el control correctamente
+        document.body.style.overflow = '';
 
         Swal.fire({
             title: '¿Cerrar Sesión?', text: "Saldrás de tu cuenta de Administrador.", icon: 'warning',
