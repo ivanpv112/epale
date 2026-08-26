@@ -33,12 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_criterio'])) {
     $color = $_POST['color'];
 
     if (empty($criterio_id)) {
-        // ES UN CRITERIO NUEVO
         $sql = "INSERT INTO criterios_evaluacion (materia_id, categoria, codigo_examen, nombre_examen, puntos_maximos, icono, color) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $pdo->prepare($sql)->execute([$materia_id, $categoria, $codigo_examen, $nombre_examen, $puntos, $icono, $color]);
     } else {
-        // SE ESTÁ EDITANDO UN CRITERIO EXISTENTE
         $sql = "UPDATE criterios_evaluacion 
                 SET categoria=?, codigo_examen=?, nombre_examen=?, puntos_maximos=?, icono=?, color=? 
                 WHERE criterio_id=?";
@@ -46,6 +44,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_criterio'])) {
     }
     
     header("Location: criterios_materia.php?id=" . $materia_id . "&exito=1"); exit;
+}
+
+// 4.5. PROCESAR PLANTILLA BASE (AUTO-CRITERIOS INTELIGENTES POR NIVEL)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['auto_criterios'])) {
+    
+    $es_nivel_4 = ($materia['nivel'] == 4);
+
+    // Criterios base para todos los niveles (Suman 50 pts)
+    $criterios_base = [
+        ['Exámenes', 'Q1', 'Examen 1', 10, 'fa-book-open', 'var(--udg-light)'],
+        ['Exámenes', 'Q2', 'Examen 2', 10, 'fa-book-open', 'var(--udg-light)'],
+        ['Exámenes', 'Q3', 'Examen 3', 10, 'fa-book-open', 'var(--udg-light)'],
+        ['Exámenes Orales', 'QO1', 'Examen Oral 1', 5, 'fa-comments', '#28a745'],
+        ['Exámenes Orales', 'QO2', 'Examen Oral 2', 5, 'fa-comments', '#28a745'],
+        ['Proyectos', 'WRITING', 'Proyecto Escrito', 5, 'fa-file-signature', '#ffc107'],
+        ['Participación', 'PARTICIPACION', 'Participación en Clase', 5, 'fa-hand-paper', '#17a2b8']
+    ];
+
+    // Distribución de los 50 pts restantes dependiendo del nivel
+    if ($es_nivel_4) {
+        $criterios_base[] = ['Plataforma', 'PLATAFORMA', 'Actividades en Plataforma', 40, 'fa-laptop-code', '#dc3545'];
+        $criterios_base[] = ['Certificación', 'CERTIFICACION', 'Examen de Certificación', 10, 'fa-certificate', '#6f42c1'];
+    } else {
+        // Al no haber certificación, los 10 puntos pasan a la plataforma para cuadrar los 100
+        $criterios_base[] = ['Plataforma', 'PLATAFORMA', 'Actividades en Plataforma', 50, 'fa-laptop-code', '#dc3545'];
+    }
+
+    $sql = "INSERT INTO criterios_evaluacion (materia_id, categoria, codigo_examen, nombre_examen, puntos_maximos, icono, color) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $pdo->prepare($sql);
+    
+    foreach ($criterios_base as $cb) {
+        $stmt->execute([$materia_id, $cb[0], $cb[1], $cb[2], $cb[3], $cb[4], $cb[5]]);
+    }
+    
+    header("Location: criterios_materia.php?id=" . $materia_id . "&exito=auto"); exit;
 }
 
 // 5. PROCESAR ELIMINAR CRITERIO
@@ -64,11 +97,6 @@ $total_puntos = 0;
 foreach ($criterios as $c) {
     $total_puntos += floatval($c['puntos_maximos']);
 }
-
-// FOTO DEL ADMIN
-$stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
-$stmt_foto->execute([$_SESSION['user_id']]);
-$user_foto = $stmt_foto->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -80,8 +108,8 @@ $user_foto = $stmt_foto->fetchColumn();
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* ESTILOS PARA EL MENÚ DESPLEGABLE INTELIGENTE */
         .smart-dropdown {
             display: none; position: absolute; top: calc(100% + 5px); left: 0; right: 0;
             background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; z-index: 1000;
@@ -125,14 +153,29 @@ $user_foto = $stmt_foto->fetchColumn();
         </div>
 
         <?php if(isset($_GET['exito'])): ?>
-            <div class="alert alert-success" style="margin-top: 20px;"><i class="fas fa-check-circle"></i> Cambios guardados correctamente.</div>
+            <div class="alert alert-success" style="margin-top: 20px;">
+                <i class="fas fa-check-circle"></i> 
+                <?php echo ($_GET['exito'] == 'auto') ? 'Plantilla base generada correctamente según el nivel.' : 'Cambios guardados correctamente.'; ?>
+            </div>
         <?php endif; ?>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
             <h3 style="margin: 0; color: var(--udg-blue);"><i class="fas fa-list-ul"></i> Criterios Actuales</h3>
-            <button type="button" class="btn-save" onclick="openModal()">
-                <i class="fas fa-plus-circle"></i> Agregar Criterio
-            </button>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                
+                <?php if (count($criterios) === 0): ?>
+                    <form method="POST" id="formAutoCriterios" style="margin: 0;">
+                        <input type="hidden" name="auto_criterios" value="1">
+                        <button type="button" class="btn-auto" onclick="confirmarPlantilla(<?php echo $materia['nivel']; ?>)">
+                            <i class="fas fa-magic"></i> Plantilla Base
+                        </button>
+                    </form>
+                <?php endif; ?>
+
+                <button type="button" class="btn-save" onclick="openModal()">
+                    <i class="fas fa-plus-circle"></i> Agregar Criterio
+                </button>
+            </div>
         </div>
 
         <div class="card" style="padding: 0; overflow: hidden;">
@@ -164,7 +207,7 @@ $user_foto = $stmt_foto->fetchColumn();
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     
-                                    <a href="criterios_materia.php?id=<?php echo $materia_id; ?>&borrar_criterio=<?php echo $c['criterio_id']; ?>" class="action-btn delete" onclick="return confirm('¿Borrar este criterio? Esto podría afectar las calificaciones de los alumnos si ya fueron evaluados en este rubro.');" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                    <a href="criterios_materia.php?id=<?php echo $materia_id; ?>&borrar_criterio=<?php echo $c['criterio_id']; ?>" class="action-btn delete" onclick="confirmarBorrado(event, this.href)" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -188,10 +231,10 @@ $user_foto = $stmt_foto->fetchColumn();
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <div id="criterioModal" class="modal-overlay" style="display:none;">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content" style="max-width: 600px; position: relative;">
             <div class="modal-header">
                 <h2 id="modalTitle" style="margin: 0;"><i class="fas fa-plus-circle"></i> Agregar Criterio</h2>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button type="button" class="close-btn" onclick="closeModal()" style="position: absolute; right: 20px; top: 15px;">&times;</button>
             </div>
             
             <form method="POST" id="formCriterio" style="margin: 0;">
@@ -203,15 +246,27 @@ $user_foto = $stmt_foto->fetchColumn();
                         
                         <div class="form-group" style="grid-column: span 2; position: relative;"> 
                             <label>Categoría (Grupo visual) <span style="color:red;">*</span></label> 
-                            <input type="text" name="categoria" id="critCategoria" required placeholder="Ej. Quizzes, Proyectos, Plataforma..." autocomplete="off"> 
+                            <input type="text" name="categoria" id="critCategoria" required placeholder="Ej. Exámenes, Proyectos, Plataforma..." autocomplete="off"> 
                             <div id="dropCategoria" class="smart-dropdown"></div>
                             <small style="color: #888; font-size: 0.8rem; display: block; margin-top: 5px;">Las actividades con la misma categoría se agruparán en la misma tarjeta.</small>
                         </div>
 
-                        <div class="form-group" style="position: relative;"> 
+                        <!-- AQUÍ BLOQUEAMOS EL CÓDIGO INTERNO PARA EVITAR ERRORES DE USUARIO -->
+                        <div class="form-group"> 
                             <label>Código Interno <span style="color:red;">*</span></label> 
-                            <input type="text" name="codigo_examen" id="critCodigo" required placeholder="Ej. QZ1, WRITING" style="text-transform: uppercase;" autocomplete="off"> 
-                            <div id="dropCodigo" class="smart-dropdown"></div>
+                            <select name="codigo_examen" id="critCodigo" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;">
+                                <option value="">-- Seleccionar Código --</option>
+                                <option value="Q1">Q1 (Examen 1)</option>
+                                <option value="Q2">Q2 (Examen 2)</option>
+                                <option value="Q3">Q3 (Examen 3)</option>
+                                <option value="QO1">QO1 (Examen Oral 1)</option>
+                                <option value="QO2">QO2 (Examen Oral 2)</option>
+                                <option value="WRITING">WRITING (Proyecto Escrito)</option>
+                                <option value="PLATAFORMA">PLATAFORMA (Act. Moodle)</option>
+                                <option value="PARTICIPACION">PARTICIPACION (En clase)</option>
+                                <option value="CERTIFICACION">CERTIFICACION (TOEFL/DELF)</option>
+                                <option value="FINAL">FINAL (Examen Extra)</option>
+                            </select>
                         </div>
 
                         <div class="form-group"> 
@@ -221,15 +276,15 @@ $user_foto = $stmt_foto->fetchColumn();
 
                         <div class="form-group" style="grid-column: span 2; position: relative;"> 
                             <label>Nombre del Examen/Actividad (Visible para el alumno) <span style="color:red;">*</span></label> 
-                            <input type="text" name="nombre_examen" id="critNombre" required placeholder="Ej. Quiz 1, Actividades Moodle..." autocomplete="off"> 
+                            <input type="text" name="nombre_examen" id="critNombre" required placeholder="Ej. Examen 1, Actividades Moodle..." autocomplete="off"> 
                             <div id="dropNombre" class="smart-dropdown"></div>
                         </div>
 
                         <div class="form-group">
                             <label>Icono</label>
-                            <select name="icono" id="critIcono">
+                            <select name="icono" id="critIcono" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;">
                                 <option value="fa-star">★ Estrella (Defecto)</option>
-                                <option value="fa-book-open">📖 Libro (Quizzes/Lecturas)</option>
+                                <option value="fa-book-open">📖 Libro (Exámenes/Lecturas)</option>
                                 <option value="fa-comments">💬 Comentarios (Orales)</option>
                                 <option value="fa-file-signature">📝 Papel (Proyectos)</option>
                                 <option value="fa-laptop-code">💻 Laptop (Plataforma)</option>
@@ -240,8 +295,8 @@ $user_foto = $stmt_foto->fetchColumn();
 
                         <div class="form-group">
                             <label>Color</label>
-                            <select name="color" id="critColor">
-                                <option value="var(--udg-light)">Azul (Examenes)</option>
+                            <select name="color" id="critColor" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;">
+                                <option value="var(--udg-light)">Azul (Exámenes)</option>
                                 <option value="#28a745">Verde (Orales)</option>
                                 <option value="#ffc107">Amarillo (Proyectos)</option>
                                 <option value="#dc3545">Rojo (Plataforma)</option>
@@ -282,7 +337,7 @@ $user_foto = $stmt_foto->fetchColumn();
             document.getElementById('criterioId').value = crit.criterio_id;
             
             document.getElementById('critCategoria').value = crit.categoria;
-            document.getElementById('critCodigo').value = crit.codigo_examen;
+            document.getElementById('critCodigo').value = crit.codigo_examen; // Ahora selecciona del dropdown
             document.getElementById('critPuntos').value = crit.puntos_maximos;
             document.getElementById('critNombre').value = crit.nombre_examen;
             document.getElementById('critIcono').value = crit.icono;
@@ -300,11 +355,52 @@ $user_foto = $stmt_foto->fetchColumn();
         };
 
         // =====================================================================
-        // LÓGICA DEL MENÚ DESPLEGABLE INTELIGENTE (AUTOCOMPLETE)
+        // SWEETALERT2 PARA ALERTAS NATIVAS
         // =====================================================================
-        const dataCategoria = ['Quizzes', 'Examen Oral', 'Proyecto Final', 'Plataforma', 'Participación', 'Examen TOEFL', 'Examen Final'];
-        const dataCodigo = ['Q1', 'Q2', 'Q3', 'QO1', 'QO2', 'WRITING', 'PLATAFORMA', 'PARTICIPACION', 'TOEFL', 'FINAL'];
-        const dataNombre = ['Quiz 1', 'Quiz 2', 'Quiz 3', 'Quiz Oral 1', 'Quiz Oral 2', 'Writing Project', 'Actividades en Plataforma', 'Participación en Clase', 'Examen TOEFL', 'Examen Final'];
+        function confirmarPlantilla(nivel) {
+            let texto = nivel == 4 
+                ? "Se cargarán 9 criterios de evaluación (incluyendo Certificación) sumando 100 puntos totales." 
+                : "Se cargarán 8 criterios de evaluación sumando 100 puntos totales (La Plataforma valdrá 50 pts al no haber Certificación).";
+            
+            Swal.fire({
+                title: '¿Generar plantilla base?',
+                text: texto,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#6f42c1',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, generar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('formAutoCriterios').submit();
+                }
+            });
+        }
+
+        function confirmarBorrado(e, url) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Borrar este criterio?',
+                text: "Esto podría afectar las calificaciones de los alumnos si ya fueron evaluados en este rubro.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, borrar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        }
+
+        // =====================================================================
+        // LÓGICA DEL MENÚ DESPLEGABLE INTELIGENTE (AUTOCOMPLETE ACTUALIZADO)
+        // =====================================================================
+        const dataCategoria = ['Exámenes', 'Exámenes Orales', 'Proyectos', 'Plataforma', 'Participación', 'Certificación', 'Examen Final'];
+        const dataNombre = ['Examen 1', 'Examen 2', 'Examen 3', 'Examen Oral 1', 'Examen Oral 2', 'Proyecto Escrito', 'Actividades en Plataforma', 'Participación en Clase', 'Examen de Certificación', 'Examen Final'];
 
         function setupAutocomplete(inputId, dropId, list) {
             const input = document.getElementById(inputId);
@@ -321,7 +417,7 @@ $user_foto = $stmt_foto->fetchColumn();
                     const div = document.createElement('div');
                     div.className = 'smart-option';
                     div.textContent = item;
-                    div.onmousedown = function(e) { e.preventDefault(); } // Evita que el input pierda el focus antes del click
+                    div.onmousedown = function(e) { e.preventDefault(); }
                     div.onclick = function() {
                         input.value = item;
                         drop.style.display = 'none';
@@ -337,7 +433,6 @@ $user_foto = $stmt_foto->fetchColumn();
         }
 
         setupAutocomplete('critCategoria', 'dropCategoria', dataCategoria);
-        setupAutocomplete('critCodigo', 'dropCodigo', dataCodigo);
         setupAutocomplete('critNombre', 'dropNombre', dataNombre);
 
     </script>
