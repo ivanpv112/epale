@@ -60,32 +60,46 @@ $stmt_crit = $pdo->prepare("SELECT codigo_examen, nombre_examen, puntos_maximos,
 $stmt_crit->execute([$materia_id]); 
 $criterios = $stmt_crit->fetchAll(PDO::FETCH_ASSOC);
 
-// Orden visual lógico de los exámenes
-$orden_deseado = ['oral 1'=>4, 'oral 2'=>5, 'quiz 1'=>1, 'quiz 2'=>2, 'quiz 3'=>3, 'writing'=>6, 'plataforma'=>7, 'participaci'=>8, 'toefl'=>9];
-usort($criterios, function($a, $b) use ($orden_deseado) {
-    $nom_a = strtolower(trim($a['nombre_examen'])); $nom_b = strtolower(trim($b['nombre_examen']));
-    $peso_a = 99; foreach ($orden_deseado as $key => $peso) { if (strpos($nom_a, $key) !== false) { $peso_a = $peso; break; } }
-    $peso_b = 99; foreach ($orden_deseado as $key => $peso) { if (strpos($nom_b, $key) !== false) { $peso_b = $peso; break; } }
-    if ($peso_a == $peso_b) return strcmp($nom_a, $nom_b); return $peso_a - $peso_b;
+// Orden visual lógico y escalable basado en el Código Interno
+usort($criterios, function($a, $b) {
+    $cod_a = strtoupper($a['codigo_examen']);
+    $cod_b = strtoupper($b['codigo_examen']);
+    
+    $get_peso = function($cod) {
+        if (strpos($cod, 'Q1') !== false || strpos($cod, 'Q2') !== false || strpos($cod, 'Q3') !== false) return 1;
+        if (strpos($cod, 'QO') !== false) return 2;
+        if (strpos($cod, 'WRITING') !== false) return 3;
+        if (strpos($cod, 'PARTICIPACION') !== false) return 4;
+        if (strpos($cod, 'PLATAFORMA') !== false) return 5;
+        if (strpos($cod, 'CERTIFICACION') !== false || strpos($cod, 'FINAL') !== false) return 6;
+        return 7; // Nuevos criterios no planeados van al final
+    };
+
+    $peso_a = $get_peso($cod_a);
+    $peso_b = $get_peso($cod_b);
+
+    if ($peso_a == $peso_b) {
+        return strnatcasecmp($a['nombre_examen'], $b['nombre_examen']);
+    }
+    return $peso_a - $peso_b;
 });
 
-// Lista de permisos exclusivos para el profesor
-$permitidos_profesor = ['oral', 'writing', 'plataforma', 'participación', 'participacion']; 
+// Lista de permisos exclusivos para el profesor (Basado en el CÓDIGO INTERNO)
+$permitidos_profesor = ['QO', 'WRITING', 'PARTICIPACION']; 
 $puntos_maximos_totales = 0;
 
 foreach ($criterios as &$c) {
     $puntos_maximos_totales += floatval($c['puntos_maximos']); 
     
-    // Verificamos si este criterio está en la lista blanca del profesor
+    // Verificamos si este código de examen está en la lista blanca del profesor
     $es_esencial = false; 
-    $nombre_lower = strtolower($c['nombre_examen']);
+    $cod_upper = strtoupper($c['codigo_examen']);
     foreach($permitidos_profesor as $palabra) { 
-        if (strpos($nombre_lower, $palabra) !== false) { $es_esencial = true; break; } 
+        if (strpos($cod_upper, $palabra) !== false) { $es_esencial = true; break; } 
     }
     
     // REGLA CLAVE DE BLOQUEO:
-    // Si la edición total es 0 (bloqueada por admin) y NO es una actividad esencial, lo bloqueamos.
-    $c['bloqueado'] = ($edicion_total === 0 && !$es_esencial) ? true : false;
+    $c['bloqueado'] = ($grupo_cerrado || ($edicion_total === 0 && !$es_esencial)) ? true : false;
 }
 unset($c);
 
@@ -171,7 +185,7 @@ if (count($alumnos) > 0) {
         <?php elseif($edicion_total === 0): ?>
             <div class="alert" style="background: #e7f3ff; color: #004085; border: 1px solid #b8daff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
                 <i class="fas fa-lock" style="font-size: 1.8rem; color: #0056b3;"></i>
-                <div><strong>Control Escolar Restringido</strong><br><span style="font-size: 0.9rem;">Solo puedes capturar las evaluaciones de tu competencia (Proyectos, Plataforma, Orales, Participación). Los exámenes principales son capturados por administración.</span></div>
+                <div><strong>Control Escolar Restringido</strong><br><span style="font-size: 0.9rem;">Solo puedes capturar las evaluaciones de tu competencia (Proyectos, Orales, Participación). Los exámenes principales y plataforma son capturados por administración.</span></div>
             </div>
         <?php endif; ?>
 
