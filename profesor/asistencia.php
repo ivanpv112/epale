@@ -4,28 +4,35 @@ require '../db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
 
+// Generación de Token CSRF
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $clave = $_GET['clave'] ?? '';
 $profesor_id = $_SESSION['user_id'];
 
 // 1. Obtener información del grupo
-$stmt = $pdo->prepare("SELECT m.nombre as materia, m.nivel, c.nombre as ciclo, g.nrc 
+$stmt = $pdo->prepare("SELECT m.nombre as materia, m.nivel, c.nombre as ciclo 
                        FROM grupos g 
                        JOIN materias m ON g.materia_id = m.materia_id 
                        JOIN ciclos c ON g.ciclo_id = c.ciclo_id 
-                       WHERE g.clave_grupo = ? AND g.profesor_id = ?");
+                       WHERE g.clave_grupo = ? AND g.profesor_id = ?
+                       LIMIT 1");
 $stmt->execute([$clave, $profesor_id]);
 $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$grupo) { header("Location: mis_grupos.php"); exit; }
 
-// 2. Obtener lista de alumnos inscritos
+// 2. Obtener lista de alumnos inscritos (CORREGIDO: Soporte para múltiples NRCs)
 $stmt_al = $pdo->prepare("SELECT i.inscripcion_id, u.nombre, u.apellido_paterno, u.apellido_materno, u.codigo, u.foto_perfil 
                           FROM inscripciones i 
                           JOIN alumnos a ON i.alumno_id = a.alumno_id 
                           JOIN usuarios u ON a.usuario_id = u.usuario_id 
-                          WHERE i.nrc = ? AND i.estatus = 'INSCRITO' 
+                          WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) 
+                          AND i.estatus = 'INSCRITO' 
                           ORDER BY u.apellido_paterno ASC, u.apellido_materno ASC");
-$stmt_al->execute([$grupo['nrc']]);
+$stmt_al->execute([$clave, $profesor_id]);
 $alumnos_brutos = $stmt_al->fetchAll(PDO::FETCH_ASSOC);
 
 $alumnos = [];
@@ -38,20 +45,21 @@ foreach($alumnos_brutos as $alum) {
     $alumnos[] = $alum;
 }
 
-// 3. Obtener fechas de clases
+// 3. Obtener fechas de clases (CORREGIDO: Soporte para múltiples NRCs)
 $stmt_fechas = $pdo->prepare("SELECT DISTINCT fecha FROM asistencias a 
                               JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
-                              WHERE i.nrc = ? ORDER BY fecha ASC");
-$stmt_fechas->execute([$grupo['nrc']]);
+                              WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) 
+                              ORDER BY fecha ASC");
+$stmt_fechas->execute([$clave, $profesor_id]);
 $fechas_clase = $stmt_fechas->fetchAll(PDO::FETCH_COLUMN);
 $total_sesiones = count($fechas_clase);
 
-// 4. Mapear asistencias
+// 4. Mapear asistencias (CORREGIDO: Soporte para múltiples NRCs)
 $asistencias_log = [];
 $stmt_log = $pdo->prepare("SELECT a.inscripcion_id, a.fecha, a.estatus FROM asistencias a 
                            JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
-                           WHERE i.nrc = ?");
-$stmt_log->execute([$grupo['nrc']]);
+                           WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?)");
+$stmt_log->execute([$clave, $profesor_id]);
 while($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
     $asistencias_log[$row['inscripcion_id']][$row['fecha']] = $row['estatus'];
 }
@@ -137,7 +145,6 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                         }
                     ?>
                     <tr class="<?php echo $row_class; ?>">
-                        <!-- Inyectamos el color de fondo directo para que no se transparente en ningún navegador -->
                         <td class="td-alumno" style="background-color: <?php echo $bg_celda_congelada; ?>;">
                             <img src="<?php echo $a['foto_url']; ?>" class="td-foto">
                             <div>
@@ -202,19 +209,23 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
     </div>
 
     <script>
+        // VARIABLE GLOBAL DEL CSRF TOKEN GENERADA EN PHP
+        const csrfToken = "<?php echo $_SESSION['csrf_token']; ?>";
+
         function cambiarAsistencia(selectObj, ins_id, fecha) {
             const nuevoEstatus = selectObj.value;
             selectObj.className = 'select-asist sel-' + nuevoEstatus;
             
+            // SE INYECTA EL TOKEN EN EL CUERPO DE LA PETICIÓN
             fetch('asistencia_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'single', ins_id: ins_id, fecha: fecha, estatus: nuevoEstatus })
+                body: JSON.stringify({ action: 'single', ins_id: ins_id, fecha: fecha, estatus: nuevoEstatus, csrf_token: csrfToken })
             })
             .then(res => res.json())
             .then(res => { 
                 if(res.success) { location.reload(); } 
-                else { Swal.fire('Error', 'Hubo un problema al actualizar la asistencia.', 'error'); }
+                else { Swal.fire('Error', res.error || 'Hubo un problema al actualizar la asistencia.', 'error'); }
             });
         }
 
@@ -246,26 +257,23 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
         function grabarPaso(estatus) {
             resultados.push({ inscripcion_id: alumnos[indexActual].inscripcion_id, estatus: estatus });
             indexActual++;
-            if(indexActual < alumnos.length) {
-                mostrarAlumno();
-            } else {
-                finalizarTomaAsistencia();
-            }
+            if(indexActual < alumnos.length) { mostrarAlumno(); } else { finalizarTomaAsistencia(); }
         }
 
         function finalizarTomaAsistencia() {
             document.getElementById('modalAsistencia').style.display = 'none';
             Swal.fire({ title: 'Procesando lista...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
             
+            // SE INYECTA EL TOKEN EN LA TOMA DE LISTA COMPLETA
             fetch('asistencia_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'batch', data: resultados })
+                body: JSON.stringify({ action: 'batch', data: resultados, csrf_token: csrfToken })
             })
             .then(res => res.json())
             .then(res => {
                 if(res.success) { Swal.fire('¡Lista Guardada!', 'La asistencia de hoy ha sido registrada exitosamente.', 'success').then(() => location.reload()); } 
-                else { Swal.fire('Error', 'Hubo un problema al guardar la asistencia.', 'error'); }
+                else { Swal.fire('Error', res.error || 'Hubo un problema al guardar la asistencia.', 'error'); }
             });
         }
 
