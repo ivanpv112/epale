@@ -99,7 +99,11 @@ function checkEstudianteCollision($alumno_id, $nrc_nuevo, $ciclo_id, $pdo) {
     return false;
 }
 
+// ESCUDO CSRF GLOBAL PARA TODAS LAS PETICIONES POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
     
     // --- QUITAR ALUMNO ---
     if (isset($_POST['action']) && $_POST['action'] === 'remove_student') {
@@ -378,6 +382,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                     <div class="card" style="margin-top: 0; background: linear-gradient(135deg, var(--udg-blue) 0%, #001a57 100%); color: white; border: none; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 10px 0; color: white;"><i class="fas fa-user-plus"></i> Inscribir Alumno</h3>
                         <form method="POST" id="formAddStudent">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="action" value="add_student">
                             <input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>">
                             <input type="hidden" name="cupo_actual" value="<?php echo $g['cupo']; ?>">
@@ -406,6 +411,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                         </a>
                                         <div class="student-action">
                                             <form method="POST" style="margin: 0;">
+                                                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                                                 <input type="hidden" name="action" value="remove_student">
                                                 <input type="hidden" name="alumno_id" value="<?php echo $alum['alumno_id']; ?>">
                                                 <input type="hidden" name="nrc_base" value="<?php echo $nrc_base; ?>">
@@ -430,6 +436,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
             <div>
                 <form method="POST" action="gestionar_grupo.php<?php echo $es_edicion ? '?clave='.$clave : ''; ?>" id="configForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <input type="hidden" name="action" value="save_group">
                     <?php if($es_edicion): ?><input type="hidden" name="inscritos_actuales" value="<?php echo $total_inscritos; ?>"><?php endif; ?>
                     
