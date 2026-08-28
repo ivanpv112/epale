@@ -5,9 +5,14 @@ require '../db.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
 // ===============================================
-// ELIMINACIÓN DE GRUPO (BLINDADO CON TRANSACCIÓN)
+// ELIMINACIÓN DE GRUPO (BLINDADO CON TRANSACCIÓN Y CSRF)
 // ===============================================
 if (isset($_GET['del_clave'])) {
+    // ESCUDO CSRF PARA MÉTODO GET
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
+
     try {
         $pdo->beginTransaction();
         $clave = $_GET['del_clave'];
@@ -149,7 +154,7 @@ $stmt = $pdo->prepare($sql); $stmt->execute(); $grupos = $stmt->fetchAll(PDO::FE
                                 </td>
                                 
                                 <td class="td-center">
-                                    <a href="#" onclick="event.stopPropagation(); confirmarBorrado('grupos_nrc.php?del_clave=<?php echo $g['clave_grupo']; ?>')" style="color: #dc3545; font-size: 1.3rem; transition: 0.2s;" title="Eliminar Clase"><i class="fas fa-trash-alt"></i></a>
+                                    <a href="#" onclick="event.stopPropagation(); confirmarBorrado('grupos_nrc.php?del_clave=<?php echo $g['clave_grupo']; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>')" style="color: #dc3545; font-size: 1.3rem; transition: 0.2s;" title="Eliminar Clase"><i class="fas fa-trash-alt"></i></a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
