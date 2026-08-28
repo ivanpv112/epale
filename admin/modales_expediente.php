@@ -18,6 +18,9 @@
             <button class="close-btn" onclick="cerrarModalCalif(<?php echo $mat['inscripcion_id']; ?>)">&times;</button>
         </div>
         <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+            <!-- Protección CSRF -->
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+            
             <input type="hidden" name="usuario_id" value="<?php echo $usuario_id; ?>">
             <input type="hidden" name="actualizar_calificaciones" value="1">
             <input type="hidden" name="inscripcion_id" value="<?php echo $mat['inscripcion_id']; ?>">
@@ -59,6 +62,9 @@
             <button class="close-btn" onclick="cerrarModalCert()">&times;</button>
         </div>
         <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+            <!-- Protección CSRF -->
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+            
             <input type="hidden" name="usuario_id" value="<?php echo $usuario_id; ?>">
             <input type="hidden" name="guardar_certificacion" value="1">
             <input type="hidden" name="alumno_id_cert" value="<?php echo $alumno_id; ?>">
@@ -90,6 +96,9 @@
             <button class="close-btn" onclick="cerrarModalDiag()">&times;</button>
         </div>
         <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+            <!-- Validación CSRF -->
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+            
             <input type="hidden" name="usuario_id" value="<?php echo $usuario_id; ?>">
             <input type="hidden" name="guardar_diagnostico" value="1">
             <input type="hidden" name="examen_id" id="inputExamenId">
