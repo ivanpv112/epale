@@ -14,8 +14,15 @@ $tipo_mensaje = '';
 // PROCESAR FORMULARIO DE GUARDAR/EDITAR MATERIA
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'save_materia') {
+    // ESCUDO CSRF
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+
     $materia_id = $_POST['materia_id'] ?? null;
-    $nombre = trim($_POST['nombre']);
+    
+    // FORZAR MAYÚSCULAS
+    $nombre = mb_strtoupper(trim($_POST['nombre']), 'UTF-8');
     $clave = strtoupper(trim($_POST['clave']));
     $nivel = intval($_POST['nivel']);
 
@@ -55,6 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // ELIMINAR MATERIA
 // =======================================================
 if (isset($_GET['borrar'])) {
+    // ESCUDO CSRF
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
+
     $id = $_GET['borrar'];
     try {
         $pdo->prepare("DELETE FROM materias WHERE materia_id = ?")->execute([$id]);
@@ -75,19 +87,17 @@ if (isset($_GET['q']) && !empty($_GET['q'])) {
     $params[':q'] = "%".$_GET['q']."%";
 }
 
-$idiomas = ['Inglés','Francés','Italiano','Español','B-learning'];
-$idiomas_present = [];
-foreach ($idiomas as $idioma) {
-    $count = $pdo->prepare("SELECT COUNT(*) FROM materias WHERE nombre LIKE ?");
-    $count->execute(["%".$idioma."%"]);
-    if ($count->fetchColumn() > 0) {
-        $idiomas_present[] = $idioma;
-    }
-}
+// =======================================================
+// DETECTOR INTELIGENTE DE IDIOMAS (ESCALABLE)
+// =======================================================
+// Obtener los nombres únicos directamente de la base de datos, forzando mayúsculas para agrupar
+$stmt_idiomas = $pdo->query("SELECT DISTINCT UPPER(TRIM(nombre)) as idioma FROM materias WHERE nombre != '' ORDER BY idioma ASC");
+$idiomas_present = $stmt_idiomas->fetchAll(PDO::FETCH_COLUMN);
 
 if (isset($_GET['idioma']) && !empty($_GET['idioma'])) {
-    $where .= " AND nombre LIKE :idioma";
-    $params[':idioma'] = "%".$_GET['idioma']."%";
+    // Filtrar forzando mayúsculas
+    $where .= " AND UPPER(TRIM(nombre)) = :idioma";
+    $params[':idioma'] = mb_strtoupper(trim($_GET['idioma']), 'UTF-8');
 }
 
 $sql = "SELECT * FROM materias WHERE $where ORDER BY nombre ASC, nivel ASC";
@@ -97,7 +107,7 @@ $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_materias = $pdo->query("SELECT COUNT(*) FROM materias")->fetchColumn();
 $total_grupos = $pdo->query("SELECT COUNT(*) FROM grupos")->fetchColumn();
-$total_idiomas = count($idiomas_present);
+$total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado en la BD
 ?>
 
 <!DOCTYPE html>
@@ -118,7 +128,7 @@ $total_idiomas = count($idiomas_present);
     <main class="main-content">
         
         <div class="page-title-center" style="margin-bottom: 30px;">
-            <h1><i class="fas fa-book"></i> Materias y Criterios</h1>
+            <h1><i class="fas fa-book"></i> Idiomas y Criterios</h1>
             <p>Administra el catálogo de idiomas y configura cómo se evalúa cada nivel.</p>
         </div>
 
@@ -127,20 +137,19 @@ $total_idiomas = count($idiomas_present);
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({
                         title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>',
-                        // SOLUCIÓN: Usamos addslashes para que el JS entienda las comillas normales sin romper el código
                         text: '<?php echo addslashes($mensaje); ?>',
                         icon: '<?php echo $tipo_mensaje; ?>',
                         confirmButtonColor: 'var(--udg-blue)'
                     });
                     if(window.location.search.includes('borrar=')){
-                        window.history.replaceState({}, document.title, window.location.pathname);
+                        const currentUrl = new URL(window.location.href); currentUrl.searchParams.delete('borrar'); currentUrl.searchParams.delete('csrf_token'); window.history.replaceState({}, document.title, currentUrl.pathname + currentUrl.search);
                     }
                 });
             </script>
         <?php endif; ?>
 
         <div class="stats-grid">
-            <div class="stat-card"> <span class="stat-number"><?php echo $total_materias; ?></span> <span class="stat-label">Total Materias</span> </div>
+            <div class="stat-card"> <span class="stat-number"><?php echo $total_materias; ?></span> <span class="stat-label">Total Niveles</span> </div>
             <div class="stat-card"> <span class="stat-number"><?php echo $total_grupos; ?></span> <span class="stat-label">Grupos Activos</span> </div>
             <div class="stat-card"> <span class="stat-number"><?php echo $total_idiomas; ?></span> <span class="stat-label">Idiomas</span> </div>
         </div>
@@ -148,12 +157,16 @@ $total_idiomas = count($idiomas_present);
         <form class="toolbar" method="GET" action="materias.php" style="margin-top: 20px;">
             <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
             <input type="text" name="q" class="search-input" placeholder="Buscar por nombre o clave..." value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
+            
             <select name="idioma" class="filter-select" onchange="this.form.submit()">
                 <option value="">Todos los idiomas</option>
                 <?php foreach ($idiomas_present as $idioma): ?>
-                    <option value="<?php echo htmlspecialchars($idioma); ?>" <?php if(isset($_GET['idioma']) && $_GET['idioma']==$idioma) echo 'selected'; ?>><?php echo htmlspecialchars($idioma); ?></option>
+                    <option value="<?php echo htmlspecialchars($idioma); ?>" <?php if(isset($_GET['idioma']) && mb_strtoupper($_GET['idioma'], 'UTF-8') == $idioma) echo 'selected'; ?>>
+                        <?php echo htmlspecialchars($idioma); ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
+            
             <button type="button" class="btn-save" onclick="openModal()" style="margin-left: auto;">
                 <i class="fas fa-book-medical"></i> Nueva Materia
             </button>
@@ -189,7 +202,9 @@ $total_idiomas = count($idiomas_present);
                                     <span style="font-weight: bold; color: #666; font-family: monospace; font-size: 1.1rem;"><?php echo htmlspecialchars($m['clave']); ?></span>
                                 </td>
                                 <td style="padding: 15px;">
-                                    <h4 style="margin: 0; color: var(--udg-blue); font-size: 1.1rem;"><?php echo htmlspecialchars($m['nombre']); ?></h4>
+                                    <h4 style="margin: 0; color: var(--udg-blue); font-size: 1.1rem; text-transform: uppercase;">
+                                        <?php echo htmlspecialchars($m['nombre']); ?>
+                                    </h4>
                                     <span class="tag-aprobado" style="background-color: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 5px;">Nivel <?php echo $m['nivel']; ?></span>
                                 </td>
                                 <td style="padding: 15px; text-align: center;">
@@ -221,7 +236,7 @@ $total_idiomas = count($idiomas_present);
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     
-                                    <button class="action-btn delete" onclick="confirmDelete(<?php echo $m['materia_id']; ?>)" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1rem;" title="Eliminar Materia">
+                                    <button class="action-btn delete" onclick="confirmDelete(<?php echo $m['materia_id']; ?>, '<?php echo $_SESSION['csrf_token']; ?>')" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1.1rem;" title="Eliminar Materia">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </td>
@@ -242,7 +257,7 @@ $total_idiomas = count($idiomas_present);
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <footer class="main-footer"></footer>
 
     <div id="materiaModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
@@ -251,17 +266,19 @@ $total_idiomas = count($idiomas_present);
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <form action="materias.php" method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="action" value="save_materia">
                 <input type="hidden" name="materia_id" id="materiaId">
                 <div class="modal-body">
                     <div class="form-grid-materias">
                         <div class="form-group full-width"> 
-                            <label>Nombre de la Materia</label> 
-                            <input type="text" name="nombre" id="materiaNombre" required placeholder="Ej. Inglés, Francés, etc."> 
+                            <label>Nombre del Idioma/Materia</label> 
+                            <!-- Transformación CSS para forzar mayúsculas visualmente -->
+                            <input type="text" name="nombre" id="materiaNombre" required placeholder="EJ. INGLÉS, FRANCÉS, ETC." style="text-transform: uppercase;"> 
                         </div>
                         <div class="form-group"> 
                             <label>Clave</label> 
-                            <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101"> 
+                            <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101" style="text-transform: uppercase;"> 
                         </div>
                         <div class="form-group"> 
                             <label>Nivel</label> 
@@ -288,7 +305,7 @@ $total_idiomas = count($idiomas_present);
         
         function openModal() {
             document.getElementById('materiaId').value = '';
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-book-medical"></i> Nueva Materia';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-book-medical"></i> Nuevo Idioma/Nivel';
             document.getElementById('materiaclave').value = '';
             document.getElementById('materiaNombre').value = '';
             document.getElementById('materiaLevel').value = '';
@@ -297,7 +314,7 @@ $total_idiomas = count($idiomas_present);
         
         function editMateria(btn) {
             document.getElementById('materiaId').value = btn.getAttribute('data-id');
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> Editar Materia';
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-pen"></i> Editar Idioma/Nivel';
             document.getElementById('materiaclave').value = btn.getAttribute('data-clave');
             document.getElementById('materiaNombre').value = btn.getAttribute('data-nombre');
             document.getElementById('materiaLevel').value = btn.getAttribute('data-nivel');
@@ -308,7 +325,7 @@ $total_idiomas = count($idiomas_present);
             modal.style.display = 'none'; 
         }
 
-        function confirmDelete(id) {
+        function confirmDelete(id, token) {
             Swal.fire({
                 title: '¿Eliminar materia?',
                 text: "Esta acción no se puede deshacer.",
@@ -320,7 +337,7 @@ $total_idiomas = count($idiomas_present);
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `materias.php?borrar=${id}`;
+                    window.location.href = `materias.php?borrar=${id}&csrf_token=${token}`;
                 }
             })
         }
