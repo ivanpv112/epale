@@ -21,6 +21,9 @@ $mensaje = ''; $tipo_mensaje = '';
 
 // PROCESAR NUEVO AVISO
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_aviso'])) {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
     $titulo = trim($_POST['titulo']);
     $cuerpo = trim($_POST['cuerpo']);
     $audiencia_raw = explode('::', $_POST['audiencia']); 
@@ -45,8 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_aviso'])) {
     }
 }
 
-// PROCESAR ELIMINACIÓN DE AVISO
+// PROCESAR ELIMINACIÓN DE AVISO (AHORA CON ESCUDO CSRF)
 if (isset($_GET['borrar'])) {
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
     $pdo->prepare("DELETE FROM avisos WHERE aviso_id = ?")->execute([$_GET['borrar']]);
     $mensaje = "Aviso eliminado correctamente."; $tipo_mensaje = "success";
 }
@@ -88,7 +94,7 @@ $avisos = $pdo->query("SELECT * FROM avisos ORDER BY fecha_creacion DESC")->fetc
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({ title: '<?php echo ($tipo_mensaje == "success") ? "¡Éxito!" : "Error"; ?>', text: '<?php echo addslashes($mensaje); ?>', icon: '<?php echo $tipo_mensaje; ?>', confirmButtonColor: 'var(--udg-blue)' });
-                    const url = new URL(window.location); url.searchParams.delete('borrar'); window.history.replaceState({}, '', url);
+                    const url = new URL(window.location); url.searchParams.delete('borrar'); url.searchParams.delete('csrf_token'); window.history.replaceState({}, '', url);
                 });
             </script>
         <?php endif; ?>
@@ -100,6 +106,7 @@ $avisos = $pdo->query("SELECT * FROM avisos ORDER BY fecha_creacion DESC")->fetc
                 
                 <form method="POST">
                     <input type="hidden" name="crear_aviso" value="1">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     
                     <div class="form-group">
                         <label>Dirigido a:</label>
@@ -168,7 +175,7 @@ $avisos = $pdo->query("SELECT * FROM avisos ORDER BY fecha_creacion DESC")->fetc
                             elseif($a['tipo_audiencia'] == 'GRUPO') { $txt_audiencia = 'NRC: ' . $a['audiencia_ref']; $badge_color = '#e2e3e5'; $badge_text = '#383d41'; }
                         ?>
                             <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; position: relative;">
-                                <a href="#" onclick="confirmarBorrado('avisos.php?borrar=<?php echo $a['aviso_id']; ?>')" style="position: absolute; top: 15px; right: 15px; color: #dc3545; font-size: 1.2rem;" title="Eliminar"><i class="fas fa-trash-alt"></i></a>
+                                <a href="#" onclick="confirmarBorrado('avisos.php?borrar=<?php echo $a['aviso_id']; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>')" style="position: absolute; top: 15px; right: 15px; color: #dc3545; font-size: 1.2rem;" title="Eliminar"><i class="fas fa-trash-alt"></i></a>
                                 
                                 <span style="background: <?php echo $badge_color; ?>; color: <?php echo $badge_text; ?>; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid <?php echo $badge_text; ?>;">
                                     Dirigido a: <?php echo htmlspecialchars($txt_audiencia); ?>
