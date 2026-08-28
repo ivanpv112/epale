@@ -9,6 +9,10 @@ $tipo_mensaje = '';
 
 // ELIMINACIÓN DE USUARIO
 if (isset($_GET['borrar'])) {
+    // ESCUDO CSRF PARA MÉTODO GET
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
     $id = $_GET['borrar'];
     $root_admin_id = 1; 
     if ($id == $root_admin_id) { $mensaje = "Acceso denegado: No puedes eliminar al Administrador Principal."; $tipo_mensaje = "error"; } 
@@ -150,7 +154,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                             </td>
                             <td style="text-align: center;">
                                 <?php if($u['usuario_id'] != $_SESSION['user_id'] && $u['usuario_id'] != 1): ?>
-                                    <a href="#" class="action-btn delete" onclick="event.stopPropagation(); confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>', '<?php echo addslashes($u['nombre']); ?>'); return false;"><i class="fas fa-trash-alt"></i></a>
+                                    <a href="#" class="action-btn delete" onclick="event.stopPropagation(); confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>', '<?php echo addslashes($u['nombre']); ?>'); return false;"><i class="fas fa-trash-alt"></i></a>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -166,6 +170,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
         <div class="modal-content">
             <div class="modal-header"> <h2 id="modalTitle" style="margin: 0;">Usuario</h2> <button class="close-btn" onclick="closeModal()">&times;</button> </div>
             <form action="guardar_usuario.php" method="POST" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="usuario_id" id="userId">
                 <div class="modal-body">
                     <div class="form-grid">
