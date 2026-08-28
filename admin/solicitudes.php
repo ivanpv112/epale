@@ -4,12 +4,20 @@ require '../db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
+// 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+}
+
 $mensaje = ''; $tipo_mensaje = '';
 
 // =======================================================
 // PROCESAR APROBACIÓN / RECHAZO
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    
     $solicitud_id = $_POST['solicitud_id'];
     $inscripcion_id = $_POST['inscripcion_id'];
     $respuesta = strip_tags(trim($_POST['respuesta_admin']));
@@ -180,6 +188,7 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE es
             </div>
             
             <form method="POST" id="formReview" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="action" id="actionType" value="">
                 <input type="hidden" name="solicitud_id" id="sol_id">
                 <input type="hidden" name="inscripcion_id" id="insc_id">
