@@ -7,6 +7,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
+// ESCUDO CSRF GLOBAL PARA PETICIONES POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+}
+
 // 2. VERIFICAR QUE SE HAYA SELECCIONADO UNA MATERIA
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header("Location: materias.php"); exit;
@@ -83,6 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['auto_criterios'])) {
 
 // 5. PROCESAR ELIMINAR CRITERIO
 if (isset($_GET['borrar_criterio'])) {
+    // ESCUDO CSRF PARA ELIMINACIÓN POR GET
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
+
     $criterio_id = $_GET['borrar_criterio'];
     $pdo->prepare("DELETE FROM criterios_evaluacion WHERE criterio_id = ?")->execute([$criterio_id]);
     header("Location: criterios_materia.php?id=" . $materia_id . "&exito=borrado"); exit;
@@ -165,6 +177,7 @@ foreach ($criterios as $c) {
                 
                 <?php if (count($criterios) === 0): ?>
                     <form method="POST" id="formAutoCriterios" style="margin: 0;">
+                        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                         <input type="hidden" name="auto_criterios" value="1">
                         <button type="button" class="btn-auto" onclick="confirmarPlantilla(<?php echo $materia['nivel']; ?>)">
                             <i class="fas fa-magic"></i> Plantilla Base
@@ -207,7 +220,7 @@ foreach ($criterios as $c) {
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     
-                                    <a href="criterios_materia.php?id=<?php echo $materia_id; ?>&borrar_criterio=<?php echo $c['criterio_id']; ?>" class="action-btn delete" onclick="confirmarBorrado(event, this.href)" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
+                                    <a href="criterios_materia.php?id=<?php echo $materia_id; ?>&borrar_criterio=<?php echo $c['criterio_id']; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>" class="action-btn delete" onclick="confirmarBorrado(event, this.href)" style="color: #dc3545; font-size: 1.1rem;" title="Eliminar">
                                         <i class="fas fa-trash-alt"></i>
                                     </a>
                                 </td>
@@ -238,6 +251,7 @@ foreach ($criterios as $c) {
             </div>
             
             <form method="POST" id="formCriterio" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="save_criterio" value="1">
                 <input type="hidden" name="criterio_id" id="criterioId">
                 
@@ -315,126 +329,7 @@ foreach ($criterios as $c) {
         </div>
     </div>
 
-    <script>
-        function toggleMobileMenu() {
-            document.getElementById('navWrapper').classList.toggle('active');
-            document.getElementById('menuOverlay').classList.toggle('active');
-        }
+    <script src="../js/criterios_materia.js?v=<?php echo time(); ?>"></script>
 
-        const modal = document.getElementById('criterioModal');
-        const overlayMenu = document.getElementById('menuOverlay');
-
-        function openModal() { 
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Agregar Criterio';
-            document.getElementById('criterioId').value = '';
-            document.getElementById('formCriterio').reset(); 
-            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-plus"></i> Agregar Criterio';
-            modal.style.display = 'flex'; 
-        }
-
-        function editCriterio(crit) {
-            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Criterio';
-            document.getElementById('criterioId').value = crit.criterio_id;
-            
-            document.getElementById('critCategoria').value = crit.categoria;
-            document.getElementById('critCodigo').value = crit.codigo_examen; // Ahora selecciona del dropdown
-            document.getElementById('critPuntos').value = crit.puntos_maximos;
-            document.getElementById('critNombre').value = crit.nombre_examen;
-            document.getElementById('critIcono').value = crit.icono;
-            document.getElementById('critColor').value = crit.color;
-
-            document.getElementById('btnSubmit').innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-            modal.style.display = 'flex';
-        }
-
-        function closeModal() { modal.style.display = 'none'; }
-
-        window.onclick = function(e) { 
-            if(e.target == modal) closeModal(); 
-            if(e.target == overlayMenu) toggleMobileMenu();
-        };
-
-        // =====================================================================
-        // SWEETALERT2 PARA ALERTAS NATIVAS
-        // =====================================================================
-        function confirmarPlantilla(nivel) {
-            let texto = nivel == 4 
-                ? "Se cargarán 9 criterios de evaluación (incluyendo Certificación) sumando 100 puntos totales." 
-                : "Se cargarán 8 criterios de evaluación sumando 100 puntos totales (La Plataforma valdrá 50 pts al no haber Certificación).";
-            
-            Swal.fire({
-                title: '¿Generar plantilla base?',
-                text: texto,
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonColor: '#6f42c1',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, generar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('formAutoCriterios').submit();
-                }
-            });
-        }
-
-        function confirmarBorrado(e, url) {
-            e.preventDefault();
-            Swal.fire({
-                title: '¿Borrar este criterio?',
-                text: "Esto podría afectar las calificaciones de los alumnos si ya fueron evaluados en este rubro.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, borrar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = url;
-                }
-            });
-        }
-
-        // =====================================================================
-        // LÓGICA DEL MENÚ DESPLEGABLE INTELIGENTE (AUTOCOMPLETE ACTUALIZADO)
-        // =====================================================================
-        const dataCategoria = ['Exámenes', 'Exámenes Orales', 'Proyectos', 'Plataforma', 'Participación', 'Certificación', 'Examen Final'];
-        const dataNombre = ['Examen 1', 'Examen 2', 'Examen 3', 'Examen Oral 1', 'Examen Oral 2', 'Proyecto Escrito', 'Actividades en Plataforma', 'Participación en Clase', 'Examen de Certificación', 'Examen Final'];
-
-        function setupAutocomplete(inputId, dropId, list) {
-            const input = document.getElementById(inputId);
-            const drop = document.getElementById(dropId);
-
-            function renderOptions(filter) {
-                drop.innerHTML = '';
-                const lowerFilter = filter.toLowerCase();
-                const filtered = list.filter(item => item.toLowerCase().includes(lowerFilter));
-                
-                if(filtered.length === 0) { drop.style.display = 'none'; return; }
-
-                filtered.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'smart-option';
-                    div.textContent = item;
-                    div.onmousedown = function(e) { e.preventDefault(); }
-                    div.onclick = function() {
-                        input.value = item;
-                        drop.style.display = 'none';
-                    };
-                    drop.appendChild(div);
-                });
-                drop.style.display = 'block';
-            }
-
-            input.addEventListener('focus', () => renderOptions(input.value));
-            input.addEventListener('input', (e) => renderOptions(e.target.value));
-            input.addEventListener('blur', () => { drop.style.display = 'none'; });
-        }
-
-        setupAutocomplete('critCategoria', 'dropCategoria', dataCategoria);
-        setupAutocomplete('critNombre', 'dropNombre', dataNombre);
-
-    </script>
 </body>
 </html>
