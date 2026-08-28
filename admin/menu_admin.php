@@ -3,6 +3,11 @@ if (!isset($_SESSION['smart_back'])) { $_SESSION['smart_back'] = []; }
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
+// Generación del token CSRF global para toda la sesión
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
     $scripts_excluidos = ['guardar_usuario.php', 'guardar_grupo.php', 'guardar_materia.php', 'login.php', 'logout.php'];
