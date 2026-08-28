@@ -7,8 +7,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit; 
 }
 
-// 1. PROCESAR BORRADO DE FOTO DE PERFIL
+// 1. PROCESAR BORRADO DE FOTO DE PERFIL (MÉTODO GET)
 if (isset($_GET['borrar_foto']) && $_GET['borrar_foto'] == 1 && isset($_GET['id'])) {
+    // ESCUDO CSRF
+    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
+    }
+
     $usuario_id = $_GET['id'];
     $stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
     $stmt_foto->execute([$usuario_id]);
@@ -20,6 +25,13 @@ if (isset($_GET['borrar_foto']) && $_GET['borrar_foto'] == 1 && isset($_GET['id'
     
     $pdo->prepare("UPDATE usuarios SET foto_perfil = NULL WHERE usuario_id = ?")->execute([$usuario_id]);
     header("Location: ver_expediente_alumno.php?id=" . $usuario_id . "&exito=foto"); exit;
+}
+
+// ESCUDO CSRF GLOBAL PARA TODAS LAS PETICIONES POST SIGUIENTES
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
 }
 
 // 2. PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES
