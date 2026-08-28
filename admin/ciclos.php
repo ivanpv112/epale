@@ -10,6 +10,11 @@ $mensaje = ''; $tipo_mensaje = '';
 // ABRIR O CERRAR UN CICLO COMPLETO (REGLA DE ORO)
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // ESCUDO CSRF
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+
     if (isset($_POST['cerrar_grupos'])) {
         $id_cerrar = $_POST['ciclo_id'];
         // Mueve todos los grupos activos de este ciclo a CERRADO
@@ -149,6 +154,7 @@ foreach ($rows as $row) {
                         </div>
                         
                         <form method="POST" style="margin:0;" onclick="event.stopPropagation();">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="ciclo_id" value="<?php echo $folder['id']; ?>">
                             <?php if ($folder['es_activo'] == 1): ?>
                                 <button type="submit" name="cerrar_grupos" style="background: white; border: 1px solid #dc3545; color: #dc3545; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#dc3545';" onclick="return confirm('¿Estás seguro de finalizar el semestre actual? Esto mandará todo al historial.');">
