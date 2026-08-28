@@ -7,7 +7,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit;
 }
 
-// 2. PROCESAR ACTUALIZACIÓN DE DATOS
+// 2. Protección CSRF GLOBAL
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+}
+
+// 3. PROCESAR ACTUALIZACIÓN DE DATOS
 $mensaje_exito = "";
 $mensaje_error = "";
 
@@ -43,7 +50,7 @@ if(isset($_GET['error'])) {
     else $mensaje_error = "Ocurrió un error al guardar la foto.";
 }
 
-// 3. Obtener datos del Administrador de la BD
+// 4. Obtener datos del Administrador de la BD
 $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE usuario_id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -166,6 +173,7 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                 <button class="close-btn" onclick="cerrarModalEditar()">&times;</button>
             </div>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="actualizar_perfil" value="1">
                 <div class="modal-body">
                     <div class="form-group">
@@ -192,6 +200,7 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                 <button class="close-btn" onclick="cerrarModalFoto()">&times;</button>
             </div>
             <form action="upload_foto_admin.php" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <div class="modal-body">
                     <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Formatos permitidos: JPG, PNG, WEBP (Máx 2MB).</p>
                     <div class="form-group">
