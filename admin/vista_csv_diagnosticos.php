@@ -102,6 +102,9 @@ if ($mensaje === 'ok_diagnosticos') {
             </div>
 
             <form method="POST" action="importar_diagnosticos.php" enctype="multipart/form-data">
+                 <!-- ESCUDO CSRF INYECTADO -->
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                
                 <div class="file-input-wrapper">
                     <label for="csv_diagnosticos" class="file-input-label" id="label_diagnosticos">
                         <i class="fas fa-cloud-upload-alt"></i> Haz clic para seleccionar el CSV de Diagnósticos
