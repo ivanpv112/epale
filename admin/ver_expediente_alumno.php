@@ -116,7 +116,8 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             <div class="avatar-wrapper">
                 <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
                 <?php if($perfil['foto_perfil']): ?>
-                    <a href="#" onclick="confirmarBorrarFoto('acciones_expediente.php?id=<?php echo $usuario_id; ?>&borrar_foto=1')" class="btn-delete-avatar" title="Eliminar foto inapropiada">
+                    <!-- ESCUDO CSRF APLICADO A LA URL DE BORRADO -->
+                    <a href="#" onclick="confirmarBorrarFoto('acciones_expediente.php?id=<?php echo $usuario_id; ?>&borrar_foto=1&csrf_token=<?php echo $_SESSION['csrf_token']; ?>')" class="btn-delete-avatar" title="Eliminar foto inapropiada">
                         <i class="fas fa-trash-alt"></i>
                     </a>
                 <?php endif; ?>
