@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
 $mensaje = ''; $tipo_mensaje = '';
 
 // =======================================================
-// ABRIR O CERRAR UN CICLO COMPLETO (REGLA DE ORO)
+// ABRIR O CERRAR UN CICLO COMPLETO
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ESCUDO CSRF
@@ -17,22 +17,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['cerrar_grupos'])) {
         $id_cerrar = $_POST['ciclo_id'];
-        // Mueve todos los grupos activos de este ciclo a CERRADO
         $pdo->prepare("UPDATE grupos SET estado = 'CERRADO' WHERE ciclo_id = ? AND estado = 'ACTIVO'")->execute([$id_cerrar]);
-        // Marca el ciclo en sí como inactivo
         $pdo->prepare("UPDATE ciclos SET activo = 0 WHERE ciclo_id = ?")->execute([$id_cerrar]);
         $mensaje = "El ciclo ha sido finalizado y mandado al archivo histórico."; $tipo_mensaje = "success";
     }
     if (isset($_POST['abrir_grupos'])) {
         $id_abrir = $_POST['ciclo_id'];
         
-        // LA REGLA DE ORO: Solo puede existir un ciclo actual a la vez.
-        // 1. Apagamos TODOS los ciclos
         $pdo->exec("UPDATE ciclos SET activo = 0");
-        // 2. Mandamos al historial (CERRADO) todos los grupos que estuvieran activos en otros ciclos
         $pdo->exec("UPDATE grupos SET estado = 'CERRADO' WHERE estado = 'ACTIVO'");
         
-        // 3. Encendemos ÚNICAMENTE el ciclo seleccionado y reactivamos sus grupos
         $pdo->prepare("UPDATE ciclos SET activo = 1 WHERE ciclo_id = ?")->execute([$id_abrir]);
         $pdo->prepare("UPDATE grupos SET estado = 'ACTIVO' WHERE ciclo_id = ?")->execute([$id_abrir]);
         
@@ -41,19 +35,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =======================================================
-// OBTENER TODOS LOS DATOS PARA EL ÁRBOL
+// OBTENER TODOS LOS DATOS PARA EL ÁRBOL (CORREGIDO PARA EVITAR DUPLICIDAD)
 // =======================================================
-// Agrupamos usando g.estado (ACTIVO/CERRADO)
+// Agrupamos la consulta estrictamente por g.clave_grupo y concatenamos los nrcs
 $sql = "SELECT c.ciclo_id, c.nombre as ciclo_nombre, c.activo,
-               COALESCE(g.estado, 'CERRADO') as grupo_estado,
+               MAX(g.estado) as grupo_estado,
                m.nombre as idioma, m.nivel,
-               g.clave_grupo, g.nrc, g.cupo,
+               g.clave_grupo, 
+               GROUP_CONCAT(DISTINCT g.nrc SEPARATOR ' y ') as nrc,
+               MAX(g.cupo) as cupo,
                u.nombre as prof_nombre, u.apellido_paterno as prof_ap,
-               (SELECT COUNT(DISTINCT i.alumno_id) FROM inscripciones i JOIN grupos g2 ON i.nrc = g2.nrc WHERE g2.clave_grupo = g.clave_grupo AND i.estatus='INSCRITO') as inscritos
+               (SELECT COUNT(DISTINCT i.alumno_id) 
+                FROM inscripciones i 
+                JOIN grupos g2 ON i.nrc = g2.nrc 
+                WHERE g2.clave_grupo = g.clave_grupo AND i.estatus='INSCRITO') as inscritos
         FROM ciclos c
         LEFT JOIN grupos g ON c.ciclo_id = g.ciclo_id
         LEFT JOIN materias m ON g.materia_id = m.materia_id
         LEFT JOIN usuarios u ON g.profesor_id = u.usuario_id
+        GROUP BY c.ciclo_id, c.nombre, c.activo, m.nombre, m.nivel, g.clave_grupo, u.nombre, u.apellido_paterno
         ORDER BY c.activo DESC, c.nombre DESC, m.nombre ASC, m.nivel ASC";
 
 $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
@@ -88,13 +88,15 @@ foreach ($rows as $row) {
     if (!isset($tree[$root_key]['idiomas'][$lang][$lvl])) $tree[$root_key]['idiomas'][$lang][$lvl] = [];
 
     // Guardar Clase
-    $tree[$root_key]['idiomas'][$lang][$lvl][] = [
-        'nrc' => $row['nrc'],
-        'clave' => $row['clave_grupo'],
-        'profesor' => trim($row['prof_nombre'] . ' ' . $row['prof_ap']),
-        'cupo' => $row['cupo'],
-        'inscritos' => $row['inscritos']
-    ];
+    if ($row['clave_grupo']) {
+        $tree[$root_key]['idiomas'][$lang][$lvl][] = [
+            'nrc' => $row['nrc'], // Mostrará "122222" o "122222 y 134543"
+            'clave' => $row['clave_grupo'],
+            'profesor' => trim($row['prof_nombre'] . ' ' . $row['prof_ap']),
+            'cupo' => $row['cupo'],
+            'inscritos' => $row['inscritos']
+        ];
+    }
 }
 ?>
 
