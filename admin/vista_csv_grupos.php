@@ -100,6 +100,9 @@ if ($mensaje === 'ok_grupos') {
             </div>
 
             <form method="POST" action="importar_grupos.php" enctype="multipart/form-data">
+                 <!-- ESCUDO CSRF INYECTADO -->
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                
                 <div class="file-input-wrapper">
                     <label for="csv_grupos" class="file-input-label" id="label_grupos">
                         <i class="fas fa-cloud-upload-alt"></i> Haz clic para seleccionar el CSV de Grupos
