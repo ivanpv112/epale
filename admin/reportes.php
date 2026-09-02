@@ -10,12 +10,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reportes Generales | E-PALE Admin</title>
     
-    <!-- Archivos CSS -->
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Librería Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -28,7 +25,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
             <p style="color: #666; margin: 5px 0 0 0;">Análisis estadístico y desempeño académico · E-PALE CUCEA</p>
         </div>
 
-        <!-- BARRA DE FILTROS -->
         <div class="reportes-filter-bar">
             <div style="width: 100%; font-size: 0.8rem; font-weight: bold; margin-bottom: -10px;"><i class="fas fa-filter"></i> FILTROS DE ANÁLISIS</div>
             <div class="reportes-filter-group">
@@ -38,25 +34,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
                 </select>
             </div>
             <div class="reportes-filter-group">
-                <label class="reportes-filter-label">2. Idioma</label>
+                <label class="reportes-filter-label">2. Idioma General</label>
                 <select id="sel_idioma" class="reportes-filter-select" onchange="cargarNiveles()" disabled>
                     <option value="">— Seleccionar idioma —</option>
                 </select>
             </div>
             <div class="reportes-filter-group">
-                <label class="reportes-filter-label">3. Nivel</label>
+                <label class="reportes-filter-label">3. Nivel (Plan de Evaluación)</label>
                 <select id="sel_nivel" class="reportes-filter-select" onchange="cargarDashboard()" disabled>
                     <option value="">— Seleccionar nivel —</option>
                 </select>
             </div>
         </div>
 
-        <!-- ESTADO VACÍO -->
         <div id="empty_state" class="content-card" style="text-align: center; padding: 80px 20px;">
             <div style="background: #f8f9fa; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
                 <i class="fas fa-filter" style="font-size: 1.8rem; color: #ccc;"></i>
             </div>
-            <h3 style="color: #444; margin-bottom: 5px;">Selecciona el ciclo e idioma para comenzar</h3>
+            <h3 style="color: #444; margin-bottom: 5px;">Selecciona el ciclo, idioma y nivel para comenzar</h3>
             <p style="color: #888; font-size: 0.9rem;">El dashboard se generará una vez que completes los 3 filtros</p>
             <div style="display:flex; justify-content:center; gap:10px; margin-top:20px; color:#aaa; font-weight:bold;">
                 <span style="width:30px; height:30px; border-radius:50%; border:2px solid var(--udg-blue); color:var(--udg-blue); display:flex; align-items:center; justify-content:center;">1</span> <i class="fas fa-chevron-right" style="margin-top:8px; font-size:0.7rem;"></i>
@@ -65,7 +60,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
             </div>
         </div>
 
-        <!-- CONTENEDOR DASHBOARD -->
         <div id="dashboard_container" style="display: none;">
             
             <div style="margin-bottom: 20px; display:flex; gap:10px; font-size:0.85rem; font-weight:bold; color:var(--udg-blue);">
@@ -74,7 +68,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
                 <span style="background:#eaf0ff; padding:5px 12px; border-radius:15px;" id="bread_nivel"></span>
             </div>
 
-            <!-- KPIs -->
             <div class="kpi-row">
                 <div class="kpi-card">
                     <div class="kpi-title">Alumnos Inscritos <i class="fas fa-user-graduate" style="background:#f1f3f5; padding:6px; border-radius:6px; color:var(--udg-blue);"></i></div>
@@ -130,14 +123,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
                 </div>
             </div>
 
-            <!-- COMPARATIVO HISTÓRICO -->
             <div class="chart-card" style="margin-bottom: 25px;">
                 <h3 class="chart-title">Comparativo por Ciclo</h3>
                 <p style="font-size:0.8rem; color:#888; margin-top:0;" id="subtitle_historico">Histórico de matrículas y promedios</p>
                 <div style="height: 280px; position:relative; margin-top:15px;"><canvas id="chartHistorico"></canvas></div>
             </div>
 
-            <!-- TABLA DE DESGLOSE -->
             <div class="chart-card" style="margin-bottom: 40px;">
                 <h3 class="chart-title">Desglose por Grupos</h3>
                 <p style="font-size:0.8rem; color:#888; margin-top:0;" id="subtitle_tabla"></p>
@@ -160,6 +151,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Loca
         </div>
     </main>
 
+    <script>
+        const csrfToken = "<?php echo $_SESSION['csrf_token']; ?>";
+    </script>
     <script src="../js/reportes_admin.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
