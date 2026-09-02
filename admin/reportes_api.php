@@ -7,6 +7,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     echo json_encode(['error' => 'No autorizado']); exit;
 }
 
+$input = json_decode(file_get_contents('php://input'), true);
+if (is_array($input)) {
+    $_POST = array_merge($_POST, $input);
+}
+
+// ESCUDO CSRF
+if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+    echo json_encode(['error' => 'Error de Seguridad: Token CSRF inválido o ausente.']); exit;
+}
+
 $action = $_POST['action'] ?? '';
 
 // 1. Cargar Ciclos
@@ -15,19 +25,28 @@ if ($action === 'get_ciclos') {
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)); exit;
 }
 
-// 2. Cargar Idiomas
+// 2. Cargar Idiomas (AGRUPACIÓN INTELIGENTE: Sin duplicados ni claves, forzando mayúsculas)
 if ($action === 'get_idiomas') {
     $ciclo_id = $_POST['ciclo_id'];
-    $stmt = $pdo->prepare("SELECT DISTINCT m.nombre FROM grupos g JOIN materias m ON g.materia_id = m.materia_id WHERE g.ciclo_id = ? ORDER BY m.nombre ASC");
+    $stmt = $pdo->prepare("SELECT DISTINCT UPPER(TRIM(m.nombre)) AS nombre 
+                           FROM grupos g 
+                           JOIN materias m ON g.materia_id = m.materia_id 
+                           WHERE g.ciclo_id = ? 
+                           ORDER BY nombre ASC");
     $stmt->execute([$ciclo_id]);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)); exit;
 }
 
-// 3. Cargar Niveles
+// 3. Cargar Niveles (TRAE NIVELES Y CLAVES ÚNICAS BUSCANDO POR EL IDIOMA AGRUPADO)
 if ($action === 'get_niveles') {
     $ciclo_id = $_POST['ciclo_id'];
-    $idioma = $_POST['idioma'];
-    $stmt = $pdo->prepare("SELECT DISTINCT m.nivel FROM grupos g JOIN materias m ON g.materia_id = m.materia_id WHERE g.ciclo_id = ? AND m.nombre = ? ORDER BY m.nivel ASC");
+    $idioma = mb_strtoupper(trim($_POST['idioma']), 'UTF-8');
+    
+    $stmt = $pdo->prepare("SELECT DISTINCT m.materia_id, m.nivel, m.clave 
+                           FROM grupos g 
+                           JOIN materias m ON g.materia_id = m.materia_id 
+                           WHERE g.ciclo_id = ? AND UPPER(TRIM(m.nombre)) = ? 
+                           ORDER BY m.nivel ASC, m.clave ASC");
     $stmt->execute([$ciclo_id, $idioma]);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)); exit;
 }
@@ -35,14 +54,17 @@ if ($action === 'get_niveles') {
 // 4. Calcular el Dashboard Completo
 if ($action === 'get_stats') {
     $ciclo_id = $_POST['ciclo_id'];
-    $idioma = $_POST['idioma'];
-    $nivel = $_POST['nivel'];
+    $materia_id = $_POST['materia_id'];
+    $idioma_base = mb_strtoupper(trim($_POST['idioma']), 'UTF-8'); // El nombre genérico para el Radar
 
-    $stmtM = $pdo->prepare("SELECT materia_id FROM materias WHERE nombre = ? AND nivel = ? LIMIT 1");
-    $stmtM->execute([$idioma, $nivel]);
-    $materia_id = $stmtM->fetchColumn();
+    // Obtenemos los nombres reales para la vista
+    $stmtInfo = $pdo->prepare("SELECT nombre, nivel, clave FROM materias WHERE materia_id = ?");
+    $stmtInfo->execute([$materia_id]);
+    $matInfo = $stmtInfo->fetch(PDO::FETCH_ASSOC);
+    $nivel = $matInfo['nivel'];
+    $clave = $matInfo['clave'];
 
-    // A) Grupos Abiertos (Contamos clases lógicas, no NRCs individuales)
+    // A) Grupos Abiertos (Contamos clases lógicas)
     $stmtG = $pdo->prepare("SELECT COUNT(DISTINCT clave_grupo) FROM grupos WHERE ciclo_id = ? AND materia_id = ?");
     $stmtG->execute([$ciclo_id, $materia_id]);
     $total_grupos = $stmtG->fetchColumn();
@@ -66,7 +88,7 @@ if ($action === 'get_stats') {
     foreach($alumnos_brutos as $al) {
         if(!isset($alumnos_unicos[$al['alumno_id']])) {
             $alumnos_unicos[$al['alumno_id']] = true;
-            $inscripciones_ids[] = $al['inscripcion_id']; // Solo tomamos una inscripción por alumno para sus sumas
+            $inscripciones_ids[] = $al['inscripcion_id']; 
             
             $gen = strtoupper($al['genero'] ?? '');
             if ($gen === 'MASCULINO') $hombres++;
@@ -81,7 +103,7 @@ if ($action === 'get_stats') {
     $stmtMax->execute([$materia_id]);
     $max_puntos = (float)$stmtMax->fetchColumn();
 
-    // D) Calificaciones Globales (REGLA IDIOMAS: MIN 80)
+    // D) Calificaciones Globales
     $desempeno_promedio = 0;
     $aprobados = 0; $reprobados = 0;
     $dist_0_69 = 0; $dist_70_79 = 0; $dist_80_85 = 0; $dist_86_95 = 0; $dist_96_100 = 0;
@@ -110,7 +132,7 @@ if ($action === 'get_stats') {
         $desempeno_promedio = round($suma_porcentajes / $total_alumnos, 1);
     }
 
-    // E) Desglose por Grupos (Agrupando Modalidades y Deduplicando)
+    // E) Desglose por Grupos 
     $stmtGrupos = $pdo->prepare("
         SELECT g.clave_grupo, u.nombre, u.apellido_paterno,
                MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g.nrc END) AS nrc_p,
@@ -157,17 +179,11 @@ if ($action === 'get_stats') {
             if($prom_g > 100) $prom_g = 100;
         }
         
-        // Etiqueta bonita para NRC
         $nrc_label = '';
-        if (!empty($g['nrc_p']) && !empty($g['nrc_v'])) {
-            $nrc_label = 'P: ' . $g['nrc_p'] . ' | V: ' . $g['nrc_v'];
-        } elseif (!empty($g['nrc_p'])) {
-            $nrc_label = $g['nrc_p'];
-        } elseif (!empty($g['nrc_v'])) {
-            $nrc_label = $g['nrc_v'] . ' (Virtual)';
-        } else {
-            $nrc_label = $g['nrc_fallback']; // En caso de que no haya horarios definidos aún
-        }
+        if (!empty($g['nrc_p']) && !empty($g['nrc_v'])) { $nrc_label = 'P: ' . $g['nrc_p'] . ' | V: ' . $g['nrc_v']; } 
+        elseif (!empty($g['nrc_p'])) { $nrc_label = $g['nrc_p']; } 
+        elseif (!empty($g['nrc_v'])) { $nrc_label = $g['nrc_v'] . ' (Virtual)'; } 
+        else { $nrc_label = $g['nrc_fallback']; }
 
         $tabla_grupos[] = [
             'nrc_label' => $nrc_label,
@@ -178,9 +194,12 @@ if ($action === 'get_stats') {
         ];
     }
 
-    // F) Radar por Nivel (Deduplicando alumnos por nivel)
-    $stmtNiv = $pdo->prepare("SELECT DISTINCT m.nivel, m.materia_id FROM grupos g JOIN materias m ON g.materia_id = m.materia_id WHERE g.ciclo_id = ? AND m.nombre = ? ORDER BY m.nivel ASC");
-    $stmtNiv->execute([$ciclo_id, $idioma]);
+    // F) Radar por Nivel (INTELIGENTE: Busca todas las materias derivadas de ese idioma global)
+    $stmtNiv = $pdo->prepare("SELECT DISTINCT m.nivel, m.materia_id, m.clave 
+                              FROM grupos g JOIN materias m ON g.materia_id = m.materia_id 
+                              WHERE g.ciclo_id = ? AND UPPER(TRIM(m.nombre)) = ? 
+                              ORDER BY m.nivel ASC, m.clave ASC");
+    $stmtNiv->execute([$ciclo_id, $idioma_base]);
     $niveles_activos = $stmtNiv->fetchAll(PDO::FETCH_ASSOC);
 
     $radar_labels = []; $radar_promedios = [];
@@ -188,8 +207,8 @@ if ($action === 'get_stats') {
     $max_pts_all = $stmtMaxAll->fetchAll(PDO::FETCH_KEY_PAIR);
 
     foreach($niveles_activos as $niv) {
-        $n = $niv['nivel']; $m_id = $niv['materia_id'];
-        $radar_labels[] = 'Nivel ' . $n;
+        $n = $niv['nivel']; $m_id = $niv['materia_id']; $c = $niv['clave'];
+        $radar_labels[] = 'Nivel ' . $n . ' (' . $c . ')'; 
         
         $stmtAlumsNivel = $pdo->prepare("SELECT i.inscripcion_id, i.alumno_id FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc WHERE g.ciclo_id = ? AND g.materia_id = ? AND i.estatus = 'INSCRITO'");
         $stmtAlumsNivel->execute([$ciclo_id, $m_id]);
@@ -214,7 +233,7 @@ if ($action === 'get_stats') {
         $radar_promedios[] = $prom_n;
     }
 
-    // G) Histórico (Comparativo por Ciclo Deduplicado)
+    // G) Histórico (Deduplicado Y USANDO materia_id para respetar la variante evaluada)
     $stmtHist = $pdo->query("SELECT ciclo_id, nombre FROM ciclos ORDER BY nombre ASC");
     $todos_ciclos = $stmtHist->fetchAll(PDO::FETCH_ASSOC);
     $hist_labels = []; $hist_alumnos = []; $hist_promedios = [];
@@ -222,10 +241,10 @@ if ($action === 'get_stats') {
     foreach($todos_ciclos as $c) {
         $stmtHA = $pdo->prepare("
             SELECT i.inscripcion_id, i.alumno_id
-            FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc JOIN materias m ON g.materia_id = m.materia_id
-            WHERE g.ciclo_id = ? AND m.nombre = ? AND m.nivel = ? AND i.estatus = 'INSCRITO'
+            FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc 
+            WHERE g.ciclo_id = ? AND g.materia_id = ? AND i.estatus = 'INSCRITO'
         ");
-        $stmtHA->execute([$c['ciclo_id'], $idioma, $nivel]);
+        $stmtHA->execute([$c['ciclo_id'], $materia_id]);
         $ins_hist_raw = $stmtHA->fetchAll(PDO::FETCH_ASSOC);
         
         $u_hist = []; $ins_hist = [];
@@ -251,6 +270,9 @@ if ($action === 'get_stats') {
     }
 
     echo json_encode([
+        'idioma' => $idioma_base,
+        'clave' => $clave,
+        'nivel' => $nivel,
         'total_grupos' => $total_grupos,
         'total_alumnos' => $total_alumnos,
         'hombres' => $hombres, 'mujeres' => $mujeres, 'otros' => $otros,
