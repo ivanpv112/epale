@@ -78,6 +78,9 @@ if ($mensaje === 'ok_profesores') {
             </div>
 
             <form method="POST" action="importar_profesores.php" enctype="multipart/form-data">
+                <!-- ESCUDO CSRF INYECTADO -->
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
                 <div class="file-input-wrapper">
                     <label for="csv_profesores" class="file-input-label" id="label_profesores">
                         <i class="fas fa-cloud-upload-alt"></i> Haz clic para seleccionar el CSV de Profesores
