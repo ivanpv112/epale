@@ -21,18 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $materia_id = $_POST['materia_id'] ?? null;
     
-    // FORZAR MAYÚSCULAS
+    // AQUÍ FORZAMOS MAYÚSCULAS DESDE EL BACKEND (Respetando acentos con UTF-8)
     $nombre = mb_strtoupper(trim($_POST['nombre']), 'UTF-8');
     $clave = strtoupper(trim($_POST['clave']));
     $nivel = intval($_POST['nivel']);
 
     try {
-        // Validación 1: Campos vacíos
         if(empty($nombre) || empty($clave) || empty($nivel)) {
             throw new Exception("Todos los campos son obligatorios.");
         }
 
-        // Validación 2: Clave duplicada
         if ($materia_id) {
             $check = $pdo->prepare("SELECT COUNT(*) FROM materias WHERE clave = ? AND materia_id != ?");
             $check->execute([$clave, $materia_id]);
@@ -87,15 +85,11 @@ if (isset($_GET['q']) && !empty($_GET['q'])) {
     $params[':q'] = "%".$_GET['q']."%";
 }
 
-// =======================================================
 // DETECTOR INTELIGENTE DE IDIOMAS (ESCALABLE)
-// =======================================================
-// Obtener los nombres únicos directamente de la base de datos, forzando mayúsculas para agrupar
 $stmt_idiomas = $pdo->query("SELECT DISTINCT UPPER(TRIM(nombre)) as idioma FROM materias WHERE nombre != '' ORDER BY idioma ASC");
 $idiomas_present = $stmt_idiomas->fetchAll(PDO::FETCH_COLUMN);
 
 if (isset($_GET['idioma']) && !empty($_GET['idioma'])) {
-    // Filtrar forzando mayúsculas
     $where .= " AND UPPER(TRIM(nombre)) = :idioma";
     $params[':idioma'] = mb_strtoupper(trim($_GET['idioma']), 'UTF-8');
 }
@@ -106,8 +100,9 @@ $stmt->execute($params);
 $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_materias = $pdo->query("SELECT COUNT(*) FROM materias")->fetchColumn();
-$total_grupos = $pdo->query("SELECT COUNT(*) FROM grupos")->fetchColumn();
-$total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado en la BD
+// CORRECCIÓN: Contamos claves de grupo únicas, no filas NRC
+$total_grupos = $pdo->query("SELECT COUNT(DISTINCT clave_grupo) FROM grupos")->fetchColumn();
+$total_idiomas = count($idiomas_present); 
 ?>
 
 <!DOCTYPE html>
@@ -168,7 +163,7 @@ $total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado
             </select>
             
             <button type="button" class="btn-save" onclick="openModal()" style="margin-left: auto;">
-                <i class="fas fa-book-medical"></i> Nueva Materia
+                <i class="fas fa-book-medical"></i> Nuevo Idioma/Nivel
             </button>
         </form>
 
@@ -187,7 +182,8 @@ $total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado
                     <tbody>
                         <?php if (count($materias) > 0): ?>
                             <?php foreach ($materias as $m): 
-                                $count_grupos = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE materia_id = ?");
+                                // CORRECCIÓN: Contamos claves únicas
+                                $count_grupos = $pdo->prepare("SELECT COUNT(DISTINCT clave_grupo) FROM grupos WHERE materia_id = ?");
                                 $count_grupos->execute([$m['materia_id']]);
                                 $num_grupos = $count_grupos->fetchColumn();
 
@@ -257,7 +253,7 @@ $total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado
 
     </main>
 
-    <footer class="main-footer"></footer>
+    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <div id="materiaModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
@@ -273,7 +269,6 @@ $total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado
                     <div class="form-grid-materias">
                         <div class="form-group full-width"> 
                             <label>Nombre del Idioma/Materia</label> 
-                            <!-- Transformación CSS para forzar mayúsculas visualmente -->
                             <input type="text" name="nombre" id="materiaNombre" required placeholder="EJ. INGLÉS, FRANCÉS, ETC." style="text-transform: uppercase;"> 
                         </div>
                         <div class="form-group"> 
@@ -347,6 +342,5 @@ $total_idiomas = count($idiomas_present); // Conteo inteligente dinámico basado
             if(e.target == overlayMenu) toggleMobileMenu();
         };
     </script>
-
 </body>
 </html>
