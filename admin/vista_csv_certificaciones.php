@@ -107,6 +107,9 @@ if ($mensaje === 'ok_certificaciones') {
             </div>
 
             <form method="POST" action="importar_certificaciones.php" enctype="multipart/form-data">
+                 <!-- ESCUDO CSRF INYECTADO -->
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                
                 <div class="file-input-wrapper">
                     <label for="csv_certificaciones" class="file-input-label" id="label_certificaciones">
                         <i class="fas fa-cloud-upload-alt"></i> Haz clic para seleccionar el CSV de Certificaciones
