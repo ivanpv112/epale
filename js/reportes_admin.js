@@ -1,11 +1,13 @@
-// js/reportes_admin.js
-
 let charts = { genero: null, calif: null, radar: null, historico: null };
 
 document.addEventListener('DOMContentLoaded', cargarCiclos);
 
 function cargarCiclos() {
-    fetch('reportes_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'action=get_ciclos' })
+    fetch('reportes_api.php', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+        body: `action=get_ciclos&csrf_token=${encodeURIComponent(csrfToken)}` 
+    })
     .then(res => res.json())
     .then(data => {
         let sel = document.getElementById('sel_ciclo');
@@ -23,11 +25,18 @@ function cargarIdiomas() {
     
     if(!ciclo_id) { selId.innerHTML = '<option value="">— Seleccionar idioma —</option>'; selId.disabled = true; ocultarDashboard(); return; }
 
-    fetch('reportes_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `action=get_idiomas&ciclo_id=${ciclo_id}` })
+    fetch('reportes_api.php', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+        body: `action=get_idiomas&ciclo_id=${ciclo_id}&csrf_token=${encodeURIComponent(csrfToken)}` 
+    })
     .then(res => res.json())
     .then(data => {
         selId.disabled = false; selId.innerHTML = '<option value="">— Seleccionar idioma —</option>';
-        data.forEach(i => selId.innerHTML += `<option value="${i.nombre}">${i.nombre}</option>`);
+        // Filtro 2 Muestra Idiomas
+        data.forEach(i => {
+            selId.innerHTML += `<option value="${i.nombre}">${i.nombre}</option>`;
+        });
         ocultarDashboard();
     });
 }
@@ -39,28 +48,34 @@ function cargarNiveles() {
 
     if(!idioma) { selNiv.innerHTML = '<option value="">— Seleccionar nivel —</option>'; selNiv.disabled = true; ocultarDashboard(); return; }
 
-    fetch('reportes_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `action=get_niveles&ciclo_id=${ciclo_id}&idioma=${idioma}` })
+    fetch('reportes_api.php', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+        body: `action=get_niveles&ciclo_id=${ciclo_id}&idioma=${encodeURIComponent(idioma)}&csrf_token=${encodeURIComponent(csrfToken)}` 
+    })
     .then(res => res.json())
     .then(data => {
         selNiv.disabled = false; selNiv.innerHTML = '<option value="">— Seleccionar nivel —</option>';
-        data.forEach(n => selNiv.innerHTML += `<option value="${n.nivel}">Nivel ${n.nivel}</option>`);
+        // Filtro 3 Muestra Nivel
+        data.forEach(n => selNiv.innerHTML += `<option value="${n.materia_id}">Nivel ${n.nivel} (${n.clave})</option>`);
         ocultarDashboard();
     });
 }
 
 function cargarDashboard() {
-    let ciclo = document.getElementById('sel_ciclo');
-    let idioma = document.getElementById('sel_idioma').value;
-    let nivel = document.getElementById('sel_nivel').value;
+    let ciclo = document.getElementById('sel_ciclo').value;
+    let idioma = document.getElementById('sel_idioma').value; 
+    let materia_id = document.getElementById('sel_nivel').value; 
 
-    if(!ciclo.value || !idioma || !nivel) { ocultarDashboard(); return; }
+    if(!ciclo || !idioma || !materia_id) { ocultarDashboard(); return; }
 
-    let textoCiclo = ciclo.options[ciclo.selectedIndex].text;
+    let textoCiclo = document.getElementById('sel_ciclo').options[document.getElementById('sel_ciclo').selectedIndex].text;
+    let textoNivelCompleto = document.getElementById('sel_nivel').options[document.getElementById('sel_nivel').selectedIndex].text;
 
     fetch('reportes_api.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `action=get_stats&ciclo_id=${ciclo.value}&idioma=${encodeURIComponent(idioma)}&nivel=${nivel}`
+        body: `action=get_stats&ciclo_id=${ciclo}&materia_id=${materia_id}&idioma=${encodeURIComponent(idioma)}&csrf_token=${encodeURIComponent(csrfToken)}`
     })
     .then(res => res.json())
     .then(data => {
@@ -70,7 +85,7 @@ function cargarDashboard() {
         // Breadcrumbs y KPIs
         document.getElementById('bread_ciclo').innerText = textoCiclo;
         document.getElementById('bread_idioma').innerText = idioma;
-        document.getElementById('bread_nivel').innerText = 'Nivel ' + nivel;
+        document.getElementById('bread_nivel').innerText = textoNivelCompleto;
 
         document.getElementById('kpi_alumnos').innerText = data.total_alumnos;
         document.getElementById('kpi_sub_alumnos').innerText = data.total_grupos + ' grupos activos';
@@ -91,8 +106,8 @@ function cargarDashboard() {
         document.getElementById('bar_aprob').style.width = data.tasa_aprobacion + '%';
         document.getElementById('bar_rep').style.width = tasaRep + '%';
 
-        // Tabla Grupos: Utilizamos nrc_label
-        document.getElementById('subtitle_tabla').innerText = `${data.total_grupos} grupos | ${idioma} Nivel ${nivel} - ${textoCiclo}`;
+        // Tabla Grupos
+        document.getElementById('subtitle_tabla').innerText = `${data.total_grupos} grupos | ${idioma} ${textoNivelCompleto} - ${textoCiclo}`;
         let tb = document.getElementById('tablaGruposBody'); tb.innerHTML = '';
         data.tabla_grupos.forEach(g => {
             let colorPerf = g.promedio >= 90 ? '#00d27a' : (g.promedio >= 80 ? '#ffc107' : '#fb4d5e');
@@ -112,7 +127,7 @@ function cargarDashboard() {
 
         // Títulos de gráficas
         document.getElementById('titulo_radar').innerText = `Promedio por Nivel — ${idioma}`;
-        document.getElementById('subtitle_historico').innerText = `${idioma} Nivel ${nivel} · Histórico de matrículas y promedios`;
+        document.getElementById('subtitle_historico').innerText = `${idioma} ${textoNivelCompleto} · Histórico de matrículas y promedios`;
 
         // Renderizado de Gráficas
         pintarGenero(data.hombres, data.mujeres, data.otros, data.total_alumnos);
