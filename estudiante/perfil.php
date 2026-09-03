@@ -6,38 +6,30 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
 }
 
-// CREACIÓN SILENCIOSA DE TABLAS (Por si no se han creado)
-try { 
-    $pdo->exec("CREATE TABLE IF NOT EXISTS certificaciones (
-        certificacion_id INT AUTO_INCREMENT PRIMARY KEY, 
-        alumno_id INT, 
-        idioma VARCHAR(50), 
-        nivel_obtenido VARCHAR(50), 
-        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )"); 
-    $pdo->exec("CREATE TABLE IF NOT EXISTS examenes_diagnosticos (
-        examen_id INT AUTO_INCREMENT PRIMARY KEY, 
-        alumno_id INT, 
-        idioma VARCHAR(50), 
-        calificacion_texto VARCHAR(50),
-        nivel_asignado INT,
-        fecha_realizacion DATE,
-        periodo VARCHAR(20),
-        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
-} catch(Exception $e) {}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+}
 
 $mensaje_exito = "";
 $mensaje_error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['actualizar_perfil'])) {
     $nuevo_correo = trim($_POST['correo']);
-    $nuevo_telefono = trim($_POST['telefono']);
+    $nuevo_telefono = preg_replace('/[^0-9]/', '', $_POST['telefono']);
+    $nueva_password = $_POST['password'] ?? '';
 
     if (!empty($nuevo_correo)) {
         try {
-            $sql_update = "UPDATE usuarios SET correo = ?, telefono = ? WHERE usuario_id = ?";
-            $pdo->prepare($sql_update)->execute([$nuevo_correo, $nuevo_telefono, $_SESSION['user_id']]);
+            if (!empty($nueva_password)) {
+                $hash_password = password_hash($nueva_password, PASSWORD_DEFAULT);
+                $sql_update = "UPDATE usuarios SET correo = ?, telefono = ?, password = ?, fecha_cambio_password = NOW() WHERE usuario_id = ?";
+                $pdo->prepare($sql_update)->execute([$nuevo_correo, $nuevo_telefono, $hash_password, $_SESSION['user_id']]);
+            } else {
+                $sql_update = "UPDATE usuarios SET correo = ?, telefono = ? WHERE usuario_id = ?";
+                $pdo->prepare($sql_update)->execute([$nuevo_correo, $nuevo_telefono, $_SESSION['user_id']]);
+            }
             $mensaje_exito = "¡Tu información se ha actualizado correctamente!";
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) { 
@@ -68,9 +60,6 @@ $nombre_completo = $user['nombre'] . " " . (isset($user['apellido_paterno']) ? $
 $foto_perfil = "../img/avatar-default.png"; 
 if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/perfiles/" . $user['foto_perfil'])) { $foto_perfil = "../img/perfiles/" . $user['foto_perfil']; }
 
-// ===============================================
-// KÁRDEX: EXTRAER CLASES CERRADAS
-// ===============================================
 $sql_historial = "SELECT i.inscripcion_id, m.nombre as materia, m.nivel, c.nombre as ciclo, 
                          (SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = i.inscripcion_id) as calificacion_final
                   FROM inscripciones i
@@ -98,27 +87,25 @@ $todas_las_inscripciones = $stmt_todas->fetchAll(PDO::FETCH_ASSOC);
 $idiomas_nivel_4 = [];
 foreach($todas_las_inscripciones as $ins) {
     if ($ins['nivel'] >= 4) {
-        $idiomas_nivel_4[$ins['materia']] = true;
+        $idioma_norm = mb_strtoupper(trim($ins['materia']), 'UTF-8');
+        $idiomas_nivel_4[$idioma_norm] = true;
     }
 }
 $idiomas_nivel_4 = array_keys($idiomas_nivel_4);
 
 $certificaciones_bd = [];
 if (count($idiomas_nivel_4) > 0) {
-    $stmt_cert = $pdo->prepare("SELECT idioma, nivel_obtenido FROM certificaciones WHERE alumno_id = ?");
+    $stmt_cert = $pdo->prepare("SELECT * FROM certificaciones WHERE alumno_id = ?");
     $stmt_cert->execute([$alumno_id]);
     while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
-        $certificaciones_bd[$row['idioma']] = $row['nivel_obtenido'];
+        $idioma_norm = mb_strtoupper(trim($row['idioma']), 'UTF-8');
+        $certificaciones_bd[$idioma_norm] = $row;
     }
 }
 
-// ===============================================
-// EXÁMENES DIAGNÓSTICOS
-// ===============================================
 $stmt_diag = $pdo->prepare("SELECT * FROM examenes_diagnosticos WHERE alumno_id = ? ORDER BY fecha_realizacion DESC");
 $stmt_diag->execute([$alumno_id]);
 $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
-
 ?>
 
 <!DOCTYPE html>
@@ -129,10 +116,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
     <title>Perfil | E-Pale</title>
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .clickable-row { cursor: pointer; transition: background-color 0.2s; }
-        .clickable-row:hover { background-color: var(--bg-gray); }
-    </style>
 </head>
 <body>
 
@@ -169,15 +152,15 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                     <?php foreach($examenes_diagnosticos as $diag): ?>
-                        <div style="border: 1px solid rgba(128,128,128,0.2); border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px; background: var(--bg-gray); box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+                        <div class="diag-card-profile">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                                 <h4 style="margin: 0; color: var(--text-dark); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
                                 <span style="background: rgba(23, 162, 184, 0.1); color: #17a2b8; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(23, 162, 184, 0.2);"><?php echo htmlspecialchars($diag['periodo']); ?></span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem; color: var(--text-muted);">
-                                <div><i class="fas fa-layer-group" style="color:var(--text-muted);"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
-                                <div><i class="fas fa-star" style="color:var(--text-muted);"></i> Calif: <strong style="color:var(--text-dark);"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
-                                <div style="grid-column: span 2;"><i class="far fa-calendar-alt" style="color:var(--text-muted);"></i> Fecha de aplicación: <span style="color:var(--text-dark); font-weight:500;"><?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></span></div>
+                                <div><i class="fas fa-layer-group"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
+                                <div><i class="fas fa-star"></i> Calif: <strong style="color:var(--text-dark);"><?php echo htmlspecialchars($diag['calificacion_texto']); ?></strong></div>
+                                <div style="grid-column: span 2;"><i class="far fa-calendar-alt"></i> Fecha de aplicación: <span style="color:var(--text-dark); font-weight:500;"><?php echo date('d/m/Y', strtotime($diag['fecha_realizacion'])); ?></span></div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -192,9 +175,20 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <?php foreach($idiomas_nivel_4 as $idioma): 
-                        $nivel_obt = $certificaciones_bd[$idioma] ?? null;
+                        $cert = $certificaciones_bd[$idioma] ?? null;
+                        $nivel_obt = $cert['nivel_obtenido'] ?? null;
+                        
+                        $clase_extra = $nivel_obt ? 'obtained' : '';
+                        $onclick_event = '';
+                        $titulo = '';
+                        
+                        if ($nivel_obt) {
+                            $json_data = htmlspecialchars(json_encode($cert), ENT_QUOTES, 'UTF-8');
+                            $onclick_event = "onclick='abrirModalCertDetalle($json_data)'";
+                            $titulo = "title='Haz clic para ver detalles'";
+                        }
                     ?>
-                        <div style="border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 20px; text-align: center; background: <?php echo $nivel_obt ? 'rgba(0, 86, 179, 0.05)' : 'var(--bg-gray)'; ?>; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: 0.2s;">
+                        <div class="cert-card <?php echo $clase_extra; ?>" <?php echo $onclick_event; ?> <?php echo $titulo; ?>>
                             <i class="fas fa-certificate" style="font-size: 2.5rem; color: <?php echo $nivel_obt ? 'var(--udg-light)' : 'var(--text-muted)'; ?>; margin-bottom: 10px;"></i>
                             <h4 style="margin: 0 0 5px 0; color: <?php echo $nivel_obt ? 'var(--text-dark)' : 'var(--text-muted)'; ?>;"><?php echo htmlspecialchars($idioma); ?></h4>
                             <span style="font-size: 1.2rem; font-weight: bold; color: <?php echo $nivel_obt ? 'var(--udg-blue)' : 'var(--text-muted)'; ?>;">
@@ -207,7 +201,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         <?php endif; ?>
 
         <div class="profile-grid">
-            
             <div class="card">
                 <h3 style="color: var(--text-dark);">
                     <i class="far fa-user" style="color: var(--udg-blue);"></i> Información Personal 
@@ -226,6 +219,18 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 <div class="info-section">
                     <span class="info-label">Teléfono</span>
                     <span class="info-value" style="color: var(--text-dark);"><?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span style="color:var(--text-muted); font-style:italic;">No registrado</span>'; ?></span>
+                </div>
+                <div class="info-section">
+                    <span class="info-label">Contraseña</span>
+                    <span class="info-value" style="color: var(--text-dark);">
+                        <?php 
+                            if (!empty($user['fecha_cambio_password'])) {
+                                echo '<i class="fas fa-key" style="color:var(--text-muted); font-size:0.9rem;"></i> Modificada el ' . date('d/m/Y', strtotime($user['fecha_cambio_password']));
+                            } else {
+                                echo '<span style="color:var(--text-muted); font-style:italic;"><i class="fas fa-key"></i> Original (No modificada)</span>';
+                            }
+                        ?>
+                    </span>
                 </div>
             </div>
 
@@ -270,7 +275,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                     <td style="text-align: center; font-size: 1.1rem; color: var(--udg-blue);"><strong><?php echo $calif; ?></strong></td>
                                     <td style="text-align: center;">
                                         <div style="margin-bottom: 5px;"><span style="background: rgba(108,117,125,0.1); color: #6c757d; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; border: 1px solid rgba(108,117,125,0.2);"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
-                                        <?php if($calif >= 60): ?>
+                                        <?php if($calif >= 80): ?>
                                             <span class="tag-aprobado" style="background: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2);">Aprobado</span>
                                         <?php else: ?>
                                             <span class="tag-rechazada" style="background: rgba(220,53,69,0.1); color: #dc3545; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(220,53,69,0.2);">Reprobado</span>
@@ -297,6 +302,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 <button class="close-btn" onclick="cerrarModalEditar()">&times;</button>
             </div>
             <form method="POST" action="perfil.php">
+                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="actualizar_perfil" value="1">
                 <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
                     <div class="form-group">
@@ -305,7 +311,11 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="form-group">
                         <label>Teléfono</label>
-                        <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 33 1234 5678">
+                        <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 3312345678" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <div class="form-group">
+                        <label>Nueva Contraseña</label>
+                        <input type="password" name="password" placeholder="(Opcional) Deja en blanco para no cambiar">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -325,6 +335,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
                 <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
                 <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="form-group">
                         <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none; color: var(--text-dark);">
                     </div>
@@ -337,19 +348,67 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- DETALLES DE LA CERTIFICACIÓN -->
+    <div id="modalCertDetalle" class="modal-overlay" style="display:none;">
+        <div class="modal-content cert-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-certificate"></i> Detalles de la Certificación </h2>
+                <button class="close-btn" onclick="cerrarModalCertDetalle()">&times;</button>
+            </div>
+            <div class="modal-body cert-modal-body">
+                <i class="fas fa-award cert-icon-lg"></i>
+                <h3 id="certDetalleIdioma" class="cert-title-lg"></h3>
+                <div id="certDetalleNivel" class="cert-level-badge"></div>
+                
+                <div class="cert-detail-grid">
+                    <div class="cert-detail-box">
+                        <div class="cert-detail-label"><i class="fas fa-star"></i> Puntaje</div>
+                        <div class="cert-detail-value" id="certDetallePuntaje"></div>
+                    </div>
+                    <div class="cert-detail-box">
+                        <div class="cert-detail-label"><i class="far fa-calendar-alt"></i> Periodo</div>
+                        <div class="cert-detail-value" id="certDetallePeriodo"></div>
+                    </div>
+                    <div class="cert-detail-box full-width">
+                        <div class="cert-detail-label"><i class="far fa-calendar-check"></i> Fecha de Aplicación</div>
+                        <div class="cert-detail-value" id="certDetalleFecha"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const modalEditar = document.getElementById('modalEditar');
         const modalFoto = document.getElementById('modalFoto');
-        const overlayMenu = document.getElementById('menuOverlay');
+        const modalCertDetalle = document.getElementById('modalCertDetalle');
         
         function abrirModalEditar() { modalEditar.style.display = 'flex'; }
         function cerrarModalEditar() { modalEditar.style.display = 'none'; }
         function abrirModalFoto() { modalFoto.style.display = 'flex'; }
         function cerrarModalFoto() { modalFoto.style.display = 'none'; }
 
+        function abrirModalCertDetalle(cert) {
+            document.getElementById('certDetalleIdioma').innerText = cert.idioma;
+            document.getElementById('certDetalleNivel').innerText = 'Nivel ' + cert.nivel_obtenido;
+            document.getElementById('certDetallePuntaje').innerText = cert.puntaje ? cert.puntaje : '---';
+            document.getElementById('certDetallePeriodo').innerText = cert.periodo ? cert.periodo : '---';
+            
+            let fecha = 'No registrada';
+            if (cert.fecha_aplicacion && cert.fecha_aplicacion !== '0000-00-00') {
+                let partes = cert.fecha_aplicacion.split('-');
+                fecha = partes[2] + '/' + partes[1] + '/' + partes[0]; 
+            }
+            document.getElementById('certDetalleFecha').innerText = fecha;
+            
+            modalCertDetalle.style.display = 'flex';
+        }
+        function cerrarModalCertDetalle() { modalCertDetalle.style.display = 'none'; }
+
         window.onclick = function(e) { 
             if(e.target == modalEditar) cerrarModalEditar(); 
             if(e.target == modalFoto) cerrarModalFoto(); 
+            if(e.target == modalCertDetalle) cerrarModalCertDetalle();
         }
     </script>
 </body>
