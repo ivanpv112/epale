@@ -8,6 +8,11 @@ if (!isset($_SESSION['smart_back_estudiante'])) {
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
+// Generación del token CSRF global para toda la sesión
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
     // Scripts silenciosos que no deben borrar la memoria del botón volver
