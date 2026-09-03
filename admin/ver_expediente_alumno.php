@@ -61,8 +61,10 @@ foreach ($todas_materias as $mat) {
         $historial[] = $mat;
     }
     
-    if ($mat['nivel'] >= 4) {
-        $idiomas_nivel_4[$mat['materia']] = true;
+    // Solo consideramos el nivel para certificación si NO está dado de baja
+    if ($mat['nivel'] >= 4 && $mat['estatus'] == 'INSCRITO') {
+        $idioma_norm = mb_strtoupper(trim($mat['materia']), 'UTF-8');
+        $idiomas_nivel_4[$idioma_norm] = true;
     }
 }
 
@@ -73,7 +75,8 @@ $stmt_cert = $pdo->prepare("SELECT * FROM certificaciones WHERE alumno_id = ?");
 $stmt_cert->execute([$alumno_id]);
 $certificaciones_bd = [];
 while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
-    $certificaciones_bd[mb_strtoupper(trim($row['idioma']), 'UTF-8')] = $row;
+    $idioma_norm = mb_strtoupper(trim($row['idioma']), 'UTF-8');
+    $certificaciones_bd[$idioma_norm] = $row;
 }
 
 $stmt_diag = $pdo->prepare("SELECT * FROM examenes_diagnosticos WHERE alumno_id = ? ORDER BY fecha_realizacion DESC");
@@ -116,7 +119,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             <div class="avatar-wrapper">
                 <img src="<?php echo $foto_perfil; ?>" alt="Foto" class="expediente-avatar">
                 <?php if($perfil['foto_perfil']): ?>
-                    <!-- ESCUDO CSRF APLICADO A LA URL DE BORRADO -->
                     <a href="#" onclick="confirmarBorrarFoto('acciones_expediente.php?id=<?php echo $usuario_id; ?>&borrar_foto=1&csrf_token=<?php echo $_SESSION['csrf_token']; ?>')" class="btn-delete-avatar" title="Eliminar foto inapropiada">
                         <i class="fas fa-trash-alt"></i>
                     </a>
@@ -228,6 +230,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
                                                         <span style="background:#cce5ff; color:#004085; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span>
                                                     <?php else: ?>
+                                                        <!-- CORRECCIÓN REGLA MÍNIMA 80 PTS -->
                                                         <?php if($calif >= 80): ?>
                                                             <span style="background:#d4edda; color:#155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Aprobada</span>
                                                         <?php else: ?>
@@ -295,8 +298,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                         
                         <div style="margin-top: 15px;">
                             <?php foreach($idiomas_nivel_4 as $idioma): 
-                                $idioma_key = mb_strtoupper(trim($idioma), 'UTF-8');
-                                $cert = $certificaciones_bd[$idioma_key] ?? null;
+                                $cert = $certificaciones_bd[$idioma] ?? null;
                                 
                                 $nivel_obt = $cert['nivel_obtenido'] ?? 'Sin registrar';
                                 $puntaje_obt = $cert['puntaje'] ?? '';
@@ -330,9 +332,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <!-- ==========================================
-             AQUÍ IMPORTAMOS TODOS LOS MODALES HTML
-             ========================================== -->
         <?php include 'modales_expediente.php'; ?>
 
     </main>
@@ -340,7 +339,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
     <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
 
     <script>
-        // Función para atrapar los datos del diagnóstico y abrir el modal
         function editarDiagnostico(diag) {
             document.getElementById('inputExamenId').value = diag.examen_id;
             document.getElementById('inputIdiomaDiag').value = diag.idioma;
@@ -352,7 +350,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('modalDiag').style.display = 'flex';
         }
 
-        // Alerta elegante para confirmar el borrado de la foto
         function confirmarBorrarFoto(url) {
             Swal.fire({
                 title: '¿Borrar foto de perfil?',
