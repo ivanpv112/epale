@@ -2,9 +2,16 @@
 session_start();
 require '../db.php';
 
-// 1. Seguridad
+// 1. Seguridad de Sesión
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
+}
+
+// 2. ESCUDO CSRF (Bloquea subidas de archivos desde formularios de terceros)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
@@ -16,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         header("Location: perfil.php?error=upload"); exit;
     }
 
-    // 2. Medidas de Seguridad
+    // 3. Medidas de Seguridad del Archivo
     // a) Whitelist de extensiones (Permitimos que suban lo que sea)
     $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
     $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -35,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         header("Location: perfil.php?error=mime"); exit;
     }
 
-    // 3. Preparar el guardado
+    // 4. Preparar el guardado
     $target_dir = "../img/perfiles/";
     if (!file_exists($target_dir)) { mkdir($target_dir, 0755, true); }
 
@@ -66,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         imagewebp($img_source, $target_file, 80); 
         imagedestroy($img_source); // Limpiar memoria de tu servidor
 
-        // 4. Actualizar la Base de Datos
+        // 5. Actualizar la Base de Datos
         $stmt_old = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
         $stmt_old->execute([$usuario_id]);
         $old_foto = $stmt_old->fetchColumn();
