@@ -12,6 +12,10 @@ $alumno_id = $alumno['alumno_id'];
 $mensaje = ''; $tipo_mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
+    }
+
     if (isset($_POST['action']) && $_POST['action'] == 'solicitar_baja') {
         $insc_baja = $_POST['inscripcion_id'];
         $motivo = strip_tags(trim($_POST['motivo']));
@@ -32,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 1. Obtener SOLO materias ACTIVAS ordenadas por Idioma y Nivel (Añadido g.nrc)
 $sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.nrc
                          FROM inscripciones i
                          JOIN grupos g ON i.nrc = g.nrc
@@ -45,7 +48,6 @@ $materias_activas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
 
 $ins_activa = isset($_GET['ins']) ? $_GET['ins'] : (count($materias_activas) > 0 ? $materias_activas[0]['inscripcion_id'] : null);
 
-// 2. Obtener los detalles de la materia ESPECÍFICA (Añadido g.nrc)
 $materia_actual = null;
 if ($ins_activa) {
     $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado, g.nrc,
@@ -170,7 +172,6 @@ if (!function_exists('format_score')) {
         <?php if($materia_actual): ?>
             <div class="page-title-center">
                 <h1><i class="fas fa-award"></i> Calificaciones</h1>
-                <!-- AQUÍ AGREGAMOS EL NRC DE LA MATERIA AL TÍTULO -->
                 <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 5px;">
                     <?php echo htmlspecialchars($materia_actual['materia'] . ' ' . $materia_actual['nivel'] . ' - NRC: ' . $materia_actual['nrc'] . ' - ' . $materia_actual['ciclo']); ?>
                 </p>
@@ -180,7 +181,6 @@ if (!function_exists('format_score')) {
                     <div style="margin-top: 20px;">
                         <select class="subject-selector" style="font-size: 1rem; padding: 10px 20px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;" onchange="window.location.href='calificaciones.php?ins='+this.value">
                             <?php foreach($materias_activas as $m): ?>
-                                <!-- AQUÍ AGREGAMOS EL NRC AL SELECTOR DESPLEGABLE -->
                                 <option value="<?php echo $m['inscripcion_id']; ?>" <?php echo ($m['inscripcion_id'] == $ins_activa) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($m['materia'] . ' ' . $m['nivel']); ?>
                                 </option>
@@ -212,7 +212,8 @@ if (!function_exists('format_score')) {
                                 $html_progress = ''; 
                             } else { 
                                 $porcentaje = ($puntaje / $max) * 100; 
-                                $color = ($porcentaje >= 60) ? '#28a745' : '#dc3545'; 
+                                // CORRECCIÓN REGLA MÍNIMA 80 PTS
+                                $color = ($porcentaje >= 80) ? '#28a745' : '#dc3545'; 
                                 $html_score = '<span class="score-text" style="color:var(--text-dark);">' . format_score($puntaje) . ' / ' . $max . '</span>'; 
                                 $html_progress = '<div class="progress-mini"><div class="progress-bar" style="width: ' . $porcentaje . '%; background-color:' . $color . ';"></div></div>'; 
                             }
@@ -236,8 +237,10 @@ if (!function_exists('format_score')) {
                     <div class="modal-content">
                         <div class="modal-header"><h3 style="margin:0; color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> Solicitar Baja</h3><button class="close-btn" onclick="cerrarModal('modalSolicitarBaja')">&times;</button></div>
                         <form method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="action" value="solicitar_baja">
                             <input type="hidden" name="inscripcion_id" value="<?php echo $ins_activa; ?>">
+                            
                             <div class="modal-body">
                                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:15px;">Estás solicitando la baja de la materia <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
                                 <div class="form-group">
@@ -272,8 +275,10 @@ if (!function_exists('format_score')) {
                     <div class="modal-content">
                         <div class="modal-header"><h3 style="margin:0; color:#856404;"><i class="fas fa-clock"></i> Solicitud en Proceso</h3><button class="close-btn" onclick="cerrarModal('modalRetirarBaja')">&times;</button></div>
                         <form method="POST">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="action" value="cancelar_baja">
                             <input type="hidden" name="solicitud_id" value="<?php echo $solicitud_pendiente['solicitud_id']; ?>">
+                            
                             <div class="modal-body">
                                 <p style="margin-top:0; color:var(--text-dark);">Tu solicitud fue enviada el <strong><?php echo date('d/m/Y', strtotime($solicitud_pendiente['fecha_solicitud'])); ?></strong>.</p>
                                 <div style="background:rgba(255,193,7,0.1); padding:15px; border-radius:6px; border-left:4px solid #ffc107; font-size:0.9rem; color:var(--text-dark);">
