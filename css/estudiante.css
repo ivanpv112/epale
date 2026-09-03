@@ -114,6 +114,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .btn-baja:hover { background: #c82333 !important; transform: translateY(-2px); }
 .btn-pendiente { background: #ffc107; border: 1px solid #e0a800; color: #856404; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; width: 100%; text-align: center; }
 .btn-historial { background: var(--bg-gray); border: 1px solid #ddd; color: var(--text-dark); padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; }
+
+.clickable-row { cursor: pointer; transition: background-color 0.2s; }
+.clickable-row:hover { background-color: var(--bg-gray); }
+
 .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 .history-table th { text-align: left; color: var(--text-muted); font-size: 0.85rem; padding: 10px; border-bottom: 1px solid #eee; transition: background-color 0.4s, color 0.4s; }
 .history-table td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; transition: border-color 0.4s; }
@@ -121,8 +125,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .history-card.pendiente { border-left-color: #ffc107; }
 .history-card.rechazada { border-left-color: #dc3545; }
 .history-card.aprobada { border-left-color: #28a745; }
+
 .tag-aprobado { background-color: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2); }
 .tag-rechazada { background-color: rgba(220,53,69,0.1); color: #dc3545; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(220,53,69,0.2); }
+
 .aviso-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; transition: border-color 0.4s; }
 .aviso-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
 .tag-aviso { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 5px; }
@@ -130,6 +136,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .aviso-clickable { cursor: pointer; transition: all 0.2s ease; border-radius: 6px; }
 .aviso-clickable:hover { background-color: var(--bg-gray); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.06); padding-right: 5px; }
 @keyframes blink { 0% {opacity:1;} 50% {opacity:0.4;} 100% {opacity:1;} }
+
+/* Tarjetas de Certificación e Insignias */
+.cert-card { border: 1px solid rgba(128,128,128,0.2); border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: all 0.2s ease; background: var(--bg-gray); }
+.cert-card.obtained { background: rgba(0, 86, 179, 0.05); cursor: pointer; }
+.cert-card.obtained:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-color: var(--udg-blue); background: rgba(0, 86, 179, 0.08); }
+
+/* Examen Diagnóstico */
+.diag-card-profile { border: 1px solid rgba(128,128,128,0.2); border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px; background: var(--bg-gray); box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
 
 /* ========================================= 8. MODALES GLOBALES (Popups) ========================================= */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 3000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
@@ -145,6 +159,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .close-btn { position: relative !important; top: auto !important; right: auto !important; margin-left: auto; background: none; border: none; font-size: 1.8rem; color: #999; cursor: pointer; transition: color 0.2s; line-height: 1; padding: 0; }
 .close-btn:hover { color: #dc3545; }
+
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--text-dark); font-size: 0.9rem; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; font-family: inherit; background: var(--bg-gray); color: var(--text-dark);}
@@ -152,6 +167,19 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .btn-cancel { background: var(--white); border: 1px solid #ddd; padding: 10px 15px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight: 600; transition: 0.2s;}
 .btn-save { background: var(--udg-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;}
 .btn-save:hover { background: var(--udg-light); }
+
+/* Modal Certificaciones UI */
+.cert-modal { max-width: 450px; }
+.cert-modal-body { text-align: center; padding-top: 10px; }
+.cert-icon-lg { font-size: 4.5rem; color: var(--udg-light); margin-bottom: 15px; }
+.cert-title-lg { color: var(--text-dark); margin: 0 0 5px 0; font-size: 1.6rem; text-transform: uppercase; }
+.cert-level-badge { font-size: 1.25rem; font-weight: bold; color: var(--udg-blue); margin-bottom: 25px; }
+.cert-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; }
+.cert-detail-box { background: var(--bg-gray); padding: 15px; border-radius: 8px; border: 1px solid rgba(128,128,128,0.2); }
+.cert-detail-box.full-width { grid-column: span 2; }
+.cert-detail-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+.cert-detail-value { color: var(--text-dark); font-size: 1.1rem; font-weight: bold; }
+
 
 /* ========================================= 9. RESPONSIVE DESIGN ========================================= */
 @media (max-width: 900px) { .main-header { height: auto !important; padding: 10px 15px !important; flex-direction: row !important; align-items: center !important; } .logo-container { width: auto !important; } .user-actions { width: auto !important; display: flex !important; gap: 10px !important; } .profile-name { display: none !important; } .profile-btn { padding: 4px !important; } .main-nav { display: none !important; } .dashboard-grid { grid-template-columns: 1fr; } .footer-content { flex-direction: column; } }
@@ -161,7 +189,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 [data-theme="dark"] .main-header { background-color: #080d18 !important; border-bottom: 1px solid #1e293b; }
 [data-theme="dark"] .main-footer { background-color: #080d18 !important; border-top: 1px solid #1e293b; color: #f8fafc !important; }
 [data-theme="dark"] .main-footer * { color: #f8fafc !important; }
-[data-theme="dark"] .card, [data-theme="dark"] .schedule-wrapper, [data-theme="dark"] .grade-category-card, [data-theme="dark"] .cert-card, [data-theme="dark"] .history-card, [data-theme="dark"] .profile-basic-info, [data-theme="dark"] .profile-photo-wrapper, [data-theme="dark"] .profile-photo-img, [data-theme="dark"] .modal-content, [data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { background-color: var(--white) !important; border-color: #1e293b !important; color: var(--text-dark); }
+[data-theme="dark"] .card, [data-theme="dark"] .schedule-wrapper, [data-theme="dark"] .grade-category-card, [data-theme="dark"] .cert-card, [data-theme="dark"] .diag-card-profile, [data-theme="dark"] .history-card, [data-theme="dark"] .profile-basic-info, [data-theme="dark"] .profile-photo-wrapper, [data-theme="dark"] .profile-photo-img, [data-theme="dark"] .modal-content, [data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer, [data-theme="dark"] .cert-detail-box { background-color: var(--white) !important; border-color: #1e293b !important; color: var(--text-dark); }
 [data-theme="dark"] .total-score-banner { background-color: #0f172a !important; border: 1px solid #1e293b; box-shadow: inset 0 0 20px rgba(0,0,0,0.4); }
 [data-theme="dark"] .welcome-banner h1, [data-theme="dark"] .page-title-center h1 { color: #f8fafc; }
 [data-theme="dark"] .chart-subtitle, [data-theme="dark"] .subject-meta, [data-theme="dark"] .info-label, [data-theme="dark"] .history-table th { color: #94a3b8 !important; }
@@ -174,6 +202,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 [data-theme="dark"] .dashboard-grid .card:nth-child(1) { border-top-color: #3ba5ff; box-shadow: 0 0 20px rgba(59, 165, 255, 0.1), inset 0 4px 15px rgba(59, 165, 255, 0.05); }
 [data-theme="dark"] .dashboard-grid .card:nth-child(2) { border-top-color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.1), inset 0 4px 15px rgba(16, 185, 129, 0.05); }
 [data-theme="dark"] .dashboard-grid .card:nth-child(3) { border-top-color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.1), inset 0 4px 15px rgba(245, 158, 11, 0.05); }
+
+/* Ajustes Específicos Modo Oscuro para Insignias */
+[data-theme="dark"] .cert-card.obtained { background-color: rgba(59, 165, 255, 0.05) !important; border-color: #1e293b !important; }
+[data-theme="dark"] .cert-card.obtained:hover { background-color: rgba(59, 165, 255, 0.1) !important; border-color: #3ba5ff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important; }
 
 .theme-toggle-btn { background: rgba(255,255,255,0.15); border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: all 0.3s ease; }
 .theme-toggle-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); }
