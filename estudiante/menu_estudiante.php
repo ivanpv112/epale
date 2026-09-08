@@ -83,6 +83,8 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
         
         <li><a href="horario.php" class="<?php echo ($pagina_actual == 'horario.php' || $pagina_actual == 'detalle_materia.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Horario</a></li>
         
+        <li><a href="mis_dictamenes.php" class="<?php echo ($pagina_actual == 'mis_dictamenes.php') ? 'active' : ''; ?>"><i class="fas fa-file-signature"></i> Mis Dictámenes</a></li>
+
     </ul>
 
     <div class="sidebar-divider"></div>
