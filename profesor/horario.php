@@ -32,14 +32,14 @@ function descifrarDias($cadena) {
     return array_unique($columnas);
 }
 
-// 3. PALETA DE COLORES PASTEL
+// 3. PALETA DE COLORES INTELIGENTE (Solo inyectamos la clase CSS)
 $paleta = [
-    ['bg' => '#e7f3ff', 'border' => '#8bb9ff', 'text' => '#0056b3'], // Azul
-    ['bg' => '#e6f8ec', 'border' => '#89dfa9', 'text' => '#0f5132'], // Verde
-    ['bg' => '#fff3cd', 'border' => '#ffe69c', 'text' => '#664d03'], // Amarillo
-    ['bg' => '#f8d7da', 'border' => '#f1aeb5', 'text' => '#842029'], // Rosa
-    ['bg' => '#f3e8ff', 'border' => '#c29ffa', 'text' => '#432874'], // Morado
-    ['bg' => '#cff4fc', 'border' => '#9eeaf9', 'text' => '#055160']  // Cyan
+    'theme-blue',
+    'theme-green',
+    'theme-yellow',
+    'theme-red',
+    'theme-purple',
+    'theme-cyan'
 ];
 
 $colores_asignados = []; $color_index = 0; $bloques_render = [];
@@ -53,7 +53,7 @@ foreach ($horarios_db as $h) {
         $colores_asignados[$h['clave_grupo']] = $paleta[$color_index % count($paleta)];
         $color_index++;
     }
-    $color = $colores_asignados[$h['clave_grupo']];
+    $tema_css = $colores_asignados[$h['clave_grupo']];
 
     $hora_ini = (int)date('H', strtotime($h['hora_inicio']));
     $hora_fin = (int)date('H', strtotime($h['hora_fin']));
@@ -64,11 +64,12 @@ foreach ($horarios_db as $h) {
     $fila_fin = ($hora_fin - 7) + 2;
 
     $dias = descifrarDias($h['dias_patron']);
-    $icono = ($h['modalidad'] == 'PRESENCIAL') ? '<i class="fas fa-building" style="color:#28a745;"></i>' : '<i class="fas fa-laptop-house" style="color:#17a2b8;"></i>';
+    // Quitamos los estilos inline para que hereden el color del tema visual
+    $icono = ($h['modalidad'] == 'PRESENCIAL') ? '<i class="fas fa-building"></i>' : '<i class="fas fa-laptop-house"></i>';
 
     foreach ($dias as $columna_dia) {
         $bloques_render[] = [
-            'col' => $columna_dia, 'row_ini' => $fila_inicio, 'row_fin' => $fila_fin, 'color' => $color,
+            'col' => $columna_dia, 'row_ini' => $fila_inicio, 'row_fin' => $fila_fin, 'tema' => $tema_css,
             'titulo' => $h['materia'], 'tiempo' => date('H:i', strtotime($h['hora_inicio'])) . ' - ' . date('H:i', strtotime($h['hora_fin'])),
             'aula' => $h['aula'], 'icono' => $icono, 'clave' => $h['clave_grupo']
         ];
@@ -95,7 +96,7 @@ foreach ($horarios_db as $h) {
         
         <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: var(--udg-blue); margin: 0; font-size: 2.2rem;"><i class="far fa-calendar-alt"></i> Mi Horario Docente</h1>
-            <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Semestre <?php echo htmlspecialchars($ciclo_actual); ?></p>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 5px;">Semestre <?php echo htmlspecialchars($ciclo_actual); ?></p>
         </div>
 
         <div class="schedule-wrapper">
@@ -118,13 +119,8 @@ foreach ($horarios_db as $h) {
                 <?php endfor; ?>
 
                 <?php foreach ($bloques_render as $b): ?>
-                    <a href="detalle_grupo.php?clave=<?php echo $b['clave']; ?>" class="class-block" style="
-                        grid-column: <?php echo $b['col']; ?>; 
-                        grid-row: <?php echo $b['row_ini']; ?> / <?php echo $b['row_fin']; ?>;
-                        background-color: <?php echo $b['color']['bg']; ?>;
-                        border-left-color: <?php echo $b['color']['border']; ?>;
-                        color: <?php echo $b['color']['text']; ?>;
-                    " title="Ver lista de alumnos">
+                    <!-- IMPRESIÓN LIMPIA DE LA CLASE DEL TEMA ($b['tema']) -->
+                    <a href="detalle_grupo.php?clave=<?php echo $b['clave']; ?>" class="class-block <?php echo $b['tema']; ?>" style="grid-column: <?php echo $b['col']; ?>; grid-row: <?php echo $b['row_ini']; ?> / <?php echo $b['row_fin']; ?>;" title="Ver lista de alumnos">
                         <div class="class-title"><?php echo htmlspecialchars($b['titulo']); ?></div>
                         <div class="class-details"><?php echo $b['icono']; ?> <?php echo htmlspecialchars($b['aula'] ?: 'Sin Aula'); ?></div>
                         <div class="class-details" style="font-weight: normal;"><i class="far fa-clock"></i> <?php echo $b['tiempo']; ?></div>
@@ -136,7 +132,8 @@ foreach ($horarios_db as $h) {
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal de Profesores</div></footer>
+    <?php include '../main_footer.php'; ?>
+    
     <script>function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }</script>
 </body>
 </html>
