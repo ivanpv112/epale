@@ -5,6 +5,11 @@ require '../db.php';
 header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
 
+// CAPA EXTRA DE SEGURIDAD: Rechazar cualquier petición que no sea POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'error' => 'Método no permitido.']); exit;
+}
+
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR' || !isset($input['action'])) {
     echo json_encode(['success' => false, 'error' => 'Acceso denegado']); exit;
 }
