@@ -38,7 +38,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
 
         <div class="page-title-center" style="margin-bottom: 30px;">
             <h1><i class="fas fa-database"></i> Módulos de Importación Masiva</h1>
-            <p>Selecciona el tipo de datos que deseas cargar al sistema mediante archivo CSV.</p>
+            <p>Selecciona el tipo de datos que deseas cargar al sistema mediante archivo CSV o PDF.</p>
         </div>
 
         <div class="module-grid">
@@ -70,6 +70,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
                 <i class="fas fa-chalkboard"></i>
                 <h3>Grupos y Horarios</h3>
                 <p>Registra la oferta académica, asignando el NRC, materia, profesor y horarios correspondientes.</p>
+            </a>
+
+            <!-- NUEVO MÓDULO DE DICTÁMENES -->
+            <a href="vista_csv_dictamenes.php" class="module-card">
+                <i class="fas fa-file-signature"></i>
+                <h3>Dictámenes (PDF)</h3>
+                <p>Registra acreditaciones por competencias y vincula los archivos PDF oficiales para los alumnos.</p>
             </a>
         </div>
 
