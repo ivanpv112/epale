@@ -4,6 +4,19 @@ let tareasActuales = [];
 
 document.addEventListener('DOMContentLoaded', cargarTareas);
 
+// NUEVA FUNCIÓN: Lógica del acordeón para las tarjetas de Mis Grupos
+function toggleGroup(event, index) {
+    let body = document.getElementById('body-group-' + index);
+    let btn = document.getElementById('btn-toggle-' + index);
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+    } else {
+        body.style.display = 'none';
+        btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+    }
+}
+
 function abrirPanelTareas() { 
     document.getElementById('modalGestionTareas').style.display = 'flex'; 
     cargarTareas(); 
@@ -22,21 +35,26 @@ function cargarTareas() {
     const resumen = document.getElementById('lista_resumen_tareas');
 
     if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Cargando...</td></tr>';
-    if(resumen) resumen.innerHTML = '<p style="color: #888; margin: 0;">Cargando tareas...</p>';
+    if(resumen) resumen.innerHTML = '<p style="color: #888; margin: 0;">Cargando avisos...</p>';
     
-    fetch('tareas_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'action=get_tareas' })
+    // INYECCIÓN DE TOKEN CSRF
+    fetch('tareas_api.php', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+        body: `action=get_tareas&csrf_token=${encodeURIComponent(csrfToken)}` 
+    })
     .then(res => res.json())
     .then(data => {
         tareasActuales = data;
         let htmlResumen = '';
         let contadorPendientes = 0;
-        let tareasMostradasDash = 0; // Límite para evitar saturación visual
+        let tareasMostradasDash = 0; 
 
         if(tbody) tbody.innerHTML = '';
 
         if(data.length === 0) {
-            if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No tienes tareas o avisos en el ciclo actual.</td></tr>';
-            if(resumen) resumen.innerHTML = '<p style="color: #888; margin: 0;">No hay tareas ni avisos activos.</p>';
+            if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No tienes avisos en el ciclo actual.</td></tr>';
+            if(resumen) resumen.innerHTML = '<p style="color: #888; margin: 0;">No hay avisos activos.</p>';
             actualizarContadorEstadisticas(0);
             return;
         }
@@ -50,10 +68,8 @@ function cargarTareas() {
 
             let icono = t.tipo === 'AVISO' ? '📢' : '📝';
             
-            // Sumamos al contador global solo las que no han finalizado
             if(t.estatus !== 'FINALIZADA') contadorPendientes++;
 
-            // --- 1. CONSTRUIR FILA PARA EL MODAL DE GESTIÓN (HISTORIAL COMPLETO) ---
             if(tbody) {
                 let btnPublicar = (t.estatus === 'PENDIENTE' || t.estatus === 'PRÓXIMA') 
                     ? `<button onclick="publicarTarea(${t.tarea_id})" class="action-btn publish-btn" title="Publicar Ahora"><i class="fas fa-play"></i></button>` : '';
@@ -79,11 +95,8 @@ function cargarTareas() {
                 `;
             }
 
-            // --- 2. CONSTRUIR TARJETA PARA EL DASHBOARD AZUL (MÁXIMO 3) ---
             if(resumen && t.estatus !== 'FINALIZADA' && tareasMostradasDash < 3) {
                 let isUrgent = (t.estatus === 'PRÓXIMA') ? 'task-urgent' : '';
-                
-                // Recortamos el título por si es exageradamente largo (Ej. sin espacios)
                 let tituloCorto = t.titulo.length > 35 ? t.titulo.substring(0, 35) + '...' : t.titulo;
 
                 htmlResumen += `
@@ -104,17 +117,15 @@ function cargarTareas() {
             }
         });
 
-        // 3. RENDERIZADO DEL RESUMEN Y EL LINK DE "VER MÁS"
         if(resumen) {
-            resumen.innerHTML = htmlResumen || '<p style="color: #888; margin: 0;">No hay tareas pendientes en este momento.</p>';
+            resumen.innerHTML = htmlResumen || '<p style="color: #888; margin: 0;">No hay avisos activos en este momento.</p>';
             
-            // Si el profesor tiene, por ejemplo, 5 tareas activas, mostramos que hay 2 ocultas
             let tareasOcultas = contadorPendientes - tareasMostradasDash;
             if (tareasOcultas > 0) {
                 resumen.innerHTML += `
                     <div style="text-align:center; margin-top:15px;">
-                        <button onclick="abrirPanelTareas()" style="background:none; border:none; color:rgba(255,255,255,0.8); text-decoration:underline; cursor:pointer; font-size: 0.9rem;">
-                            Ver ${tareasOcultas} actividades más...
+                        <button onclick="abrirPanelTareas()" style="background:none; border:none; color:var(--udg-blue); text-decoration:underline; cursor:pointer; font-size: 0.9rem;">
+                            Ver ${tareasOcultas} avisos más...
                         </button>
                     </div>
                 `;
@@ -128,7 +139,7 @@ function cargarTareas() {
 function actualizarContadorEstadisticas(numero) {
     const statBoxes = document.querySelectorAll('.stat-box');
     statBoxes.forEach(box => {
-        if(box.innerHTML.includes('Tareas Pendientes')) {
+        if(box.innerHTML.includes('Avisos Activos')) {
             const numDiv = box.querySelector('.number');
             if(numDiv) numDiv.innerText = numero;
         }
@@ -144,7 +155,11 @@ function abrirFormularioTarea() {
 }
 
 function cargarGruposSelect(nrc_seleccionado = '') {
-    fetch('tareas_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'action=get_grupos_activos' })
+    fetch('tareas_api.php', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+        body: `action=get_grupos_activos&csrf_token=${encodeURIComponent(csrfToken)}` 
+    })
     .then(res => res.json())
     .then(data => {
         let select = document.getElementById('tarea_nrc');
@@ -174,6 +189,7 @@ function guardarTarea(e) {
     e.preventDefault();
     let formData = new FormData(document.getElementById('formTarea'));
     formData.append('action', 'save_tarea');
+    formData.append('csrf_token', csrfToken); // Agregamos Token al FormData
 
     fetch('tareas_api.php', { method: 'POST', body: formData })
     .then(res => res.json())
@@ -189,12 +205,16 @@ function guardarTarea(e) {
 function publicarTarea(id) {
     Swal.fire({
         title: '¿Publicar ahora?', 
-        text: "La tarea será visible para los alumnos de inmediato, respetando su fecha de cierre original.", 
+        text: "El aviso será visible para los alumnos de inmediato.", 
         icon: 'info',
         showCancelButton: true, confirmButtonColor: '#28a745', confirmButtonText: 'Sí, publicar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('tareas_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `action=publicar_manual&tarea_id=${id}` })
+            fetch('tareas_api.php', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+                body: `action=publicar_manual&tarea_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
+            })
             .then(res => res.json())
             .then(data => { if(data.status === 'success') { cargarTareas(); Swal.fire('¡Publicada!', '', 'success'); } });
         }
@@ -204,12 +224,16 @@ function publicarTarea(id) {
 function finalizarTarea(id) {
     Swal.fire({
         title: '¿Finalizar ahora?', 
-        text: "La tarea se cerrará y ya no recibirá más entregas.", 
+        text: "El aviso se cerrará y ya no recibirá más interacción.", 
         icon: 'warning',
         showCancelButton: true, confirmButtonColor: '#fd7e14', confirmButtonText: 'Sí, finalizar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('tareas_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `action=finalizar_manual&tarea_id=${id}` })
+            fetch('tareas_api.php', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+                body: `action=finalizar_manual&tarea_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
+            })
             .then(res => res.json())
             .then(data => { if(data.status === 'success') { cargarTareas(); Swal.fire('¡Finalizada!', '', 'success'); } });
         }
@@ -224,7 +248,11 @@ function borrarTarea(id) {
         showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, borrar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('tareas_api.php', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `action=delete_tarea&tarea_id=${id}` })
+            fetch('tareas_api.php', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
+                body: `action=delete_tarea&tarea_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
+            })
             .then(res => res.json())
             .then(data => { if(data.status === 'success') { cargarTareas(); Swal.fire('¡Borrado!', '', 'success'); } });
         }
