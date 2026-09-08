@@ -7,6 +7,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
     echo json_encode(['status' => 'error', 'message' => 'No autorizado']); exit;
 }
 
+// CAPTURA INTELIGENTE DE DATOS
+$input = json_decode(file_get_contents('php://input'), true);
+if (is_array($input)) { $_POST = array_merge($_POST, $input); }
+
+// ESCUDO CSRF PARA APIS INTERNAS
+if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Error de Seguridad: Token CSRF inválido.']); exit;
+}
+
 $profesor_id = $_SESSION['user_id'];
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $ahora = date('Y-m-d H:i:s'); 
