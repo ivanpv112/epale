@@ -24,7 +24,7 @@ $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$grupo) { header("Location: mis_grupos.php"); exit; }
 
-// 2. Obtener lista de alumnos inscritos (CORREGIDO: Soporte para múltiples NRCs)
+// 2. Obtener lista de alumnos inscritos
 $stmt_al = $pdo->prepare("SELECT i.inscripcion_id, u.nombre, u.apellido_paterno, u.apellido_materno, u.codigo, u.foto_perfil 
                           FROM inscripciones i 
                           JOIN alumnos a ON i.alumno_id = a.alumno_id 
@@ -45,7 +45,7 @@ foreach($alumnos_brutos as $alum) {
     $alumnos[] = $alum;
 }
 
-// 3. Obtener fechas de clases (CORREGIDO: Soporte para múltiples NRCs)
+// 3. Obtener fechas de clases
 $stmt_fechas = $pdo->prepare("SELECT DISTINCT fecha FROM asistencias a 
                               JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
                               WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) 
@@ -54,7 +54,7 @@ $stmt_fechas->execute([$clave, $profesor_id]);
 $fechas_clase = $stmt_fechas->fetchAll(PDO::FETCH_COLUMN);
 $total_sesiones = count($fechas_clase);
 
-// 4. Mapear asistencias (CORREGIDO: Soporte para múltiples NRCs)
+// 4. Mapear asistencias
 $asistencias_log = [];
 $stmt_log = $pdo->prepare("SELECT a.inscripcion_id, a.fecha, a.estatus FROM asistencias a 
                            JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
@@ -127,25 +127,18 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                         
                         $porcentaje_asist = ($total_sesiones > 0) ? ($conteo_asist / $total_sesiones) * 100 : 100;
                         
-                        // Lógica de colores directos y Regla Universitaria UdeG (80% mínimo)
+                        // LÓGICA LIMPIA: Solo inyectamos la clase general, el CSS hace la magia
                         $row_class = 'status-row-good';
-                        $color_porcentaje = '#28a745'; 
-                        $bg_celda_congelada = '#ffffff';
-
                         if ($total_sesiones > 0) {
                             if ($porcentaje_asist < 80) { // Menos de 80% pierde derecho
                                 $row_class = 'status-row-fail';
-                                $color_porcentaje = '#dc3545';
-                                $bg_celda_congelada = '#fdf0f1';
                             } elseif ($porcentaje_asist < 86) { // Menos de 86% está en riesgo
                                 $row_class = 'status-row-risk';
-                                $color_porcentaje = '#d39e00'; 
-                                $bg_celda_congelada = '#fffaf0';
                             }
                         }
                     ?>
                     <tr class="<?php echo $row_class; ?>">
-                        <td class="td-alumno" style="background-color: <?php echo $bg_celda_congelada; ?>;">
+                        <td class="td-alumno">
                             <img src="<?php echo $a['foto_url']; ?>" class="td-foto">
                             <div>
                                 <div class="td-nombre"><?php echo htmlspecialchars($a['apellido_paterno'] . " " . $a['apellido_materno'] . " " . $a['nombre']); ?></div>
@@ -167,7 +160,7 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                         <td class="td-total-num">
                             <?php echo $conteo_asist; ?>
                         </td>
-                        <td class="td-porcentaje" style="color: <?php echo $color_porcentaje; ?>;">
+                        <td class="td-porcentaje">
                             <?php echo round($porcentaje_asist, 1); ?>%
                         </td>
                     </tr>
@@ -279,5 +272,8 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
 
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
     </script>
+
+    <?php include '../main_footer.php'; ?>
+
 </body>
 </html>
