@@ -14,7 +14,6 @@ $clave_grupo = $_GET['clave'] ?? '';
 
 if (!$clave_grupo) { header("Location: mis_grupos.php"); exit; }
 
-// ... [TODO EL CÓDIGO PHP DE CONSULTAS PERMANECE EXACTAMENTE IGUAL AL ANTERIOR] ...
 $stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.edicion_total, g.estado FROM grupos g JOIN materias m ON g.materia_id = m.materia_id JOIN ciclos c ON c.ciclo_id = g.ciclo_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
 $stmt_info->execute([$clave_grupo, $profesor_id]);
 $info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
@@ -54,6 +53,15 @@ usort($criterios, function($a, $b) {
     return $peso_a - $peso_b;
 });
 
+// Asignamos iconos fijos del sistema para el frontend
+foreach($criterios as &$c) {
+    $nombre = $c['nombre_examen'];
+    if (stripos($nombre, 'Oral') !== false) { $c['icono_fijo'] = 'fas fa-comments'; $c['color_fijo'] = 'class-green'; } 
+    elseif (stripos($nombre, 'Proyecto') !== false) { $c['icono_fijo'] = 'fas fa-file-signature'; $c['color_fijo'] = 'class-yellow'; } 
+    elseif (stripos($nombre, 'Participaci') !== false) { $c['icono_fijo'] = 'fas fa-hand-paper'; $c['color_fijo'] = 'class-cyan'; } 
+    else { $c['icono_fijo'] = 'fas fa-book-open'; $c['color_fijo'] = 'class-muted'; }
+}
+
 $permitidos_profesor = ['QO', 'WRITING', 'PARTICIPACION']; 
 $puntos_maximos_totales = 0;
 foreach ($criterios as &$c) {
@@ -88,22 +96,19 @@ if (count($alumnos) > 0) {
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/profesor.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @keyframes savedFlash { 0% { background-color: #d4edda; } 100% { background-color: white; } }
-        .flash-success { animation: savedFlash 1.5s ease-out; }
-    </style>
 </head>
 <body>
 
     <?php include 'menu_profesor.php'; ?>
 
     <main class="main-content">
-        <!-- ... [TODO EL HTML PERMANECE IGUAL, DESDE LA CABECERA HASTA LA TABLA] ... -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div class="header-asistencia">
             <div>
-                <h1 style="margin: 0; color: var(--udg-blue); font-size: 1.8rem;"><?php echo htmlspecialchars($info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.95rem;">
-                    <span style="font-family: monospace; font-weight: bold; color: #555;">NRC <?php echo htmlspecialchars($txt_nrc_aula); ?></span><br>
+                <h1 class="title-asistencia"><?php echo htmlspecialchars($info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
+                
+                <!-- AHORA UTILIZAN CLASES CSS (dg-subtitle y dg-nrc) -->
+                <p class="dg-subtitle">
+                    <span class="dg-nrc">NRC <?php echo htmlspecialchars($txt_nrc_aula); ?></span><br>
                     <i class="far fa-calendar-alt" style="margin-top:5px;"></i> Semestre <?php echo htmlspecialchars($info_grupo['ciclo']); ?> &nbsp;|&nbsp; 
                     <i class="fas fa-users"></i> <?php echo count($alumnos); ?> Alumnos
                 </p>
@@ -115,26 +120,34 @@ if (count($alumnos) > 0) {
             </div>
         </div>
 
+        <!-- ALERTAS LIMPIAS (Las clases alert-closed y alert-restricted están en el CSS) -->
         <?php if($grupo_cerrado): ?>
-            <div class="alert" style="background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+            <div class="alert-closed">
                 <i class="fas fa-archive" style="font-size: 1.8rem;"></i>
                 <div><strong>Clase Finalizada</strong><br><span style="font-size: 0.9rem;">Esta clase ha sido cerrada por la administración. Las calificaciones son de solo lectura.</span></div>
             </div>
         <?php elseif($edicion_total === 0): ?>
-            <div class="alert" style="background: #e7f3ff; color: #004085; border: 1px solid #b8daff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                <i class="fas fa-lock" style="font-size: 1.8rem; color: #0056b3;"></i>
+            <div class="alert-restricted">
+                <i class="fas fa-lock"></i>
                 <div><strong>Control Escolar Restringido</strong><br><span style="font-size: 0.9rem;">Solo puedes capturar las evaluaciones de tu competencia (Proyectos, Orales, Participación). Los exámenes principales y plataforma son capturados por administración.</span></div>
             </div>
         <?php endif; ?>
 
         <?php if (count($criterios) === 0): ?>
-            <div class="alert" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 20px; border-radius: 8px; text-align: center;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i><strong>No hay criterios de evaluación definidos para esta materia.</strong></div>
+            <div class="alert-warning-empty">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                <strong>No hay criterios de evaluación definidos para esta materia.</strong>
+            </div>
         <?php elseif (count($alumnos) === 0): ?>
-            <div class="content-card" style="text-align: center; padding: 50px 20px; color: #888;"><i class="fas fa-ghost" style="font-size: 3rem; color: #ddd; margin-bottom: 15px; display: block;"></i><h3>El grupo no tiene alumnos inscritos</h3></div>
+            <div class="content-card empty-table-msg">
+                <i class="fas fa-ghost"></i>
+                <h3>El grupo no tiene alumnos inscritos</h3>
+            </div>
         <?php else: ?>
-            <div style="display: flex; justify-content: space-between; align-items: center; background: <?php echo $grupo_cerrado ? '#6c757d' : '#001a57'; ?>; padding: 15px 20px; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-                <div style="color: white; font-weight: bold;"><i class="fas fa-edit"></i> Hoja de Calificaciones <?php if($grupo_cerrado) echo "(Solo Lectura)"; else echo "En Vivo"; ?></div>
-                <?php if(!$grupo_cerrado): ?><div id="saveStatus" style="color: #a0d8ff; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;"><i class="fas fa-cloud-upload-alt"></i> Guardado automático activo</div><?php endif; ?>
+            
+            <div class="excel-header-bar <?php echo $grupo_cerrado ? 'bg-cerrado' : ''; ?>">
+                <div class="excel-header-title"><i class="fas fa-edit"></i> Hoja de Calificaciones <?php if($grupo_cerrado) echo "(Solo Lectura)"; else echo "En Vivo"; ?></div>
+                <?php if(!$grupo_cerrado): ?><div id="saveStatus" class="excel-save-status"><i class="fas fa-cloud-upload-alt"></i> Guardado automático activo</div><?php endif; ?>
             </div>
 
             <div class="excel-table-wrapper-profe" style="border-top-left-radius: 0; border-top-right-radius: 0; margin-bottom: 30px;">
@@ -144,12 +157,19 @@ if (count($alumnos) > 0) {
                             <th>Alumno</th>
                             <?php foreach($criterios as $c): ?>
                                 <th title="<?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?>">
-                                    <i class="fas <?php echo htmlspecialchars($c['icono'] ?? 'fa-star'); ?>" style="color: <?php echo ($grupo_cerrado || $c['bloqueado']) ? '#aaa' : htmlspecialchars($c['color'] ?? ''); ?>; display: block; font-size: 1.2rem; margin-bottom: 5px;"></i>
-                                    <div style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto;"><?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?><?php if($c['bloqueado'] || $grupo_cerrado) echo ' <i class="fas fa-lock" style="color:#aaa; font-size:0.75rem;" title="Manejado por Control Escolar"></i>'; ?></div>
-                                    <span style="font-weight: normal; color: #aaa; font-size: 0.75rem;">Máx: <?php echo floatval($c['puntos_maximos'] ?? 0); ?></span>
+                                    <i class="excel-crit-icon <?php echo htmlspecialchars($c['icono_fijo']); ?> <?php echo ($c['bloqueado']||$grupo_cerrado)?'class-locked':$c['color_fijo']; ?>"></i>
+                                    <div class="excel-crit-title">
+                                        <?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?>
+                                        <?php if($c['bloqueado'] || $grupo_cerrado) echo ' <i class="fas fa-lock lock-icon" title="Manejado por Control Escolar"></i>'; ?>
+                                    </div>
+                                    <span class="excel-crit-max">Máx: <?php echo floatval($c['puntos_maximos'] ?? 0); ?></span>
                                 </th>
                             <?php endforeach; ?>
-                            <th style="background: #e7f3ff; color: var(--udg-blue);"><i class="fas fa-calculator" style="display: block; font-size: 1.2rem; margin-bottom: 5px;"></i>TOTAL<br><span style="font-weight: normal; font-size: 0.75rem;">/ <?php echo $puntos_maximos_totales; ?></span></th>
+                            <th class="excel-total-col">
+                                <i class="fas fa-calculator excel-crit-icon"></i>
+                                <div class="excel-crit-title">TOTAL</div>
+                                <span class="excel-crit-max">/ <?php echo $puntos_maximos_totales; ?></span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -158,13 +178,11 @@ if (count($alumnos) > 0) {
                             $foto_url = "../img/avatar-default.png"; if (!empty($a['foto_perfil']) && file_exists("../img/perfiles/" . $a['foto_perfil'])) { $foto_url = "../img/perfiles/" . $a['foto_perfil']; }
                         ?>
                             <tr>
-                                <td style="padding: 10px 15px; min-width: 250px;">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <img src="<?php echo htmlspecialchars($foto_url); ?>" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
-                                        <div>
-                                            <div style="font-weight: bold; color: var(--udg-blue);"><?php echo htmlspecialchars($nombre_seguro); ?></div>
-                                            <div style="font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 2px;">Código: <?php echo htmlspecialchars($a['codigo'] ?? 'N/A'); ?></div>
-                                        </div>
+                                <td class="excel-student-cell">
+                                    <img src="<?php echo htmlspecialchars($foto_url); ?>" class="excel-student-img">
+                                    <div>
+                                        <div class="excel-student-name"><?php echo htmlspecialchars($nombre_seguro); ?></div>
+                                        <div class="excel-student-code">Código: <?php echo htmlspecialchars($a['codigo'] ?? 'N/A'); ?></div>
                                     </div>
                                 </td>
                                 <?php foreach($criterios as $c): 
@@ -174,7 +192,7 @@ if (count($alumnos) > 0) {
                                 ?>
                                     <td><input type="number" step="0.01" min="0" max="<?php echo $max_pts; ?>" value="<?php echo htmlspecialchars((string)$val_actual); ?>" class="<?php echo $class_attr; ?>" data-insc="<?php echo htmlspecialchars((string)$insc_id); ?>" data-examen="<?php echo htmlspecialchars((string)$cod_examen); ?>" <?php echo $readonly_attr; ?> <?php if($bloqueado_total) echo 'title="Calificación Bloqueada o Cerrada"'; ?>></td>
                                 <?php endforeach; ?>
-                                <td style="background: #f8fbff;"><div class="total-cell js-total-<?php echo htmlspecialchars((string)$insc_id); ?>"><?php echo number_format($suma_alumno, 1); ?></div></td>
+                                <td class="excel-total-cell-bg"><div class="total-cell js-total-<?php echo htmlspecialchars((string)$insc_id); ?>"><?php echo number_format($suma_alumno, 1); ?></div></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -182,6 +200,8 @@ if (count($alumnos) > 0) {
             </div>
         <?php endif; ?>
     </main>
+
+    <?php include '../main_footer.php'; ?>
 
     <script>
         // VARIABLE GLOBAL DEL CSRF TOKEN GENERADA EN PHP
