@@ -27,6 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $genero = $_POST['genero'] ?? null;
     $password = $_POST['password'] ?? '';
 
+    // ESCUDO ROOT
+    if ($usuario_id == 1 && $_SESSION['user_id'] != 1) {
+        header("Location: usuarios.php?msg=error_root");
+        exit;
+    }
+
     // 2. Recibir nuevos campos
     $carrera = trim($_POST['carrera'] ?? '');
     $periodo_ingreso = trim($_POST['periodo_ingreso'] ?? '');
