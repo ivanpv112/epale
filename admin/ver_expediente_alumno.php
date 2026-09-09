@@ -82,6 +82,15 @@ while($row = $stmt_cert->fetch(PDO::FETCH_ASSOC)) {
 $stmt_diag = $pdo->prepare("SELECT * FROM examenes_diagnosticos WHERE alumno_id = ? ORDER BY fecha_realizacion DESC");
 $stmt_diag->execute([$alumno_id]);
 $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
+
+// 4. OBTENER DICTÁMENES OFICIALES DEL ALUMNO
+$stmt_dict = $pdo->prepare("SELECT * FROM dictamenes_estudiantes WHERE codigo_alumno = ? ORDER BY ciclo_acreditacion DESC, nombre_materia ASC");
+$stmt_dict->execute([$perfil['codigo']]);
+$dictamenes_alumno = $stmt_dict->fetchAll(PDO::FETCH_ASSOC);
+
+// Para verificar existencia de PDF físicos
+$upload_dir_dictamenes = '../uploads/dictamenes/';
+$archivos_fisicos_dict = is_dir($upload_dir_dictamenes) ? array_diff(scandir($upload_dir_dictamenes), ['.', '..']) : [];
 ?>
 
 <!DOCTYPE html>
@@ -230,7 +239,6 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php if($h['grupo_estado'] == 'ACTIVO' && $h['activo'] == 1): ?>
                                                         <span style="background:#cce5ff; color:#004085; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Activa</span>
                                                     <?php else: ?>
-                                                        <!-- CORRECCIÓN REGLA MÍNIMA 80 PTS -->
                                                         <?php if($calif >= 80): ?>
                                                             <span style="background:#d4edda; color:#155724; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">Aprobada</span>
                                                         <?php else: ?>
@@ -253,6 +261,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
 
             <!-- COLUMNA DERECHA (DIAGNÓSTICOS Y CERTIFICACIONES) -->
             <div>
+                <!-- DIAGNÓSTICOS -->
                 <div class="card card-highlighted">
                     <div class="card-actions-top">
                         <button class="btn-save btn-sm" onclick="abrirModalDiag('', '', '', '', '', '')" title="Agregar Nuevo Diagnóstico"><i class="fas fa-plus"></i> Agregar</button>
@@ -288,6 +297,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
 
+                <!-- CERTIFICACIONES -->
                 <?php if(count($idiomas_nivel_4) > 0): ?>
                     <div class="card card-highlighted">
                         <div class="card-header-center">
@@ -305,13 +315,14 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                                 $periodo_obt = $cert['periodo'] ?? '';
                                 $fecha_obt = (!empty($cert['fecha_aplicacion']) && $cert['fecha_aplicacion'] !== '0000-00-00') ? $cert['fecha_aplicacion'] : '';
                             ?>
-                                <div class="cert-card card-editable" onclick="abrirModalCert('<?php echo htmlspecialchars((string)$idioma); ?>', '<?php echo htmlspecialchars((string)($nivel_obt == 'Sin registrar' ? '' : $nivel_obt)); ?>', '<?php echo htmlspecialchars((string)$puntaje_obt); ?>', '<?php echo htmlspecialchars((string)$periodo_obt); ?>', '<?php echo htmlspecialchars((string)$fecha_obt); ?>')" title="Haz clic para actualizar nivel oficial">
+                                <!-- Usamos la NUEVA CLASE 'cert-exp-card' alineada a la izquierda -->
+                                <div class="cert-exp-card card-editable" onclick="abrirModalCert('<?php echo htmlspecialchars((string)$idioma); ?>', '<?php echo htmlspecialchars((string)($nivel_obt == 'Sin registrar' ? '' : $nivel_obt)); ?>', '<?php echo htmlspecialchars((string)$puntaje_obt); ?>', '<?php echo htmlspecialchars((string)$periodo_obt); ?>', '<?php echo htmlspecialchars((string)$fecha_obt); ?>')" title="Haz clic para actualizar nivel oficial">
                                     <div>
-                                        <strong class="cert-title"><?php echo htmlspecialchars((string)$idioma); ?></strong>
-                                        <span class="cert-meta">Nivel: <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars((string)$nivel_obt); ?></strong></span>
+                                        <strong class="cert-exp-title"><?php echo htmlspecialchars((string)$idioma); ?></strong>
+                                        <span class="cert-exp-meta">Nivel: <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars((string)$nivel_obt); ?></strong></span>
                                         
                                         <?php if($cert): ?>
-                                            <div class="cert-details">
+                                            <div class="cert-exp-details">
                                                 <div><i class="fas fa-star text-muted"></i> Pts: <strong><?php echo htmlspecialchars((string)($puntaje_obt ?: '-')); ?></strong></div>
                                                 <div><i class="fas fa-calendar-alt text-muted"></i> Per: <strong><?php echo htmlspecialchars((string)($periodo_obt ?: '-')); ?></strong></div>
                                                 <div class="col-span-2"><i class="far fa-calendar-check text-muted"></i> Fecha: <?php echo $fecha_obt ? date('d/m/Y', strtotime($fecha_obt)) : '-'; ?></div>
@@ -329,6 +340,53 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                         <p style="font-size: 0.85rem; color: #999; margin-top: 10px;">Disponible al cursar Nivel 4.</p>
                     </div>
                 <?php endif; ?>
+
+                <!-- NUEVO: DICTÁMENES OFICIALES -->
+                <div class="card card-highlighted" style="border-top-color: #17a2b8;">
+                    <div class="card-header-center">
+                        <i class="fas fa-file-signature card-icon-large" style="color: #17a2b8;"></i>
+                        <h3 style="color: #17a2b8; margin: 0;">Dictámenes Oficiales</h3>
+                        <p style="font-size: 0.85rem; color: #666;">Acreditaciones vinculadas al código</p>
+                    </div>
+                    
+                    <div style="margin-top: 15px;">
+                        <?php if(count($dictamenes_alumno) > 0): ?>
+                            <?php foreach($dictamenes_alumno as $d): 
+                                $pdf_url = null;
+                                $llave_busqueda = str_replace('/', '.', $d['num_dictamen']);
+
+                                foreach ($archivos_fisicos_dict as $archivo) {
+                                    if (stripos($archivo, $llave_busqueda) !== false) {
+                                        $pdf_url = '../uploads/dictamenes/' . rawurlencode($archivo);
+                                        break;
+                                    }
+                                }
+                            ?>
+                                <div class="dict-exp-card">
+                                    <div class="dict-exp-header">
+                                        <strong class="dict-exp-title"><?php echo htmlspecialchars($d['nombre_materia']); ?></strong>
+                                        <span class="dict-exp-badge"><?php echo htmlspecialchars($d['num_dictamen']); ?></span>
+                                    </div>
+                                    <div class="dict-exp-details">
+                                        <div><i class="far fa-calendar-check text-muted"></i> Ciclo: <strong><?php echo htmlspecialchars($d['ciclo_acreditacion']); ?></strong></div>
+                                        <div><i class="fas fa-hashtag text-muted"></i> Clave: <strong><?php echo htmlspecialchars($d['clave_materia']); ?></strong></div>
+                                    </div>
+                                    
+                                    <?php if ($pdf_url): ?>
+                                        <a href="<?php echo $pdf_url; ?>" target="_blank" class="btn-dict-download"><i class="fas fa-file-pdf"></i> Ver / Descargar PDF</a>
+                                    <?php else: ?>
+                                        <span class="btn-dict-disabled"><i class="fas fa-hourglass-half"></i> En proceso de firma</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="empty-state-box">
+                                <i class="fas fa-folder-open" style="font-size: 2rem; color: #ddd; margin-bottom: 10px; display: block;"></i>
+                                No hay dictámenes registrados.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
 
