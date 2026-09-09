@@ -30,6 +30,8 @@ if (isset($_GET['msg'])) {
     if ($_GET['msg'] === 'ok') { $mensaje = "¡Usuario guardado correctamente!"; $tipo_mensaje = "success"; } 
     elseif ($_GET['msg'] === 'error') { $mensaje = "Hubo un error al intentar guardar el usuario."; $tipo_mensaje = "error"; } 
     elseif ($_GET['msg'] === 'dup') { $mensaje = "El correo o el código ya están registrados."; $tipo_mensaje = "error"; }
+    // NUEVO MENSAJE DE ERROR PARA EL ESCUDO ROOT
+    elseif ($_GET['msg'] === 'error_root') { $mensaje = "Acceso denegado: Solo el Administrador Principal puede modificar su propia contraseña y datos."; $tipo_mensaje = "error"; }
 }
 
 // CONSULTA EXTENDIDA PARA INCLUIR DATOS DE PROFESORES Y ALUMNOS
@@ -115,7 +117,11 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                         </tr>
                     </thead>
                     <tbody id="usersTableBody">
-                        <?php foreach ($usuarios as $u): ?>
+                        <?php foreach ($usuarios as $u): 
+                            // LÓGICA DE ESCUDO ROOT FRONTEND
+                            // Verificamos si el usuario de la fila es el ROOT (id 1) y si el que está navegando NO es el root
+                            $es_root_protegido = ($u['usuario_id'] == 1 && $_SESSION['user_id'] != 1);
+                        ?>
                         <tr class="group-row" 
                             data-id="<?php echo $u['usuario_id']; ?>" 
                             data-nombre="<?php echo htmlspecialchars($u['nombre']); ?>" 
@@ -132,10 +138,17 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                             data-periodo="<?php echo htmlspecialchars($u['periodo_ingreso'] ?? ''); ?>"
                             data-nacionalidad="<?php echo htmlspecialchars($u['nacionalidad'] ?? ''); ?>"
                             data-experiencia="<?php echo htmlspecialchars($u['experiencia'] ?? ''); ?>"
-                            onclick="editUser(this)" title="Haz clic para editar">
+                            
+                            <?php if ($es_root_protegido): ?>
+                                style="background-color: #f8f9fa; cursor: not-allowed; opacity: 0.8;" title="El Administrador Principal está protegido"
+                            <?php else: ?>
+                                onclick="editUser(this)" title="Haz clic para editar"
+                            <?php endif; ?>>
                             
                             <td class="user-cell">
-                                <h4 class="user-name"><?php 
+                                <h4 class="user-name">
+                                    <?php if ($u['usuario_id'] == 1) echo '<i class="fas fa-crown" style="color: #f59e0b; margin-right:5px;" title="Root"></i>'; ?>
+                                    <?php 
                                     if (isset($u['apellido_paterno'])) { echo htmlspecialchars($u['nombre'] . ' ' . $u['apellido_paterno'] . (isset($u['apellido_materno']) && $u['apellido_materno'] ? ' ' . $u['apellido_materno'] : '')); } 
                                     else { echo htmlspecialchars($u['nombre'] . ' ' . $u['apellidos']); }
                                 ?></h4>
@@ -155,6 +168,8 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                             <td style="text-align: center;">
                                 <?php if($u['usuario_id'] != $_SESSION['user_id'] && $u['usuario_id'] != 1): ?>
                                     <a href="#" class="action-btn delete" onclick="event.stopPropagation(); confirmarBorradoUsuario('usuarios.php?borrar=<?php echo $u['usuario_id']; ?>&csrf_token=<?php echo $_SESSION['csrf_token']; ?>', '<?php echo addslashes($u['nombre']); ?>'); return false;"><i class="fas fa-trash-alt"></i></a>
+                                <?php elseif ($es_root_protegido): ?>
+                                    <i class="fas fa-lock" style="color: #ccc;" title="Protegido"></i>
                                 <?php endif; ?>
                             </td>
                         </tr>
