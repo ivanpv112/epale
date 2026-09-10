@@ -6,8 +6,7 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// 2. FUNCIÓN MAESTRA DE VALIDACIÓN MEJORADA
-// Por defecto valida POST, pero puedes pedirle que valide GET
+// 2. FUNCIÓN DE VALIDACIÓN: Valida POST y GET
 function validar_csrf_estricto($metodo_esperado = 'POST') {
     
     $metodo_actual = $_SERVER['REQUEST_METHOD'];
