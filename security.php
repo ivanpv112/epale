@@ -6,24 +6,31 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// 2. FUNCIÓN MAESTRA DE VALIDACIÓN
-function validar_csrf_estricto() {
-    // Solo validamos si es una petición que intenta modificar datos (POST, PUT, DELETE)
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// 2. FUNCIÓN MAESTRA DE VALIDACIÓN MEJORADA
+// Por defecto valida POST, pero puedes pedirle que valide GET
+function validar_csrf_estricto($metodo_esperado = 'POST') {
+    
+    $metodo_actual = $_SERVER['REQUEST_METHOD'];
+    
+    // Solo validamos si el método actual coincide con el que queremos proteger
+    if ($metodo_actual === strtoupper($metodo_esperado)) {
         
-        // A) Intentar leer el token desde un formulario normal (multipart o urlencoded)
-        $token = $_POST['csrf_token'] ?? '';
+        $token = '';
 
-        // B) Si está vacío, intentar leerlo desde el cuerpo JSON (Fetch API)
-        if (empty($token)) {
-            $json_body = json_decode(file_get_contents('php://input'), true);
-            $token = $json_body['csrf_token'] ?? '';
+        // Buscar el token dependiendo de por dónde viene
+        if ($metodo_actual === 'POST') {
+            $token = $_POST['csrf_token'] ?? '';
+            if (empty($token)) {
+                $json_body = json_decode(file_get_contents('php://input'), true);
+                $token = $json_body['csrf_token'] ?? '';
+            }
+        } elseif ($metodo_actual === 'GET') {
+            $token = $_GET['csrf_token'] ?? '';
         }
 
         // Validación criptográfica
         if (empty($_SESSION['csrf_token']) || empty($token) || !hash_equals($_SESSION['csrf_token'], $token)) {
             
-            // Determinar cómo responder: JSON (para APIs) o Texto Plano (para formularios)
             $is_json_request = isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false;
             
             if ($is_json_request) {
