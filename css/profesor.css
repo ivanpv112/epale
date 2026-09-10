@@ -61,7 +61,7 @@
 .crit-bar-bg { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
 .crit-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
 
-/* ========================================= 4. MÓDULO: VISTA DE GRUPOS (mis_grupos.php) ========================================= */
+/* ========================================= 4. MÓDULO: VISTA DE GRUPOS (Buscador y Tabla) ========================================= */
 .search-toolbar { margin-bottom: 25px; max-width: 700px; margin-left: auto; margin-right: auto; }
 .search-input-wrapper { display: flex; align-items: center; width: 100%; border: 2px solid #e2e8f0; border-radius: 8px; padding: 0 15px; background: white; transition: all 0.3s ease; box-sizing: border-box; }
 .search-input-wrapper:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -114,6 +114,11 @@
 .teacher-info-wrapper { display: flex; flex-direction: column; align-items: center; }
 .teacher-info-wrapper h1 { margin: 0; font-size: 2.2rem; color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.3); font-weight: bold; }
 .teacher-info-wrapper p { margin: 10px 0 0 0; font-size: 0.95rem; color: white; display: inline-flex; align-items: center; gap: 15px; background: rgba(0, 0, 0, 0.25); padding: 8px 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+
+/* Clases de Alertas y Campos de Solo Lectura */
+.readonly-data { background-color: #f1f3f5 !important; cursor: not-allowed !important; color: #666 !important; border: 1px solid #ddd; }
+.alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; font-weight: 500; }
+.alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; font-weight: 500; }
 
 /* ========================================= 6. MÓDULO: CALIFICACIONES (VISTA EXCEL) ========================================= */
 .dg-subtitle { margin: 5px 0 0 0; color: #666; font-size: 0.95rem; line-height: 1.5; }
@@ -313,19 +318,13 @@
 [data-theme="dark"] .subtitle-asistencia { color: #94a3b8; }
 [data-theme="dark"] .th-alumno, [data-theme="dark"] .th-fecha, [data-theme="dark"] .th-total { background: #151e32; border-color: #1e293b; color: #f8fafc; }
 [data-theme="dark"] .status-row-good { background-color: #0f172a; border-color: #1e293b; }
-
-/* SOLUCIÓN AL "EFECTO FANTASMA" DEL SCROLL: Colores SÓLIDOS sin transparencia RGBA para bloquear las celdas inferiores */
 [data-theme="dark"] .status-row-risk { background-color: #1f1a10; border-left-color: #f59e0b; border-color: #1e293b; }
 [data-theme="dark"] .status-row-fail { background-color: #241417; border-left-color: #ef4444; border-color: #1e293b; }
-
 [data-theme="dark"] .status-row-good .td-porcentaje { color: #10b981; }
 [data-theme="dark"] .status-row-risk .td-porcentaje { color: #f59e0b; }
 [data-theme="dark"] .status-row-fail .td-porcentaje { color: #ef4444; }
 [data-theme="dark"] .td-alumno { background-color: inherit; }
-
-/* COLOR DEL CONTEO TOTAL DE ASISTENCIAS EN OSCURO */
 [data-theme="dark"] .td-total-num { color: var(--udg-light); }
-
 [data-theme="dark"] .select-asist { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
 [data-theme="dark"] .sel-ASISTENCIA { border-color: #10b981; color: #10b981; }
 [data-theme="dark"] .sel-FALTA { border-color: #ef4444; color: #ef4444; }
@@ -348,3 +347,8 @@
 [data-theme="dark"] .class-block.theme-red { background-color: rgba(239, 68, 68, 0.1); border-left-color: #ef4444; color: #fecaca; }
 [data-theme="dark"] .class-block.theme-purple { background-color: rgba(168, 85, 247, 0.1); border-left-color: #a855f7; color: #e9d5ff; }
 [data-theme="dark"] .class-block.theme-cyan { background-color: rgba(6, 182, 212, 0.1); border-left-color: #06b6d4; color: #a5f3fc; }
+
+/* H. Alertas y Campos de Solo Lectura */
+[data-theme="dark"] .readonly-data { background-color: #1e293b !important; color: #64748b !important; border-color: #334155 !important; }
+[data-theme="dark"] .alert-success { background-color: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+[data-theme="dark"] .alert-error { background-color: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
