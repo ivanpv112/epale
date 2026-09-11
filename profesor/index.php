@@ -223,7 +223,11 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <div style="background: white; border-radius: 12px; padding: 40px; text-align: center; color: #aaa; border: 1px solid #f1f3f5;">No tienes grupos activos asignados.</div>
+                    <div class="content-card empty-table-msg">
+                        <i class="fas fa-chalkboard"></i>
+                        <h3>No tienes grupos activos asignados</h3>
+                        <p style="font-size: 0.9rem; margin-top: 10px;">Contacta a administración si crees que esto es un error.</p>
+                    </div>
                 <?php endif; ?>
             </div> <!-- FIN CONTENEDOR IZQUIERDO -->
 
