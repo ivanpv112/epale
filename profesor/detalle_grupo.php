@@ -1,13 +1,11 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
 
-// Generación de Token CSRF
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// ELIMINADO: validar_csrf_estricto(); <-- No va aquí porque es una vista (GET).
 
 $profesor_id = $_SESSION['user_id'];
 $clave_grupo = $_GET['clave'] ?? ''; 
@@ -106,7 +104,6 @@ if (count($alumnos) > 0) {
             <div>
                 <h1 class="title-asistencia"><?php echo htmlspecialchars($info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
                 
-                <!-- AHORA UTILIZAN CLASES CSS (dg-subtitle y dg-nrc) -->
                 <p class="dg-subtitle">
                     <span class="dg-nrc">NRC <?php echo htmlspecialchars($txt_nrc_aula); ?></span><br>
                     <i class="far fa-calendar-alt" style="margin-top:5px;"></i> Semestre <?php echo htmlspecialchars($info_grupo['ciclo']); ?> &nbsp;|&nbsp; 
@@ -120,7 +117,6 @@ if (count($alumnos) > 0) {
             </div>
         </div>
 
-        <!-- ALERTAS LIMPIAS (Las clases alert-closed y alert-restricted están en el CSS) -->
         <?php if($grupo_cerrado): ?>
             <div class="alert-closed">
                 <i class="fas fa-archive" style="font-size: 1.8rem;"></i>
