@@ -1,13 +1,12 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
 
-// Generación de Token CSRF
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// Token CSRF
+validar_csrf_estricto('GET');
 
 $clave = $_GET['clave'] ?? '';
 $profesor_id = $_SESSION['user_id'];
@@ -127,7 +126,6 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                         
                         $porcentaje_asist = ($total_sesiones > 0) ? ($conteo_asist / $total_sesiones) * 100 : 100;
                         
-                        // LÓGICA LIMPIA: Solo inyectamos la clase general, el CSS hace la magia
                         $row_class = 'status-row-good';
                         if ($total_sesiones > 0) {
                             if ($porcentaje_asist < 80) { // Menos de 80% pierde derecho
