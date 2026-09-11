@@ -1,6 +1,7 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 // SEGURIDAD: Solo Profesores
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
@@ -35,12 +36,11 @@ $stmt->execute([$profesor_id]);
 $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $total_alumnos = 0;
-// CONTADOR INTELIGENTE DE CRITERIOS PENDIENTES
 $total_criterios_pendientes = 0;
 
 // MOTOR DE PROGRESO DE CALIFICACIÓN POR GRUPO
 foreach ($grupos as &$g) {
-    // A. Obtener SOLO Criterios del Profesor (Filtro Estricto)
+    // A. Obtener Criterios del Profesor
     $stmtCriterios = $pdo->prepare("
         SELECT codigo_examen, nombre_examen, color, icono 
         FROM criterios_evaluacion 
@@ -158,7 +158,7 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
             
             <!-- CONTENEDOR IZQUIERDO: TÍTULO, LEYENDA Y TARJETAS INDIVIDUALES -->
             <div>
-                <!-- TÍTULO Y LEYENDA (Sueltos) -->
+                <!-- TÍTULO Y LEYENDA -->
                 <div style="display:flex; align-items:center; gap: 10px; margin-bottom: 5px;">
                     <h3 class="card-title" style="margin:0;"><i class="fas fa-book-open"></i> Mis Grupos</h3>
                     <span style="color:var(--text-muted); font-size:0.9rem; margin-top:2px;">— progreso de calificación por criterio</span>
@@ -233,9 +233,9 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
                 <div class="content-card" style="height: fit-content; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 class="card-title" style="margin: 0;"><i class="fas fa-bullhorn"></i> Avisos Activos</h3>
-                        <button onclick="abrirPanelTareas()" class="btn-save" style="padding: 6px 12px; font-size: 0.85rem; background-color: #3ba5ff; border: none; color: white; cursor: pointer; border-radius: 8px;"><i class="fas fa-edit"></i> Gestionar</button>
+                        <button onclick="abrirPanelAvisos()" class="btn-save" style="padding: 6px 12px; font-size: 0.85rem; background-color: #3ba5ff; border: none; color: white; cursor: pointer; border-radius: 8px;"><i class="fas fa-edit"></i> Gestionar</button>
                     </div>
-                    <div id="lista_resumen_tareas">
+                    <div id="lista_resumen_avisos">
                         <p style="color: #888; margin: 0;">Cargando avisos...</p>
                     </div>
                 </div>
@@ -244,7 +244,7 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
                 <div class="content-card">
                     <h3 class="card-title"><i class="far fa-calendar-check"></i> Próximas Clases (Hoy)</h3>
                     <?php if(count($clases_hoy) > 0): ?>
-                        <div class="today-classes" style="flex-direction: column;"> <!-- EN MÓDULO DERECHO VAN APILADAS -->
+                        <div class="today-classes" style="flex-direction: column;">
                             <?php foreach($clases_hoy as $c): ?>
                                 <div class="class-card">
                                     <div><div class="class-name"><?php echo htmlspecialchars($c['materia']); ?></div><div class="class-room"><?php echo ($c['tipo'] == 'Presencial') ? '<i class="fas fa-building" style="color:#28a745;"></i>' : '<i class="fas fa-laptop-house" style="color:#17a2b8;"></i>'; ?> <?php echo htmlspecialchars($c['aula']); ?></div></div>
@@ -260,20 +260,20 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
     </main>
 
     <!-- MODALES DE GESTIÓN DE AVISOS -->
-    <div id="modalGestionTareas" class="modal-overlay">
+    <div id="modalGestionAvisos" class="modal-overlay">
         <div class="modal-content-lg">
             <div class="modal-header">
                 <h2><i class="fas fa-bullhorn"></i> Panel de Avisos y Asignaciones</h2>
-                <button class="close-btn" onclick="cerrarPanelTareas()">&times;</button>
+                <button class="close-btn" onclick="cerrarPanelAvisos()">&times;</button>
             </div>
             <div class="modal-body">
-                <button onclick="abrirFormularioTarea()" class="btn-save mb-15" style="background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;"><i class="fas fa-plus"></i> Crear Nuevo</button>
+                <button onclick="abrirFormularioAviso()" class="btn-save mb-15" style="background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;"><i class="fas fa-plus"></i> Crear Nuevo</button>
                 <div style="overflow-x: auto;">
                     <table class="table-modern">
                         <thead>
                             <tr><th>Tipo</th><th>Título</th><th>Clase</th><th>Inicio</th><th>Fin</th><th>Estatus</th><th>Acciones</th></tr>
                         </thead>
-                        <tbody id="tablaTareasBody"></tbody>
+                        <tbody id="tablaAvisosBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -281,44 +281,44 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
     </div>
 
     <!-- z-index ALTO -->
-    <div id="modalFormTarea" class="modal-overlay" style="z-index: 3100;">
+    <div id="modalFormAviso" class="modal-overlay" style="z-index: 3100;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="tituloModalTarea">Nueva Publicación</h2>
-                <button class="close-btn" onclick="cerrarFormularioTarea()">&times;</button>
+                <h2 id="tituloModalAviso">Nuevo Aviso</h2>
+                <button class="close-btn" onclick="cerrarFormularioAviso()">&times;</button>
             </div>
-            <form id="formTarea" onsubmit="guardarTarea(event)">
+            <form id="formAviso" onsubmit="guardarAviso(event)">
                 <div class="modal-body">
-                    <input type="hidden" id="tarea_id" name="tarea_id">
+                    <input type="hidden" id="aviso_id" name="aviso_id">
                     <div class="form-group-inline mb-15">
                         <label style="margin-right: 15px; cursor: pointer;"><input type="radio" name="tipo" value="AVISO" checked> 📢 Aviso General</label>
                         <label style="cursor: pointer;"><input type="radio" name="tipo" value="ASIGNACION"> 📝 Asignación / Tarea</label>
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="display:block; margin-bottom:5px; font-weight:bold;">Título</label>
-                        <input type="text" id="tarea_titulo" name="titulo" required placeholder="Ej. Tarea 1: Ensayo" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                        <input type="text" id="aviso_titulo" name="titulo" required placeholder="Ej. Cambio de Aula / Tarea 1" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="display:block; margin-bottom:5px; font-weight:bold;">Descripción</label>
-                        <textarea id="tarea_descripcion" name="descripcion" rows="3" required placeholder="Detalles de lo que deben hacer..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
+                        <textarea id="aviso_descripcion" name="descripcion" rows="3" required placeholder="Detalles del aviso..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></textarea>
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="display:block; margin-bottom:5px; font-weight:bold;">¿A qué clase va dirigido?</label>
-                        <select id="tarea_nrc" name="nrc" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
+                        <select id="aviso_nrc" name="nrc" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="form-group">
                             <label style="display:block; margin-bottom:5px; font-weight:bold;">Fecha de Publicación</label>
-                            <input type="datetime-local" id="tarea_inicio" name="fecha_inicio" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                            <input type="datetime-local" id="aviso_inicio" name="fecha_inicio" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div class="form-group">
                             <label style="display:block; margin-bottom:5px; font-weight:bold;">Fecha Límite</label>
-                            <input type="datetime-local" id="tarea_fin" name="fecha_fin" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                            <input type="datetime-local" id="aviso_fin" name="fecha_fin" required style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn-cancel" onclick="cerrarFormularioTarea()" style="padding: 8px 15px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
+                    <button type="button" class="btn-cancel" onclick="cerrarFormularioAviso()" style="padding: 8px 15px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
                     <button type="submit" class="btn-save" style="padding: 8px 15px; background: var(--udg-blue); color: #fff; border: none; border-radius: 4px; cursor: pointer;"><i class="fas fa-paper-plane"></i> Publicar</button>
                 </div>
             </form>
@@ -328,8 +328,9 @@ usort($clases_hoy, function($a, $b) { return strtotime($a['inicio']) - strtotime
     <?php include '../main_footer.php'; ?>
 
     <script>
+        // VARIABLE GLOBAL DEL CSRF TOKEN 
         const csrfToken = "<?php echo $_SESSION['csrf_token']; ?>";
     </script>
-    <script src="../js/tareas_profesor.js?v=<?php echo time(); ?>"></script>
+    <script src="../js/avisos_profesor.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
