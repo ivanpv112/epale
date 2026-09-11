@@ -1,6 +1,7 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
@@ -15,9 +16,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR' || !isset($i
 }
 
 // Validación estricta del Token CSRF
-if (empty($_SESSION['csrf_token']) || empty($input['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $input['csrf_token'])) {
-    echo json_encode(['success' => false, 'error' => 'Token de seguridad inválido (CSRF). Por favor, recarga la página.']); exit;
-}
+validar_csrf_estricto();
 
 $profesor_id = $_SESSION['user_id'];
 
