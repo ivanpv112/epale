@@ -48,7 +48,7 @@ $colores_asignados = []; $color_index = 0; $bloques_render = [];
 foreach ($horarios_db as $h) {
     if (!$h['hora_inicio'] || !$h['hora_fin'] || !$h['dias_patron']) continue;
 
-    // AHORA ASIGNA EL COLOR POR CLAVE DEL GRUPO (Hace cada clase independiente visualmente)
+    // COLOR POR CLAVE DEL GRUPO (Hace cada clase independiente visualmente)
     if (!isset($colores_asignados[$h['clave_grupo']])) {
         $colores_asignados[$h['clave_grupo']] = $paleta[$color_index % count($paleta)];
         $color_index++;
@@ -64,7 +64,6 @@ foreach ($horarios_db as $h) {
     $fila_fin = ($hora_fin - 7) + 2;
 
     $dias = descifrarDias($h['dias_patron']);
-    // Quitamos los estilos inline para que hereden el color del tema visual
     $icono = ($h['modalidad'] == 'PRESENCIAL') ? '<i class="fas fa-building"></i>' : '<i class="fas fa-laptop-house"></i>';
 
     foreach ($dias as $columna_dia) {
@@ -119,7 +118,6 @@ foreach ($horarios_db as $h) {
                 <?php endfor; ?>
 
                 <?php foreach ($bloques_render as $b): ?>
-                    <!-- IMPRESIÓN LIMPIA DE LA CLASE DEL TEMA ($b['tema']) -->
                     <a href="detalle_grupo.php?clave=<?php echo $b['clave']; ?>" class="class-block <?php echo $b['tema']; ?>" style="grid-column: <?php echo $b['col']; ?>; grid-row: <?php echo $b['row_ini']; ?> / <?php echo $b['row_fin']; ?>;" title="Ver lista de alumnos">
                         <div class="class-title"><?php echo htmlspecialchars($b['titulo']); ?></div>
                         <div class="class-details"><?php echo $b['icono']; ?> <?php echo htmlspecialchars($b['aula'] ?: 'Sin Aula'); ?></div>
