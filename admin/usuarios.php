@@ -1,6 +1,7 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
 
@@ -9,10 +10,10 @@ $tipo_mensaje = '';
 
 // ELIMINACIÓN DE USUARIO
 if (isset($_GET['borrar'])) {
-    // ESCUDO CSRF PARA MÉTODO GET
-    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
-    }
+    
+    // Función CSRF
+    validar_csrf_estricto('GET');
+
     $id = $_GET['borrar'];
     $root_admin_id = 1; 
     if ($id == $root_admin_id) { $mensaje = "Acceso denegado: No puedes eliminar al Administrador Principal."; $tipo_mensaje = "error"; } 
@@ -290,5 +291,8 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             searchInput.addEventListener('input', filterTable); rolSelect.addEventListener('change', filterTable);
         });
     </script>
+
+    <?php include '../main_footer.php'; ?>
+
 </body>
 </html>
