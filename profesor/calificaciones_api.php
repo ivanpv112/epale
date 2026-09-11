@@ -1,11 +1,12 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php'; // Inclusión del cerebro
 
 header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
 
-// CAPA EXTRA DE SEGURIDAD: Rechazar cualquier petición que no sea por POST
+// Rechazar cualquier petición que no sea por POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Método no permitido.']); exit;
 }
@@ -16,9 +17,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR' || !isset($i
 }
 
 // 2. Validación estricta del Token CSRF
-if (empty($_SESSION['csrf_token']) || empty($input['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $input['csrf_token'])) {
-    echo json_encode(['success' => false, 'error' => 'Token de seguridad inválido (CSRF). Por favor, recarga la página.']); exit;
-}
+validar_csrf_estricto();
 
 if ($input['action'] === 'save_single') {
     $insc_id = $input['inscripcion_id'];
@@ -82,11 +81,9 @@ if ($input['action'] === 'save_single') {
         echo json_encode(['success' => true]);
         
     } catch(PDOException $e) {
-        // 3. Fuga de Datos Resuelta: El error real va al log, el usuario ve un mensaje genérico
         error_log("Error PDO en calificaciones_api: " . $e->getMessage());
         echo json_encode(['success' => false, 'error' => 'Ocurrió un error interno al guardar en la base de datos.']);
     } catch(Exception $e) {
-        // Excepciones controladas
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
