@@ -37,7 +37,6 @@ if (is_dir($upload_dir)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Dictámenes | Portal Estudiantil</title>
-    <!-- EL CSS MAESTRO YA CONTIENE TODOS LOS ESTILOS -->
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -109,7 +108,7 @@ if (is_dir($upload_dir)) {
         <?php endif; ?>
     </main>
 
-    <?php include 'footer_estudiante.php'; ?>
+    <?php include '../main_footer.php'; ?>
     
     <script>
         function toggleMobileMenu() { 
