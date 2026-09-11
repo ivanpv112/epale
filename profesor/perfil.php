@@ -1,11 +1,15 @@
 <?php
 session_start();
 require '../db.php';
+require '../security.php';
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { 
     header("Location: ../index.php"); exit; 
 }
+
+// Función CSRF
+validar_csrf_estricto();
 
 $usuario_id = $_SESSION['user_id'];
 $mensaje = '';
@@ -15,6 +19,7 @@ $tipo_mensaje = '';
 // PROCESAR ACTUALIZACIÓN DE PERFIL
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $telefono = trim($_POST['telefono'] ?? '');
     $password = $_POST['password'] ?? '';
     
@@ -22,10 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 1. Actualizar teléfono
         $pdo->prepare("UPDATE usuarios SET telefono = ? WHERE usuario_id = ?")->execute([$telefono, $usuario_id]);
         
-        // 2. Actualizar contraseña si se escribió una nueva
+        // 2. Actualizar contraseña si se escribió una nueva (y actualizar la fecha de cambio)
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $pdo->prepare("UPDATE usuarios SET password = ? WHERE usuario_id = ?")->execute([$hash, $usuario_id]);
+            $pdo->prepare("UPDATE usuarios SET password = ?, fecha_cambio_password = CURRENT_TIMESTAMP WHERE usuario_id = ?")->execute([$hash, $usuario_id]);
         }
 
         // 3. Procesar Foto de Perfil
@@ -80,6 +85,18 @@ $foto_actual = "../img/avatar-default.png";
 if ($profesor['foto_perfil'] && file_exists("../img/perfiles/" . $profesor['foto_perfil'])) {
     $foto_actual = "../img/perfiles/" . $profesor['foto_perfil'];
 }
+
+// Lógica Visual para la fecha de cambio de contraseña
+$fecha_cambio = $profesor['fecha_cambio_password'];
+if ($fecha_cambio) {
+    $texto_pass = "Último cambio: " . date('d/m/Y \a \l\a\s H:i', strtotime($fecha_cambio));
+    $clase_pass = "color: #28a745;"; // Verde
+    $icono_pass = "fas fa-check-circle";
+} else {
+    $texto_pass = "Advertencia: Nunca has cambiado la contraseña por defecto.";
+    $clase_pass = "color: #dc3545; font-weight: bold;"; // Rojo
+    $icono_pass = "fas fa-exclamation-triangle";
+}
 ?>
 
 <!DOCTYPE html>
@@ -100,12 +117,14 @@ if ($profesor['foto_perfil'] && file_exists("../img/perfiles/" . $profesor['foto
     <main class="main-content">
         
         <?php if($mensaje): ?>
-            <div class="alert <?php echo ($tipo_mensaje == 'success') ? 'alert-success' : 'alert-error'; ?>" style="margin-bottom: 20px; <?php echo ($tipo_mensaje == 'error') ? 'background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; padding:15px; border-radius:8px;' : ''; ?>">
+            <!-- ALERTA LIMPIA, EL CSS CONTROLA LOS COLORES AHORA -->
+            <div class="alert <?php echo ($tipo_mensaje == 'success') ? 'alert-success' : 'alert-error'; ?>" style="margin-bottom: 20px;">
                 <i class="fas <?php echo ($tipo_mensaje == 'success') ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i> <?php echo htmlspecialchars($mensaje); ?>
             </div>
         <?php endif; ?>
 
         <form method="POST" action="perfil.php" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             
             <div class="teacher-header-card">
                 <div class="teacher-avatar-wrapper">
@@ -132,6 +151,7 @@ if ($profesor['foto_perfil'] && file_exists("../img/perfiles/" . $profesor['foto
                     
                     <div class="form-group">
                         <label>Nombre(s)</label>
+                        <!-- CAMPOS LIMPIOS, EL CSS HACE LA MAGIA -->
                         <input type="text" value="<?php echo htmlspecialchars($profesor['nombre']); ?>" class="readonly-data" readonly title="Solicita cambios de nombre al Administrador">
                     </div>
                     <div class="form-group">
@@ -156,7 +176,9 @@ if ($profesor['foto_perfil'] && file_exists("../img/perfiles/" . $profesor['foto
                     <div class="form-group">
                         <label style="color: var(--udg-blue); font-weight: bold;">Actualizar Contraseña</label>
                         <input type="password" name="password" placeholder="Escribe aquí solo si deseas cambiarla">
-                        <small style="color: #888;">Déjalo en blanco para mantener tu contraseña actual.</small>
+                        <small style="display: block; margin-top: 5px; <?php echo $clase_pass; ?>">
+                            <i class="<?php echo $icono_pass; ?>"></i> <?php echo $texto_pass; ?>
+                        </small>
                     </div>
                 </div>
 
@@ -169,7 +191,7 @@ if ($profesor['foto_perfil'] && file_exists("../img/perfiles/" . $profesor['foto
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Portal Docente</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <script>
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }
