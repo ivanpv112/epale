@@ -1,7 +1,7 @@
 <?php
 session_start();
 require '../db.php';
-require '../security.php';
+require_once '../security.php';
 
 date_default_timezone_set('America/Mexico_City'); 
 
@@ -22,7 +22,7 @@ if (is_array($input)) {
 }
 
 // Validación estricta del Token CSRF (Centralizada)
-validar_csrf_estricto();
+validar_csrf_estricto('POST');
 
 $profesor_id = $_SESSION['user_id'];
 $action = $_POST['action'] ?? '';
