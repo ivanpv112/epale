@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
     header("Location: ../index.php"); exit;
@@ -167,6 +170,6 @@ foreach ($horarios_db as $h) {
 
     </main>
 
-    <?php include 'footer_estudiante.php'; ?>
+    <?php include '../main_footer.php'; ?>
 </body>
 </html>
