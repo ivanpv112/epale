@@ -7,8 +7,6 @@ validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
 
-// ELIMINADO: validar_csrf_estricto(); <-- No va aquí porque es una vista (GET).
-
 $profesor_id = $_SESSION['user_id'];
 $clave_grupo = $_GET['clave'] ?? ''; 
 
