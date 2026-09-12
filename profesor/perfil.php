@@ -1,7 +1,7 @@
 <?php
 session_start();
 require '../db.php';
-require '../security.php';
+require_once '../security.php';
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { 
@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
 }
 
 // Función CSRF
-validar_csrf_estricto();
+validar_csrf_estricto('POST');
 
 $usuario_id = $_SESSION['user_id'];
 $mensaje = '';
