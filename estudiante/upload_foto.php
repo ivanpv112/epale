@@ -51,10 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         $img_source = @imagecreatefromjpeg($file['tmp_name']);
     } elseif ($mime_type == 'image/png') {
         $img_source = @imagecreatefrompng($file['tmp_name']);
-        // Respetar la transparencia del PNG antes de convertir a WEBP
         if ($img_source !== false) {
             imagepalettetotruecolor($img_source);
-            imagealphablending($img_source, true);
+            imagealphablending($img_source, false);
             imagesavealpha($img_source, true);
         }
     } elseif ($mime_type == 'image/webp') {
