@@ -1,4 +1,7 @@
 <?php
+// Importar archivo de seguridad (centraliza la generación del token)
+require_once '../security.php';
+
 // ==========================================
 // MOTOR DE "VOLVER INTELIGENTE" (Versión Estudiante)
 // ==========================================
@@ -7,11 +10,6 @@ if (!isset($_SESSION['smart_back_estudiante'])) {
 }
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
-
-// Generación del token CSRF global para toda la sesión
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
@@ -121,7 +119,7 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
             backdrop: `rgba(0,0,123,0.4)`
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '../logout.php';
+                window.location.href = '../logout.php?csrf_token=<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
             }
         });
     }
