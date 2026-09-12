@@ -1,12 +1,12 @@
 <?php
 session_start();
 require '../db.php';
-require '../security.php';
+require_once '../security.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
 
 // Token CSRF
-validar_csrf_estricto();
+validar_csrf_estricto('POST');
 
 $clave = $_GET['clave'] ?? '';
 $profesor_id = $_SESSION['user_id'];
