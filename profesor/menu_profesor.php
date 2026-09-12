@@ -1,4 +1,7 @@
 <?php
+// Importar archivo de seguridad (centraliza la generación del token)
+require_once '../security.php';
+
 // ==========================================
 // MOTOR DE "VOLVER INTELIGENTE" (Versión Profesor)
 // ==========================================
@@ -111,7 +114,7 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
             backdrop: `rgba(0,0,123,0.4)`
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '../logout.php';
+                window.location.href = '../logout.php?csrf_token=<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
             }
         });
     }
