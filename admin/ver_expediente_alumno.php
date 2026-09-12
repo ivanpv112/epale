@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
@@ -394,7 +397,7 @@ $archivos_fisicos_dict = is_dir($upload_dir_dictamenes) ? array_diff(scandir($up
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <script>
         function editarDiagnostico(diag) {

@@ -1,16 +1,15 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 // Validar seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     header("Location: ../index.php"); exit;
 }
 
-// Generación de Token CSRF para las peticiones AJAX
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
 ?>
 
 <!DOCTYPE html>
@@ -148,7 +147,7 @@ if (empty($_SESSION['csrf_token'])) {
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <script>
         const csrfToken = "<?php echo $_SESSION['csrf_token']; ?>";

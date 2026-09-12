@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 header('Content-Type: application/json');
 
@@ -28,7 +31,7 @@ try {
 
 
 // Función para corregir codificación de Excel (ISO-8859-1 / Windows-1252) a UTF-8 (BD)
-function limpiarTextoExcel($cadena) {
+function limpiarTextoExcel(string $cadena) {
     if (empty($cadena)) return '';
     // Detecta la codificación y la fuerza a UTF-8 para que las tildes no corten la cadena
     return mb_convert_encoding(trim($cadena), 'UTF-8', 'UTF-8, ISO-8859-1, WINDOWS-1252');

@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
@@ -253,7 +256,7 @@ $total_idiomas = count($idiomas_present);
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <div id="materiaModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">

@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {

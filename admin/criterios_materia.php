@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 // 1. SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
@@ -241,7 +244,7 @@ foreach ($criterios as $c) {
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <div id="criterioModal" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="max-width: 600px; position: relative;">

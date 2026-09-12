@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php'; 
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 // 1. Seguridad: Verificar que sea ADMINISTRADOR
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
@@ -164,7 +167,7 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
 
     </main>
 
-    <footer class="main-footer"><div class="address-bar">Copyright © 2026 E-PALE | Panel de Administración</div></footer>
+    <?php include '../main_footer.php'; ?>
 
     <div id="modalEditar" class="modal-overlay">
         <div class="modal-content">
