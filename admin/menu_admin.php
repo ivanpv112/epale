@@ -3,10 +3,8 @@ if (!isset($_SESSION['smart_back'])) { $_SESSION['smart_back'] = []; }
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
-// Generación del token CSRF global para toda la sesión
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// Importar archivo de seguridad (centraliza la generación del token)
+require_once '../security.php';
 
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
@@ -115,7 +113,7 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
             showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
             confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Sí, salir', cancelButtonText: 'Cancelar', reverseButtons: true, backdrop: `rgba(0,0,123,0.4)`
         }).then((result) => {
-            if (result.isConfirmed) { window.location.href = '../logout.php'; }
+            if (result.isConfirmed) { window.location.href = '../logout.php?csrf_token=<?php echo $_SESSION["csrf_token"] ?? ""; ?>'; }
         });
     }
 </script>
