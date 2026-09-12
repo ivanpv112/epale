@@ -1,7 +1,7 @@
 <?php
 session_start();
 require '../db.php';
-require '../security.php';
+require_once '../security.php';
 
 header('Content-Type: application/json');
 $input = json_decode(file_get_contents('php://input'), true);
@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR' || !isset($i
 }
 
 // Validación estricta del Token CSRF
-validar_csrf_estricto();
+validar_csrf_estricto('POST');
 
 $profesor_id = $_SESSION['user_id'];
 
