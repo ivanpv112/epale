@@ -1,6 +1,9 @@
 <?php
 session_start();
 require '../db.php';
+require_once '../security.php';
+
+validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') { header("Location: ../index.php"); exit; }
 
@@ -12,9 +15,6 @@ $alumno_id = $alumno['alumno_id'];
 $mensaje = ''; $tipo_mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
 
     if (isset($_POST['action']) && $_POST['action'] == 'solicitar_baja') {
         $insc_baja = $_POST['inscripcion_id'];
@@ -354,7 +354,7 @@ if (!function_exists('format_score')) {
         <?php endif; ?>
     </main>
 
-    <?php include 'footer_estudiante.php'; ?>
+    <?php include '../main_footer.php'; ?>
 
     <script>
         function abrirModal(id) { document.getElementById(id).style.display = 'flex'; }
