@@ -70,6 +70,23 @@ try {
             $insertGrupo->execute([$rnc_virtual, $materia_id, $profesor_id, $ciclo_id, $cupo, $edicion_total, $clave_grupo]);
             $insertHorario->execute([$rnc_virtual, $dias_virtual, $inicio_virtual, $fin_virtual, 'VIRTUAL', $aula_virtual]);
         }
+        
+        // --- LOG HISTORIAL ---
+        $s_mat = $pdo->prepare("SELECT nombre, nivel FROM materias WHERE materia_id = ?");
+        $s_mat->execute([$materia_id]);
+        $mat = $s_mat->fetch(PDO::FETCH_ASSOC);
+        $nom_mat = $mat ? $mat['nombre'] . ' ' . $mat['nivel'] : "Materia $materia_id";
+
+        $s_prof = $pdo->prepare("SELECT nombre, apellido_paterno FROM usuarios WHERE usuario_id = ?");
+        $s_prof->execute([$profesor_id]);
+        $prof = $s_prof->fetch(PDO::FETCH_ASSOC);
+        $nom_prof = $prof ? 'Prof. ' . $prof['nombre'] . ' ' . $prof['apellido_paterno'] : "Profesor $profesor_id";
+        
+        $nrcs = [];
+        if ($rnc_presencial !== '') $nrcs[] = $rnc_presencial;
+        if ($rnc_virtual !== '') $nrcs[] = $rnc_virtual;
+        
+        registrar_historial($pdo, $_SESSION['user_id'], 'Grupo', 'Grupos', 'Creación de nuevo grupo', $nom_mat . ' / ' . $nom_prof, "Se creó un nuevo grupo para esta clase con los NRC(s): " . implode(', ', $nrcs) . ". (Cupo: $cupo)");
     }
     $pdo->commit();
 

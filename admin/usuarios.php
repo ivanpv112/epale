@@ -216,7 +216,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                         <div class="form-group teacher-field"> <label>Nacionalidad</label> <input type="text" name="nacionalidad" id="userNationality" placeholder="Ej. Mexicana"> </div>
                         <div class="form-group teacher-field"> <label>Experiencia</label> <input type="text" name="experiencia" id="userExperience" placeholder="Ej. C1"> </div>
                         
-                        <div class="form-group"> <label>Teléfono</label> <input type="text" name="telefono" id="userPhone"> </div>
+                        <div class="form-group"> <label>Teléfono</label> <input type="text" name="telefono" id="userPhone" oninput="this.value = this.value.replace(/[^0-9]/g, '');" maxlength="15" placeholder="Solo números"> </div>
                         <div class="form-group gender-field">
                             <label>Género</label>
                             <select name="genero" id="userGender">

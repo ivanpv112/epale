@@ -20,18 +20,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['cerrar_grupos'])) {
         $id_cerrar = $_POST['ciclo_id'];
+        
+        $stmt_nc = $pdo->prepare("SELECT nombre FROM ciclos WHERE ciclo_id = ?");
+        $stmt_nc->execute([$id_cerrar]);
+        $nom_ciclo = $stmt_nc->fetchColumn();
+
         $pdo->prepare("UPDATE grupos SET estado = 'CERRADO' WHERE ciclo_id = ? AND estado = 'ACTIVO'")->execute([$id_cerrar]);
         $pdo->prepare("UPDATE ciclos SET activo = 0 WHERE ciclo_id = ?")->execute([$id_cerrar]);
+        
+        registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Sistema', 'Ciclo finalizado', $nom_ciclo, "Se ha finalizado el semestre actual y se ha enviado al archivo histórico.");
+        
         $mensaje = "El ciclo ha sido finalizado y mandado al archivo histórico."; $tipo_mensaje = "success";
     }
     if (isset($_POST['abrir_grupos'])) {
         $id_abrir = $_POST['ciclo_id'];
+        
+        $stmt_na = $pdo->prepare("SELECT nombre FROM ciclos WHERE ciclo_id = ?");
+        $stmt_na->execute([$id_abrir]);
+        $nom_ciclo = $stmt_na->fetchColumn();
         
         $pdo->exec("UPDATE ciclos SET activo = 0");
         $pdo->exec("UPDATE grupos SET estado = 'CERRADO' WHERE estado = 'ACTIVO'");
         
         $pdo->prepare("UPDATE ciclos SET activo = 1 WHERE ciclo_id = ?")->execute([$id_abrir]);
         $pdo->prepare("UPDATE grupos SET estado = 'ACTIVO' WHERE ciclo_id = ?")->execute([$id_abrir]);
+        
+        registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Sistema', 'Nuevo ciclo actual', $nom_ciclo, "Se ha establecido como ciclo activo principal. Los demás se archivaron automáticamente.");
         
         $mensaje = "¡Listo! Este es ahora el Ciclo Actual. Los demás se han archivado automáticamente."; $tipo_mensaje = "success";
     }

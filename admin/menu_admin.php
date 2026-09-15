@@ -71,6 +71,7 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
         </a></li>
         <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
         <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
+        <li><a href="historial.php" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
     </ul>
 
     <div class="sidebar-divider"></div>

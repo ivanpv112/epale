@@ -46,12 +46,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_criterio'])) {
         $sql = "INSERT INTO criterios_evaluacion (materia_id, categoria, codigo_examen, nombre_examen, puntos_maximos, icono, color) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $pdo->prepare($sql)->execute([$materia_id, $categoria, $codigo_examen, $nombre_examen, $puntos, $icono, $color]);
+        $detalle = "Se agregó el criterio de evaluación '$nombre_examen' ($codigo_examen) por $puntos pts a la materia.";
     } else {
+        $stmt_old_c = $pdo->prepare("SELECT nombre_examen, puntos_maximos, codigo_examen FROM criterios_evaluacion WHERE criterio_id = ?");
+        $stmt_old_c->execute([$criterio_id]);
+        $old_crit = $stmt_old_c->fetch(PDO::FETCH_ASSOC);
+
         $sql = "UPDATE criterios_evaluacion 
                 SET categoria=?, codigo_examen=?, nombre_examen=?, puntos_maximos=?, icono=?, color=? 
                 WHERE criterio_id=?";
         $pdo->prepare($sql)->execute([$categoria, $codigo_examen, $nombre_examen, $puntos, $icono, $color, $criterio_id]);
+        
+        $cambios = [];
+        if ($old_crit && $old_crit['nombre_examen'] != $nombre_examen) $cambios[] = "Nombre: {$old_crit['nombre_examen']} → $nombre_examen";
+        if ($old_crit && $old_crit['puntos_maximos'] != $puntos) $cambios[] = "Puntos: {$old_crit['puntos_maximos']} pts → $puntos pts";
+        if ($old_crit && $old_crit['codigo_examen'] != $codigo_examen) $cambios[] = "Código: {$old_crit['codigo_examen']} → $codigo_examen";
+        
+        $detalle_str = !empty($cambios) ? " (" . implode(", ", $cambios) . ")" : "";
+        $detalle = "Se modificó el criterio de evaluación '$nombre_examen'$detalle_str en la materia.";
     }
+    
+    // LOG HISTORIAL
+    registrar_historial($pdo, $_SESSION['user_id'], empty($criterio_id) ? 'Creación' : 'Edición', 'Clases', 'Criterios de evaluación actualizados', $materia['nombre'] . ' ' . $materia['nivel'], $detalle);
     
     header("Location: criterios_materia.php?id=" . $materia_id . "&exito=1"); exit;
 }
@@ -88,6 +104,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['auto_criterios'])) {
         $stmt->execute([$materia_id, $cb[0], $cb[1], $cb[2], $cb[3], $cb[4], $cb[5]]);
     }
     
+    // LOG HISTORIAL
+    registrar_historial($pdo, $_SESSION['user_id'], 'Creación', 'Clases', 'Plantilla de criterios generada', $materia['nombre'] . ' ' . $materia['nivel'], "Se generaron automáticamente los criterios base de evaluación para la materia (100 puntos en total).");
+    
     header("Location: criterios_materia.php?id=" . $materia_id . "&exito=auto"); exit;
 }
 
@@ -99,7 +118,16 @@ if (isset($_GET['borrar_criterio'])) {
     }
 
     $criterio_id = $_GET['borrar_criterio'];
+    
+    // LOG HISTORIAL ANTES DE BORRAR PARA SACAR EL NOMBRE
+    $stmt_bc = $pdo->prepare("SELECT nombre_examen FROM criterios_evaluacion WHERE criterio_id = ?");
+    $stmt_bc->execute([$criterio_id]);
+    $nombre_examen_borrado = $stmt_bc->fetchColumn() ?: "Criterio ID $criterio_id";
+
     $pdo->prepare("DELETE FROM criterios_evaluacion WHERE criterio_id = ?")->execute([$criterio_id]);
+    
+    registrar_historial($pdo, $_SESSION['user_id'], 'Borrado', 'Clases', 'Criterio eliminado', $materia['nombre'] . ' ' . $materia['nivel'], "Se eliminó el criterio de evaluación '$nombre_examen_borrado' de la materia.");
+    
     header("Location: criterios_materia.php?id=" . $materia_id . "&exito=borrado"); exit;
 }
 

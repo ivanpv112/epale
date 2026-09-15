@@ -135,6 +135,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $alumno_quitar = $_POST['alumno_id'];
         $nrc_grupo = $_POST['nrc_base'];
         $pdo->prepare("UPDATE inscripciones SET estatus = 'BAJA' WHERE alumno_id = ? AND nrc = ?")->execute([$alumno_quitar, $nrc_grupo]);
+        
+        // LOG HISTORIAL
+        $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
+        $stmt_al->execute([$alumno_quitar]);
+        $nom_al = $stmt_al->fetchColumn();
+        registrar_historial($pdo, $_SESSION['user_id'], 'Baja', 'Grupos', 'Baja de estudiante', $nom_al, "Se dio de baja al estudiante del grupo con NRC $nrc_grupo.");
+
         $mensaje = "El alumno fue dado de baja exitosamente.";
         $tipo_mensaje = "success";
     }
@@ -169,11 +176,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $tipo_mensaje = "error";
                     } else {
                         $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]);
+                        
+                        $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
+                        $stmt_al->execute([$nuevo_alumno_id]);
+                        $nom_al = $stmt_al->fetchColumn();
+                        registrar_historial($pdo, $_SESSION['user_id'], 'Inscripción', 'Grupos', 'Reinscripción de estudiante', $nom_al, "Se re-inscribió al estudiante en el grupo con NRC $nrc_grupo (estaba dado de baja).");
+
                         $mensaje = "Alumno re-inscrito correctamente.";
                         $tipo_mensaje = "success";
                     }
                 } else {
                     $pdo->prepare("INSERT INTO inscripciones (alumno_id, nrc, estatus) VALUES (?, ?, 'INSCRITO')")->execute([$nuevo_alumno_id, $nrc_grupo]);
+                    
+                    $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
+                    $stmt_al->execute([$nuevo_alumno_id]);
+                    $nom_al = $stmt_al->fetchColumn();
+                    registrar_historial($pdo, $_SESSION['user_id'], 'Inscripción', 'Grupos', 'Inscripción de estudiante', $nom_al, "Se inscribió manualmente al estudiante en el grupo con NRC $nrc_grupo.");
+
                     $mensaje = "Alumno inscrito correctamente.";
                     $tipo_mensaje = "success";
                 }
@@ -261,7 +280,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $inscritos_actuales = $_POST['inscritos_actuales'] ?? 0;
                 if ($n_cupo < $inscritos_actuales) throw new Exception("No puedes reducir la capacidad a {$n_cupo}. Ya tienes {$inscritos_actuales} alumnos inscritos.");
 
+                // OLD DATA CHECK
+                $stmt_old_g = $pdo->prepare("SELECT materia_id FROM grupos WHERE clave_grupo = ? LIMIT 1");
+                $stmt_old_g->execute([$clave]);
+                $old_g = $stmt_old_g->fetch(PDO::FETCH_ASSOC);
+
                 $pdo->prepare("UPDATE grupos SET profesor_id=?, materia_id=?, ciclo_id=?, cupo=?, edicion_total=?, estado=? WHERE clave_grupo=?")->execute([$n_prof, $n_mat, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
+                
+                // LOG HISTORIAL
+                if ($old_g && $old_g['materia_id'] != $n_mat) {
+                    $s_old = $pdo->prepare("SELECT nombre, clave FROM materias WHERE materia_id = ?");
+                    $s_old->execute([$old_g['materia_id']]);
+                    $om = $s_old->fetch(PDO::FETCH_ASSOC);
+                    
+                    $s_new = $pdo->prepare("SELECT nombre, clave FROM materias WHERE materia_id = ?");
+                    $s_new->execute([$n_mat]);
+                    $nm = $s_new->fetch(PDO::FETCH_ASSOC);
+                    
+                    $old_str = $om ? $om['nombre'] . ' (' . $om['clave'] . ')' : 'Desconocida';
+                    $new_str = $nm ? $nm['nombre'] . ' (' . $nm['clave'] . ')' : 'Desconocida';
+                    
+                    $detalle = "Se modificó la materia asignada al grupo (Materia: $old_str → $new_str).";
+                    registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Grupos', 'Cambio de materia en grupo', 'Grupo ' . $clave, $detalle);
+                }
 
                 // Módulo Presencial (Guardado Seguro)
                 if (!empty($nrc_p)) {
