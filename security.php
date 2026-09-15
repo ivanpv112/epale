@@ -6,6 +6,19 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// 1.1 ZONA HORARIA Y CONTROL DE INACTIVIDAD (15 minutos)
+date_default_timezone_set('America/Mexico_City');
+
+if (isset($_SESSION['user_id'])) {
+    $tiempo_limite = 15 * 60; // 15 minutos en segundos (900s)
+    if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad'] > $tiempo_limite)) {
+        session_unset();
+        session_destroy();
+    } else {
+        $_SESSION['ultima_actividad'] = time(); // Actualiza el tiempo cada vez que hay actividad
+    }
+}
+
 // 2. FUNCIÓN MAESTRA DE VALIDACIÓN
 function validar_csrf_estricto($metodo_esperado = 'POST') {
     
@@ -69,6 +82,18 @@ function validar_csrf_estricto($metodo_esperado = 'POST') {
             }
             exit;
         }
+    }
+}
+
+// 3. FUNCIÓN PARA EL HISTORIAL DE MODIFICACIONES (AUDITORÍA)
+function registrar_historial(PDO $pdo, int $admin_id, string $tipo_accion, string $categoria, string $titulo, string $afectado, string $detalle) {
+    try {
+        $stmt = $pdo->prepare("INSERT INTO historial_admin (admin_id, tipo_accion, categoria, titulo, afectado, detalle, fecha) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$admin_id, $tipo_accion, $categoria, $titulo, $afectado, $detalle]);
+        return true;
+    } catch (PDOException $e) {
+        // En un entorno de producción real podríamos registrar este error en un log de sistema (file).
+        return false;
     }
 }
 ?>
