@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 09-09-2026 a las 00:08:00
+-- Tiempo de generación: 11-09-2026 a las 21:09:44
 -- Versión del servidor: 8.0.36
 -- Versión de PHP: 8.3.14
 
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `alumnos` (
   `carrera` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`alumno_id`),
   KEY `usuario_id` (`usuario_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `alumnos`
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `asistencias` (
   `estatus` enum('ASISTENCIA','FALTA','RETARDO') NOT NULL,
   PRIMARY KEY (`asistencia_id`),
   UNIQUE KEY `unique_asistencia` (`inscripcion_id`,`fecha`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Volcado de datos para la tabla `asistencias`
@@ -93,8 +93,9 @@ INSERT INTO `asistencias` (`asistencia_id`, `inscripcion_id`, `fecha`, `estatus`
 (22, 6, '2026-08-26', 'ASISTENCIA'),
 (23, 6, '2026-08-27', 'ASISTENCIA'),
 (24, 13, '2026-08-27', 'ASISTENCIA'),
-(25, 6, '2026-09-08', 'FALTA'),
-(26, 21, '2026-09-08', 'ASISTENCIA');
+(25, 6, '2026-09-08', 'ASISTENCIA'),
+(26, 21, '2026-09-08', 'ASISTENCIA'),
+(27, 6, '2026-09-11', 'ASISTENCIA');
 
 -- --------------------------------------------------------
 
@@ -120,6 +121,28 @@ CREATE TABLE IF NOT EXISTS `avisos` (
 
 INSERT INTO `avisos` (`aviso_id`, `titulo`, `cuerpo`, `tipo_audiencia`, `audiencia_ref`, `fecha_creacion`, `fecha_expiracion`) VALUES
 (4, 'XD', 'se cancela la clase de mañana', 'MATERIA', '3', '2026-04-23 00:32:15', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `avisos_profesor`
+--
+
+DROP TABLE IF EXISTS `avisos_profesor`;
+CREATE TABLE IF NOT EXISTS `avisos_profesor` (
+  `aviso_id` int NOT NULL AUTO_INCREMENT,
+  `profesor_id` int NOT NULL,
+  `nrc` int NOT NULL,
+  `tipo` enum('AVISO','ASIGNACION') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descripcion` text COLLATE utf8mb4_unicode_ci,
+  `fecha_inicio` datetime NOT NULL,
+  `fecha_fin` datetime NOT NULL,
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`aviso_id`),
+  KEY `profesor_id` (`profesor_id`),
+  KEY `nrc` (`nrc`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -653,35 +676,6 @@ INSERT INTO `solicitudes_bajas` (`solicitud_id`, `inscripcion_id`, `motivo`, `de
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `tareas_profesor`
---
-
-DROP TABLE IF EXISTS `tareas_profesor`;
-CREATE TABLE IF NOT EXISTS `tareas_profesor` (
-  `tarea_id` int NOT NULL AUTO_INCREMENT,
-  `profesor_id` int NOT NULL,
-  `nrc` int NOT NULL,
-  `tipo` enum('AVISO','ASIGNACION') COLLATE utf8mb4_unicode_ci NOT NULL,
-  `titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descripcion` text COLLATE utf8mb4_unicode_ci,
-  `fecha_inicio` datetime NOT NULL,
-  `fecha_fin` datetime NOT NULL,
-  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`tarea_id`),
-  KEY `profesor_id` (`profesor_id`),
-  KEY `nrc` (`nrc`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `tareas_profesor`
---
-
-INSERT INTO `tareas_profesor` (`tarea_id`, `profesor_id`, `nrc`, `tipo`, `titulo`, `descripcion`, `fecha_inicio`, `fecha_fin`, `fecha_creacion`) VALUES
-(5, 16, 44444, 'AVISO', 'Faltare hoy', 'Me dio gripa', '2026-08-24 23:04:00', '2026-08-31 23:04:00', '2026-08-25 05:04:56');
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `usuarios`
 --
 
@@ -706,7 +700,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   PRIMARY KEY (`usuario_id`),
   UNIQUE KEY `correo` (`correo`),
   UNIQUE KEY `codigo` (`codigo`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `usuarios`
@@ -714,7 +708,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
 
 INSERT INTO `usuarios` (`usuario_id`, `codigo`, `nombre`, `apellido_paterno`, `apellido_materno`, `correo`, `password`, `telefono`, `rol`, `estatus`, `genero`, `periodo_ingreso`, `foto_perfil`, `google_id`, `fecha_creacion`, `fecha_cambio_password`) VALUES
 (1, 'AD01', 'Admin', 'Principal', NULL, 'admin@epale.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '', 'ADMIN', 'ACTIVO', NULL, NULL, NULL, NULL, '2026-02-18 21:47:58', NULL),
-(2, 'PR01', 'Juan', 'Mendez', '', 'profe@epale.com', '$2y$10$0uLUwInpV4JgkV/gJtTWGOkcq9wZoKQNVk944UJMm76ovkOBfVBJO', '', 'PROFESOR', 'ACTIVO', 'MASCULINO', '', 'prof_2_1773183139.jpg', NULL, '2026-02-18 21:47:58', NULL),
+(2, 'PR01', 'Juan', 'Mendez', '', 'profe@epale.com', '$2y$10$uEA8XhqxxVMt73XXtiwSdeMiSFHy5EvFDpDigOCA4aiDLBLDorYpi', '', 'PROFESOR', 'ACTIVO', 'MASCULINO', '', 'prof_2_1773183139.jpg', NULL, '2026-02-18 21:47:58', '2026-09-09 22:07:21'),
 (3, '3', 'Luis', 'Macias', 'Mendez', 'alumno@epale.com', '$2y$10$u9Tnus0MXvdfVLPfpO4fSOKU94enh4U5N61AB4j6zk6pzL3YMRjGq', '3322777085', 'ALUMNO', 'ACTIVO', 'MASCULINO', '', 'd7141781b2b45fbf01a6.webp', NULL, '2026-02-18 21:47:58', '2026-09-02 21:42:55'),
 (4, '2187345', 'Jorge', 'Ledezma', 'Paredes', 'test2@gmail.com', '$2y$10$3p/LyyaWWdWxxb3/4QO97.HeZ7cHUNL.j.9hUZimIeA.Ua7iJN1fq', '3344553322', 'ALUMNO', 'ACTIVO', 'MASCULINO', '', NULL, NULL, '2026-02-18 21:58:25', NULL),
 (7, '2', 'Ivan Alejandro', 'Godinez', 'Padilla', 'test3@gmail.com', '$2y$10$WKAXb1YFEvwvBvEAFnt6GO2ujXXSOuU3YuxNvX3SJ5FZj9pDfvmGO', '222334456', 'ALUMNO', 'ACTIVO', NULL, NULL, NULL, NULL, '2026-03-05 20:43:36', NULL),
@@ -736,6 +730,13 @@ ALTER TABLE `alumnos`
   ADD CONSTRAINT `alumnos_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`usuario_id`) ON DELETE CASCADE;
 
 --
+-- Filtros para la tabla `avisos_profesor`
+--
+ALTER TABLE `avisos_profesor`
+  ADD CONSTRAINT `avisos_profesor_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`usuario_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `avisos_profesor_ibfk_2` FOREIGN KEY (`nrc`) REFERENCES `grupos` (`nrc`) ON DELETE CASCADE;
+
+--
 -- Filtros para la tabla `grupos`
 --
 ALTER TABLE `grupos`
@@ -749,13 +750,6 @@ ALTER TABLE `grupos`
 ALTER TABLE `inscripciones`
   ADD CONSTRAINT `inscripciones_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `alumnos` (`alumno_id`),
   ADD CONSTRAINT `inscripciones_ibfk_2` FOREIGN KEY (`nrc`) REFERENCES `grupos` (`nrc`);
-
---
--- Filtros para la tabla `tareas_profesor`
---
-ALTER TABLE `tareas_profesor`
-  ADD CONSTRAINT `tareas_profesor_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `usuarios` (`usuario_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `tareas_profesor_ibfk_2` FOREIGN KEY (`nrc`) REFERENCES `grupos` (`nrc`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

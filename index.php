@@ -1,5 +1,5 @@
 <?php
-// index.php - Login Actualizado para Nueva BD
+// index.php - Login
 session_start();
 require 'db.php';
 
@@ -16,13 +16,15 @@ const MAX_INTENTOS    = 5;   // intentos fallidos permitidos
 const VENTANA_MINUTOS = 15;  // ventana de tiempo que se revisa
 const BLOQUEO_MINUTOS = 15;  // tiempo de bloqueo una vez superado el máximo
 
-function obtener_ip_cliente(): string {
+function obtener_ip_cliente(): string
+{
     // X-Forwarded-For solo es confiable si tienes un proxy/load balancer que lo
     // sobrescribe; si tu hosting recibe la conexión directa, usa REMOTE_ADDR.
     return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
 
-function esta_bloqueado(PDO $pdo, string $identificador, string $ip): bool {
+function esta_bloqueado(PDO $pdo, string $identificador, string $ip): bool
+{
     // Cuenta intentos fallidos recientes por usuario+IP y por IP en general
     // (frena tanto ataques dirigidos a una cuenta como fuerza bruta distribuida
     // de una misma IP contra varias cuentas).
@@ -40,19 +42,22 @@ function esta_bloqueado(PDO $pdo, string $identificador, string $ip): bool {
     return (int)$stmt->fetchColumn() >= MAX_INTENTOS;
 }
 
-function registrar_intento(PDO $pdo, string $identificador, string $ip, bool $exitoso): void {
+function registrar_intento(PDO $pdo, string $identificador, string $ip, bool $exitoso): void
+{
     $stmt = $pdo->prepare("INSERT INTO login_intentos (identificador, ip, exitoso) VALUES (?, ?, ?)");
     $stmt->execute([$identificador, $ip, $exitoso ? 1 : 0]);
 }
 
-function limpiar_intentos(PDO $pdo, string $identificador): void {
+function limpiar_intentos(PDO $pdo, string $identificador): void
+{
     // Al iniciar sesión con éxito borramos su historial de fallos, para que el
     // contador no arrastre intentos viejos hacia el próximo posible bloqueo.
     $stmt = $pdo->prepare("DELETE FROM login_intentos WHERE identificador = ? AND exitoso = 0");
     $stmt->execute([$identificador]);
 }
 
-function limpieza_diaria_respaldo(PDO $pdo): void {
+function limpieza_diaria_respaldo(PDO $pdo): void
+{
     // Respaldo por si el Event Scheduler de MySQL está desactivado en el hosting
     // (común en hosting compartido). Se controla con un archivo marcador para
     // que la limpieza real solo corra una vez cada 24h, sin importar cuántas
@@ -143,22 +148,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión | E-PALE</title>
     <link rel="stylesheet" href="css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+
+<body class="login-body">
     <header class="login-header">
-        <img src="img/logo-pale.png" alt="Logo E-PALE"> 
-        <h1>e-PALE</h1>
-        <p>Plataforma de Aprendizaje de Lenguas Extranjeras</p>
+        <img src="img/imagotipo-pale-login.png" alt="Logo E-PALE">
     </header>
     <div class="login-card">
         <h2>Iniciar Sesión</h2>
-        <?php if(!empty($mensaje)): ?>
+        <?php if (!empty($mensaje)): ?>
             <div class="error-msg"><i class="fas fa-exclamation-circle"></i> <?php echo $mensaje; ?></div>
         <?php endif; ?>
         <form method="POST" action="index.php">
@@ -179,8 +184,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         function togglePassword() {
             var x = document.getElementById("password");
             var icon = document.querySelector(".toggle-password");
-            if (x.type === "password") { x.type = "text"; icon.classList.replace("fa-eye", "fa-eye-slash"); } 
-            else { x.type = "password"; icon.classList.replace("fa-eye-slash", "fa-eye"); }
+            if (x.type === "password") {
+                x.type = "text";
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                x.type = "password";
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
         }
     </script>
 </body>
