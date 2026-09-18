@@ -1,5 +1,7 @@
 <?php
-if (!isset($_SESSION['smart_back'])) { $_SESSION['smart_back'] = []; }
+if (!isset($_SESSION['smart_back'])) {
+    $_SESSION['smart_back'] = [];
+}
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
@@ -19,15 +21,15 @@ $stmt_foto_menu = $pdo->prepare("SELECT foto_perfil, nombre FROM usuarios WHERE 
 $stmt_foto_menu->execute([$_SESSION['user_id']]);
 $admin_menu = $stmt_foto_menu->fetch(PDO::FETCH_ASSOC);
 
-$foto_menu = "../img/avatar-default.png"; 
-if($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['foto_perfil'])) {
+$foto_menu = "../img/avatar-default.png";
+if ($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['foto_perfil'])) {
     $foto_menu = "../img/perfiles/" . $admin_menu['foto_perfil'];
 }
 
 $stmt_notif = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'");
 $notif_bajas = $stmt_notif->fetchColumn();
 // Burbuja roja elegante (Pegada al texto)
-$badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_bajas.'</span>' : '';
+$badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_bajas . '</span>' : '';
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -35,8 +37,7 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
 <header class="main-header">
     <div class="logo-container">
         <a href="usuarios.php" class="logo-link">
-            <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-            <span class="logo-text">e-PALE</span>
+            <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
@@ -67,8 +68,8 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
         <li><a href="ciclos.php" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
         <li><a href="interfaz_csv.php" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
         <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
-            <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
-        </a></li>
+                <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
+            </a></li>
         <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
         <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
         <li><a href="historial.php" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
@@ -87,10 +88,10 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
     function toggleMobileMenu() {
         const sidebar = document.getElementById('navWrapper');
         const overlay = document.getElementById('menuOverlay');
-        
+
         sidebar.classList.toggle('active');
         overlay.classList.toggle('active');
-        
+
         // Imitamos el comportamiento de SweetAlert para el Scroll Lock
         if (sidebar.classList.contains('active')) {
             document.body.style.overflow = 'hidden';
@@ -101,20 +102,29 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">'.$notif_baja
 
     // 2. FUNCIÓN PARA CERRAR SESIÓN
     function confirmarSalida(event) {
-        event.preventDefault(); 
-        
+        event.preventDefault();
+
         document.getElementById('navWrapper').classList.remove('active');
         document.getElementById('menuOverlay').classList.remove('active');
-        
+
         // Liberamos el scroll de la página para que SweetAlert tome el control correctamente
         document.body.style.overflow = '';
 
         Swal.fire({
-            title: '¿Cerrar Sesión?', text: "Saldrás de tu cuenta de Administrador.", icon: 'warning',
-            showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Sí, salir', cancelButtonText: 'Cancelar', reverseButtons: true, backdrop: `rgba(0,0,123,0.4)`
+            title: '¿Cerrar Sesión?',
+            text: "Saldrás de tu cuenta de Administrador.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Sí, salir',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            backdrop: `rgba(0,0,123,0.4)`
         }).then((result) => {
-            if (result.isConfirmed) { window.location.href = '../logout.php?csrf_token=<?php echo $_SESSION["csrf_token"] ?? ""; ?>'; }
+            if (result.isConfirmed) {
+                window.location.href = '../logout.php?csrf_token=<?php echo $_SESSION["csrf_token"] ?? ""; ?>';
+            }
         });
     }
 </script>
