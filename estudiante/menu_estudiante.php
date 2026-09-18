@@ -15,7 +15,7 @@ if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
     // Scripts silenciosos que no deben borrar la memoria del botón volver
     $scripts_excluidos = ['login.php', 'logout.php', 'procesar_perfil.php'];
-    
+
     if ($referer_path !== '' && $referer_path !== $pagina_actual && !in_array($referer_path, $scripts_excluidos)) {
         $_SESSION['smart_back_estudiante'][$pagina_actual] = $referer;
     }
@@ -29,8 +29,8 @@ $stmt_foto_menu = $pdo->prepare("SELECT foto_perfil, nombre FROM usuarios WHERE 
 $stmt_foto_menu->execute([$_SESSION['user_id']]);
 $est_menu = $stmt_foto_menu->fetch(PDO::FETCH_ASSOC);
 
-$foto_menu = "../img/avatar-default.png"; 
-if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_perfil'])) {
+$foto_menu = "../img/avatar-default.png";
+if ($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_perfil'])) {
     $foto_menu = "../img/perfiles/" . $est_menu['foto_perfil'];
 }
 ?>
@@ -46,8 +46,7 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
 <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
     <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
         <a href="index.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
-            <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-            <span style="font-size: 1.2rem; font-weight: bold;">e-PALE</span>
+            <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
@@ -78,9 +77,9 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
         <li><a href="index.php" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
 
         <li><a href="calificaciones.php" class="<?php echo ($pagina_actual == 'calificaciones.php') ? 'active' : ''; ?>"><i class="fas fa-clipboard-check"></i> Calificaciones</a></li>
-        
+
         <li><a href="horario.php" class="<?php echo ($pagina_actual == 'horario.php' || $pagina_actual == 'detalle_materia.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Horario</a></li>
-        
+
         <li><a href="mis_dictamenes.php" class="<?php echo ($pagina_actual == 'mis_dictamenes.php') ? 'active' : ''; ?>"><i class="fas fa-file-signature"></i> Mis Dictámenes</a></li>
 
     </ul>
@@ -100,8 +99,8 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
     }
 
     function confirmarSalida(event) {
-        event.preventDefault(); 
-        
+        event.preventDefault();
+
         // Cierra el menú lateral primero si está en móvil
         document.getElementById('navWrapper').classList.remove('active');
         document.getElementById('menuOverlay').classList.remove('active');
@@ -137,24 +136,24 @@ if($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto_
         const root = document.documentElement;
         const icon = document.getElementById('theme-icon');
         const isDark = root.getAttribute('data-theme') === 'dark';
-        
+
         icon.classList.add('spin-out');
-        
+
         setTimeout(() => {
             if (isDark) {
                 root.removeAttribute('data-theme');
                 localStorage.setItem('epale_theme', 'light');
-                icon.className = 'fas fa-sun theme-icon-container'; 
-                icon.style.color = '#ffc107'; 
+                icon.className = 'fas fa-sun theme-icon-container';
+                icon.style.color = '#ffc107';
             } else {
                 root.setAttribute('data-theme', 'dark');
                 localStorage.setItem('epale_theme', 'dark');
-                icon.className = 'fas fa-moon theme-icon-container'; 
-                icon.style.color = '#f8fafc'; 
+                icon.className = 'fas fa-moon theme-icon-container';
+                icon.style.color = '#f8fafc';
             }
             icon.classList.remove('spin-out');
             icon.classList.add('spin-in');
-        }, 200); 
+        }, 200);
     }
 
     // 3. Asegurar que el icono coincida con la memoria al cambiar de pestaña
