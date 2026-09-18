@@ -14,7 +14,7 @@ $pagina_actual = basename($_SERVER['PHP_SELF']);
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
     $scripts_excluidos = ['login.php', 'logout.php', 'procesar_perfil.php'];
-    
+
     if ($referer_path !== '' && $referer_path !== $pagina_actual && !in_array($referer_path, $scripts_excluidos)) {
         $_SESSION['smart_back_profesor'][$pagina_actual] = $referer;
     }
@@ -27,8 +27,8 @@ $stmt_foto_menu = $pdo->prepare("SELECT foto_perfil, nombre FROM usuarios WHERE 
 $stmt_foto_menu->execute([$_SESSION['user_id']]);
 $prof_menu = $stmt_foto_menu->fetch(PDO::FETCH_ASSOC);
 
-$foto_menu = "../img/avatar-default.png"; 
-if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['foto_perfil'])) {
+$foto_menu = "../img/avatar-default.png";
+if ($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['foto_perfil'])) {
     $foto_menu = "../img/perfiles/" . $prof_menu['foto_perfil'];
 }
 ?>
@@ -45,8 +45,7 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
 <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
     <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
         <a href="index.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
-            <img src="../img/logo-pale.png" alt="E-PALE" class="logo-img">
-            <span style="font-size: 1.2rem; font-weight: bold;">e-PALE</span>
+            <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
@@ -55,12 +54,12 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
             <img src="<?php echo $foto_menu; ?>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white; background:white;">
             <span class="profile-name" style="font-weight: 500;"><?php echo strtok($prof_menu['nombre'], " "); ?></span>
         </a>
-        
+
         <!-- Botón Dark Mode -->
         <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Cambiar Tema">
             <i id="theme-icon" class="fas fa-sun theme-icon-container" style="color: #ffc107;"></i>
         </button>
-        
+
         <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0;">
             <i class="fas fa-bars"></i>
         </button>
@@ -78,7 +77,7 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
     <ul class="yt-sidebar-menu">
         <li><a href="index.php" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
         <li><a href="mis_grupos.php" class="<?php echo ($pagina_actual == 'mis_grupos.php' || $pagina_actual == 'detalle_grupo.php' || $pagina_actual == 'asistencia.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard-teacher"></i> Mis Grupos</a></li>
-        
+
         <li><a href="horario.php" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Mi Horario</a></li>
     </ul>
 
@@ -97,7 +96,7 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
     }
 
     function confirmarSalida(event) {
-        event.preventDefault(); 
+        event.preventDefault();
         document.getElementById('navWrapper').classList.remove('active');
         document.getElementById('menuOverlay').classList.remove('active');
 
@@ -127,24 +126,24 @@ if($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fot
         const root = document.documentElement;
         const icon = document.getElementById('theme-icon');
         const isDark = root.getAttribute('data-theme') === 'dark';
-        
+
         icon.classList.add('spin-out');
-        
+
         setTimeout(() => {
             if (isDark) {
                 root.removeAttribute('data-theme');
                 localStorage.setItem('epale_theme', 'light');
-                icon.className = 'fas fa-sun theme-icon-container'; 
-                icon.style.color = '#ffc107'; 
+                icon.className = 'fas fa-sun theme-icon-container';
+                icon.style.color = '#ffc107';
             } else {
                 root.setAttribute('data-theme', 'dark');
                 localStorage.setItem('epale_theme', 'dark');
-                icon.className = 'fas fa-moon theme-icon-container'; 
-                icon.style.color = '#f8fafc'; 
+                icon.className = 'fas fa-moon theme-icon-container';
+                icon.style.color = '#f8fafc';
             }
             icon.classList.remove('spin-out');
             icon.classList.add('spin-in');
-        }, 200); 
+        }, 200);
     }
 
     // Asegurar que el icono coincida con la memoria al cambiar de pestaña

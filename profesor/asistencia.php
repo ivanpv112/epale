@@ -72,7 +72,7 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
 <head>
     <meta charset="UTF-8">
     <title>Lista de Asistencia | e-PALE</title>
-    <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/profesor.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
