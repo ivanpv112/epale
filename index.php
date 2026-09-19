@@ -5,6 +5,12 @@ require 'db.php';
 
 $mensaje = "";
 
+// Si venimos de un intento fallido de login con Google, mostramos ese mensaje.
+if (!empty($_SESSION['login_error'])) {
+    $mensaje = $_SESSION['login_error'];
+    unset($_SESSION['login_error']);
+}
+
 // Respaldo: intenta la limpieza diaria en cada visita (el marcador de archivo
 // asegura que la operación de borrado real solo ocurra una vez cada 24h).
 limpieza_diaria_respaldo($pdo);
@@ -178,6 +184,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
             <button type="submit" class="btn-login">Ingresar</button>
         </form>
+        <div class="login-divider"><span>o</span></div>
+        <a href="#" class="btn-google" style="pointer-events: none; opacity: 0.5;" title="Próximamente">
+            <i class="fab fa-google"></i>
+            Continuar con Google
+        </a>
     </div>
     <footer class="login-footer">© 2026 E-PALE - Universidad de Guadalajara - CUCEA</footer>
     <script>
