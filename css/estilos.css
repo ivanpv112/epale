@@ -35,9 +35,12 @@
 /* ÍCONO DE OJITO (VER PASSWORD) */
 .toggle-password { position: absolute; right: 15px; top: 38px; cursor: pointer; color: #999; }
 
-/* BOTÓN */
-.btn-login { width: 100%; padding: 12px; background-color: var(--bg-blue); color: var(--white); border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+/* BOTÓN Y EFECTO EXPANDING CANVAS */
+.btn-login { width: 100%; padding: 12px; background-color: var(--bg-blue); color: var(--white); border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 44px; }
 .btn-login:hover { background-color: var(--hover); }
+.btn-login.is-loading { color: transparent; pointer-events: none; }
+.btn-login.is-loading::after { content: ''; position: absolute; width: 22px; height: 22px; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: #fff; border-radius: 50%; animation: btn-spin 0.8s linear infinite; }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
 
 .login-divider { display: flex; align-items: center; text-align: center; color: #999; font-size: 0.85rem; margin: 18px 0; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
@@ -63,6 +66,12 @@
 /* FOOTER */
 .login-footer { margin-top: 4rem; font-size: 0.85rem; opacity: 0.7; text-align: center; padding: 0 10px 25px 10px; }
 
+/* =========================================
+   EFECTO CORTINA (EXPANDING CANVAS)
+   ========================================= */
+.curtain-reveal { position: fixed; border-radius: 50%; background-color: var(--bg-blue); transform: translate(-50%, -50%) scale(0); z-index: 9999; pointer-events: none; transition: transform 0.45s cubic-bezier(0.7, 0, 0.3, 1); }
+.curtain-reveal.expand { transform: translate(-50%, -50%) scale(250); }
+.hidden { display: none !important; }
 /* --- RESPONSIVE (MÓVIL) --- */
 @media (max-width: 480px) {
     .login-card { padding: 1.5rem; max-width: 90%; }
