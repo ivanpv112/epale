@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') { header("Location: ../index"); exit; }
 
 $stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
 $stmt_al->execute([$_SESSION['user_id']]);
@@ -128,7 +128,7 @@ if (!function_exists('format_score')) {
                 
                 <?php if($materia_actual['grupo_estado'] == 'CERRADO'): ?>
                     <div>
-                        <a href="perfil.php" class="btn-cancel" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                        <a href="perfil" class="btn-cancel" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                             <i class="fas fa-arrow-left"></i> Volver al Kárdex
                         </a>
                     </div>
@@ -180,7 +180,7 @@ if (!function_exists('format_score')) {
 
                 <?php if($materia_actual['grupo_estado'] == 'ACTIVO' && count($materias_activas) > 0): ?>
                     <div style="margin-top: 20px;">
-                        <select class="subject-selector" style="font-size: 1rem; padding: 10px 20px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;" onchange="window.location.href='calificaciones.php?ins='+this.value">
+                        <select class="subject-selector" style="font-size: 1rem; padding: 10px 20px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;" onchange="window.location.href='calificaciones?ins='+this.value">
                             <?php foreach($materias_activas as $m): ?>
                                 <option value="<?php echo $m['inscripcion_id']; ?>" <?php echo ($m['inscripcion_id'] == $ins_activa) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($m['materia'] . ' ' . $m['nivel']); ?>
@@ -350,7 +350,7 @@ if (!function_exists('format_score')) {
                 <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); opacity: 0.5; margin-bottom: 15px; display: block;"></i>
                 <h2 style="color:var(--text-dark);">Información no encontrada</h2>
                 <p>No estás inscrito en esta materia o no existe.</p>
-                <a href="perfil.php" class="btn-cancel" style="text-decoration:none; margin-top:15px; display:inline-block;"><i class="fas fa-arrow-left"></i> Volver al Kárdex</a>
+                <a href="perfil" class="btn-cancel" style="text-decoration:none; margin-top:15px; display:inline-block;"><i class="fas fa-arrow-left"></i> Volver al Kárdex</a>
             </div>
         <?php endif; ?>
     </main>

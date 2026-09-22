@@ -8,7 +8,7 @@ validar_csrf_estricto('POST');
 date_default_timezone_set('America/Mexico_City');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index.php");
+    header("Location: ../index");
     exit;
 }
 
@@ -297,7 +297,7 @@ if (count($mis_nrcs) > 0) {
                         </div>
 
                         <div style="text-align: center; margin-top: 15px;">
-                            <button onclick="window.location.href='calificaciones.php?ins=<?php echo $insc_id; ?>'" style="padding: 8px 15px; background: transparent; border: 1px solid var(--udg-blue); color: var(--udg-blue); border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Ver Desglose</button>
+                            <button onclick="window.location.href='calificaciones?ins=<?php echo $insc_id; ?>'" style="padding: 8px 15px; background: transparent; border: 1px solid var(--udg-blue); color: var(--udg-blue); border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Ver Desglose</button>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -334,7 +334,7 @@ if (count($mis_nrcs) > 0) {
                     <?php endif; ?>
                 </ul>
                 <div style="margin-top: 25px; text-align: center;">
-                    <button onclick="window.location.href='horario.php'" style="width: auto; padding: 10px 20px; background-color: transparent; border: 1px solid var(--text-muted); border-radius: 6px; font-weight:bold; cursor:pointer; color: var(--text-dark); transition: 0.2s;" onmouseover="this.style.background='var(--bg-gray)'" onmouseout="this.style.background='transparent'">Ver Horario Completo</button>
+                    <button onclick="window.location.href='horario'" style="width: auto; padding: 10px 20px; background-color: transparent; border: 1px solid var(--text-muted); border-radius: 6px; font-weight:bold; cursor:pointer; color: var(--text-dark); transition: 0.2s;" onmouseover="this.style.background='var(--bg-gray)'" onmouseout="this.style.background='transparent'">Ver Horario Completo</button>
                 </div>
             </div>
 

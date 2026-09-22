@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 $mensaje_exito = "";
@@ -267,7 +267,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                             <?php foreach($historial as $h): 
                                 $calif = floatval($h['calificacion_final']);
                             ?>
-                                <tr class="clickable-row" onclick="window.location.href='calificaciones.php?ins=<?php echo $h['inscripcion_id']; ?>'">
+                                <tr class="clickable-row" onclick="window.location.href='calificaciones?ins=<?php echo $h['inscripcion_id']; ?>'">
                                     <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
                                     <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['ciclo']); ?></td>
                                     <td style="text-align: center; font-size: 1.1rem; color: var(--udg-blue);"><strong><?php echo $calif; ?></strong></td>
@@ -299,7 +299,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
                 <h2>Editar Información</h2>
                 <button class="close-btn" onclick="cerrarModalEditar()">&times;</button>
             </div>
-            <form method="POST" action="perfil.php">
+            <form method="POST" action="perfil">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="actualizar_perfil" value="1">
                 <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
@@ -332,7 +332,7 @@ $examenes_diagnosticos = $stmt_diag->fetchAll(PDO::FETCH_ASSOC);
             </div>
             <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
                 <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Por favor, selecciona una imagen cuadrada y de buena calidad (máx 5MB). Formatos permitidos: JPG, PNG, WEBP.</p>
-                <form action="upload_foto.php" method="POST" enctype="multipart/form-data">
+                <form action="upload_foto" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="form-group">
                         <input type="file" name="foto_perfil" id="fileFoto" accept="image/*" required style="font-size: 0.9rem; padding: 0; border: none; color: var(--text-dark);">

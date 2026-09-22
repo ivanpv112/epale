@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // 1. Seguridad de Sesión
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
 
     // Validación: Revisar si la imagen es muy pesada o hubo error al subir
     if ($file['error'] !== UPLOAD_ERR_OK || empty($file['tmp_name'])) {
-        header("Location: perfil.php?error=upload"); exit;
+        header("Location: perfil?error=upload"); exit;
     }
 
     // 3. Medidas de Seguridad del Archivo
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
     $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     
     if (!in_array($file_ext, $allowed_ext)) {
-        header("Location: perfil.php?error=ext"); exit;
+        header("Location: perfil?error=ext"); exit;
     }
 
     // b) Verificar tipo real (MIME type)
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
     
     $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!in_array($mime_type, $allowed_mimes)) {
-        header("Location: perfil.php?error=mime"); exit;
+        header("Location: perfil?error=mime"); exit;
     }
 
     // 4. Preparar el guardado
@@ -84,11 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         
         $_SESSION['foto_perfil'] = $new_file_name;
 
-        header("Location: perfil.php?exito=foto"); exit;
+        header("Location: perfil?exito=foto"); exit;
     } else {
-        header("Location: perfil.php?error=save"); exit;
+        header("Location: perfil?error=save"); exit;
     }
 } else {
-    header("Location: perfil.php"); exit;
+    header("Location: perfil"); exit;
 }
 ?>

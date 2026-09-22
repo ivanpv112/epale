@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // Validar seguridad: Solo Alumnos
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 $usuario_id = $_SESSION['user_id'];
