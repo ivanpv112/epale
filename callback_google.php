@@ -13,7 +13,7 @@ require 'google_config.php';
 function volver_con_error(string $mensaje): void
 {
     $_SESSION['login_error'] = $mensaje;
-    header('Location: index.php');
+    header('Location: index');
     exit;
 }
 
@@ -133,13 +133,13 @@ $_SESSION['ultima_actividad'] = time();
 
 switch ($user['rol']) {
     case 'ADMIN':
-        header('Location: admin/usuarios.php');
+        header('Location: admin/usuarios');
         break;
     case 'PROFESOR':
-        header('Location: profesor/index.php');
+        header('Location: profesor/index');
         break;
     case 'ALUMNO':
-        header('Location: estudiante/index.php');
+        header('Location: estudiante/index');
         break;
     default:
         volver_con_error('Rol no identificado.');
