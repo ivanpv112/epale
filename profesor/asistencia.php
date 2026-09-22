@@ -3,7 +3,7 @@ session_start();
 require '../db.php';
 require_once '../security.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index"); exit; }
 
 // Token CSRF
 validar_csrf_estricto('POST');
@@ -21,7 +21,7 @@ $stmt = $pdo->prepare("SELECT m.nombre as materia, m.nivel, c.nombre as ciclo
 $stmt->execute([$clave, $profesor_id]);
 $grupo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$grupo) { header("Location: mis_grupos.php"); exit; }
+if (!$grupo) { header("Location: mis_grupos"); exit; }
 
 // 2. Obtener lista de alumnos inscritos
 $stmt_al = $pdo->prepare("SELECT i.inscripcion_id, u.nombre, u.apellido_paterno, u.apellido_materno, u.codigo, u.foto_perfil 
@@ -107,8 +107,8 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                         <?php foreach($fechas_clase as $f): ?>
                             <th class="th-fecha"><?php echo date('d/m', strtotime($f)); ?></th>
                         <?php endforeach; ?>
-                        <th class="th-total">Total Asist.</th>
-                        <th class="th-total">% Asistencia</th>
+                        <th class="th-total th-total-num">Total Asist.</th>
+                        <th class="th-total th-porcentaje">% Asistencia</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -208,7 +208,7 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
             selectObj.className = 'select-asist sel-' + nuevoEstatus;
             
             // SE INYECTA EL TOKEN EN EL CUERPO DE LA PETICIÓN
-            fetch('asistencia_api.php', {
+            fetch('asistencia_api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'single', ins_id: ins_id, fecha: fecha, estatus: nuevoEstatus, csrf_token: csrfToken })
@@ -256,7 +256,7 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
             Swal.fire({ title: 'Procesando lista...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
             
             // SE INYECTA EL TOKEN EN LA TOMA DE LISTA COMPLETA
-            fetch('asistencia_api.php', {
+            fetch('asistencia_api', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'batch', data: resultados, csrf_token: csrfToken })

@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // SEGURIDAD: Solo Profesores (Validación de Sesión y Rol)
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 $profesor_id = $_SESSION['user_id'];
@@ -88,7 +88,7 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 // CSS se encarga de TODO el diseño mediante estas dos clases
                                 $estado_class = $esta_activa ? 'row-active' : 'row-inactive'; 
                             ?>
-                                <tr class="group-row <?php echo $estado_class; ?>" onclick="window.location.href='detalle_grupo.php?clave=<?php echo $g['clave_grupo']; ?>'">
+                                <tr class="group-row <?php echo $estado_class; ?>" onclick="window.location.href='detalle_grupo?clave=<?php echo $g['clave_grupo']; ?>'">
                                     
                                     <td class="col-semester">
                                         <?php echo htmlspecialchars($g['ciclo']); ?>

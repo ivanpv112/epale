@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
-    header("Location: ../index.php");
+    header("Location: ../index");
     exit;
 }
 
@@ -14,7 +14,7 @@ $profesor_id = $_SESSION['user_id'];
 $clave_grupo = $_GET['clave'] ?? '';
 
 if (!$clave_grupo) {
-    header("Location: mis_grupos.php");
+    header("Location: mis_grupos");
     exit;
 }
 
@@ -22,7 +22,7 @@ $stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, c
 $stmt_info->execute([$clave_grupo, $profesor_id]);
 $info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
 if (!$info_grupo) {
-    header("Location: mis_grupos.php");
+    header("Location: mis_grupos");
     exit;
 }
 
@@ -149,7 +149,7 @@ if (count($alumnos) > 0) {
                 </p>
             </div>
             <div style="display: flex; gap: 10px;">
-                <a href="asistencia.php?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:var(--udg-light); color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                <a href="asistencia?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:var(--udg-light); color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
                     <i class="fas fa-calendar-check"></i> Lista de Asistencia
                 </a>
             </div>
@@ -297,7 +297,7 @@ if (count($alumnos) > 0) {
                         if (saveStatusText) saveStatusText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
                         // SE AÑADE EL TOKEN CSRF AL CUERPO DEL JSON
-                        fetch('calificaciones_api.php', {
+                        fetch('calificaciones_api', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'

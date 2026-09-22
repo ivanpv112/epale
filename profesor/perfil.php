@@ -5,7 +5,7 @@ require_once '../security.php';
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 // Función CSRF
@@ -123,7 +123,7 @@ if ($fecha_cambio) {
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="perfil.php" enctype="multipart/form-data">
+        <form method="POST" action="perfil" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             
             <div class="teacher-header-card">

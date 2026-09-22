@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // SEGURIDAD: Solo Profesores
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { header("Location: ../index"); exit; }
 $profesor_id = $_SESSION['user_id'];
 
 // 1. OBTENER TODAS LAS CLASES ACTIVAS DEL PROFESOR

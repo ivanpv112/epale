@@ -44,13 +44,13 @@ if ($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fo
 
 <header class="main-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; height: 65px;">
     <div class="logo-container" style="display: flex; align-items: center; width: auto; margin: 0;">
-        <a href="index.php" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
+        <a href="index" style="display: flex; align-items: center; gap: 10px; text-decoration: none; color: white;">
             <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
     <div class="user-actions" style="display: flex; align-items: center; gap: 15px;">
-        <a href="perfil.php" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 20px;">
+        <a href="perfil" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 20px;">
             <img src="<?php echo $foto_menu; ?>" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid white; background:white;">
             <span class="profile-name" style="font-weight: 500;"><?php echo strtok($prof_menu['nombre'], " "); ?></span>
         </a>
@@ -75,16 +75,16 @@ if ($prof_menu['foto_perfil'] && file_exists("../img/perfiles/" . $prof_menu['fo
     </div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="index.php" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
-        <li><a href="mis_grupos.php" class="<?php echo ($pagina_actual == 'mis_grupos.php' || $pagina_actual == 'detalle_grupo.php' || $pagina_actual == 'asistencia.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard-teacher"></i> Mis Grupos</a></li>
+        <li><a href="index" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
+        <li><a href="mis_grupos" class="<?php echo ($pagina_actual == 'mis_grupos.php' || $pagina_actual == 'detalle_grupo.php' || $pagina_actual == 'asistencia.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard-teacher"></i> Mis Grupos</a></li>
 
-        <li><a href="horario.php" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Mi Horario</a></li>
+        <li><a href="horario" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Mi Horario</a></li>
     </ul>
 
     <div class="sidebar-divider"></div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="perfil.php" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
+        <li><a href="perfil" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
         <li><a href="#" onclick="confirmarSalida(event)" style="color: #ff6b6b;"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> Cerrar Sesión</a></li>
     </ul>
 </aside>
