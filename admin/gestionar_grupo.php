@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php");
+    header("Location: ../index");
     exit;
 }
 
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insertHorario->execute([$nrc_v, $_POST['dias_virtual'], $_POST['inicio_virtual'], $_POST['fin_virtual'], 'VIRTUAL', $_POST['aula_virtual']]);
                 }
                 $pdo->commit();
-                header("Location: gestionar_grupo.php?clave=$nueva_clave&msg=created");
+                header("Location: gestionar_grupo?clave=$nueva_clave&msg=created");
                 exit;
             }
         } catch (Exception $e) {
@@ -388,7 +388,7 @@ if ($es_edicion) {
     $stmt->execute([$clave]);
     $g = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$g) {
-        header("Location: grupos_nrc.php");
+        header("Location: grupos_nrc");
         exit;
     }
 
@@ -442,7 +442,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
 
     <main class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <a href="grupos_nrc.php" style="color: var(--udg-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-arrow-left"></i> Volver al listado</a>
+            <a href="grupos_nrc" style="color: var(--udg-blue); text-decoration: none; font-weight: bold;"><i class="fas fa-arrow-left"></i> Volver al listado</a>
             <?php if ($es_edicion): ?>
                 <span style="font-weight: bold; color: #555;">Gestionando: <span style="color: var(--udg-blue);"><?php echo htmlspecialchars($g['materia']); ?></span>
                     <?php if ($g['estado'] == 'CERRADO'): ?>
@@ -638,7 +638,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                     </div>
 
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <a href="grupos_nrc.php" class="btn-cancel" style="text-decoration: none; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center;">Cancelar</a>
+                        <a href="grupos_nrc" class="btn-cancel" style="text-decoration: none; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center;">Cancelar</a>
                         <button type="submit" class="btn-save" style="flex: 2; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 10px;"><i class="fas fa-save"></i> <?php echo $es_edicion ? 'Guardar Cambios' : 'Crear Nuevo Grupo'; ?></button>
                     </div>
                 </form>

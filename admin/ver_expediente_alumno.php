@@ -7,12 +7,12 @@ validar_csrf_estricto('POST');
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 // VERIFICAR ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header("Location: expedientes.php"); exit;
+    header("Location: expedientes"); exit;
 }
 $usuario_id = $_GET['id'];
 
@@ -25,7 +25,7 @@ $stmt_perfil = $pdo->prepare($sql_perfil);
 $stmt_perfil->execute([$usuario_id]);
 $perfil = $stmt_perfil->fetch(PDO::FETCH_ASSOC);
 
-if (!$perfil) { header("Location: expedientes.php"); exit; }
+if (!$perfil) { header("Location: expedientes"); exit; }
 
 $nombre_completo = trim($perfil['nombre'] . ' ' . $perfil['apellido_paterno'] . ' ' . $perfil['apellido_materno']);
 $foto_perfil = "../img/avatar-default.png"; 

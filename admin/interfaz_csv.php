@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // Validar seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 ?>
 
@@ -35,7 +35,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        <a href="usuarios.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+        <a href="usuarios" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
             <i class="fas fa-arrow-left"></i> Volver a Usuarios
         </a>
 
@@ -45,38 +45,38 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
         </div>
 
         <div class="module-grid">
-            <a href="vista_csv_alumnos.php" class="module-card">
+            <a href="vista_csv_alumnos" class="module-card">
                 <i class="fas fa-user-graduate"></i>
                 <h3>Importar Alumnos</h3>
                 <p>Carga cuentas de estudiantes con auto-generación de contraseñas y asignación de carrera.</p>
             </a>
 
-            <a href="vista_csv_profesores.php" class="module-card">
+            <a href="vista_csv_profesores" class="module-card">
                 <i class="fas fa-chalkboard-teacher"></i>
                 <h3>Importar Profesores</h3>
                 <p>Carga perfiles de docentes incluyendo nacionalidad, experiencia y generación de accesos.</p>
             </a>
 
-            <a href="vista_csv_diagnosticos.php" class="module-card">
+            <a href="vista_csv_diagnosticos" class="module-card">
                 <i class="fas fa-clipboard-check"></i>
                 <h3>Exámenes Diagnósticos</h3>
                 <p>Alimenta el historial académico con los resultados de ubicación inicial de los alumnos.</p>
             </a>
             
-            <a href="vista_csv_certificaciones.php" class="module-card">
+            <a href="vista_csv_certificaciones" class="module-card">
                 <i class="fas fa-certificate"></i>
                 <h3>Certificaciones</h3>
                 <p>Carga los niveles oficiales (TOEFL, Cambridge, etc.) obtenidos por los alumnos en cada idioma.</p>
             </a>
 
-            <a href="vista_csv_grupos.php" class="module-card">
+            <a href="vista_csv_grupos" class="module-card">
                 <i class="fas fa-chalkboard"></i>
                 <h3>Grupos y Horarios</h3>
                 <p>Registra la oferta académica, asignando el NRC, materia, profesor y horarios correspondientes.</p>
             </a>
 
             <!-- NUEVO MÓDULO DE DICTÁMENES -->
-            <a href="vista_csv_dictamenes.php" class="module-card">
+            <a href="vista_csv_dictamenes" class="module-card">
                 <i class="fas fa-file-signature"></i>
                 <h3>Dictámenes (PDF)</h3>
                 <p>Registra acreditaciones por competencias y vincula los archivos PDF oficiales para los alumnos.</p>

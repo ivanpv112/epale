@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 // Función auxiliar para obtener el nombre completo rápidamente para los logs
@@ -171,5 +171,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['guardar_diagnostico'])
 }
 
 // Si se accede a este archivo sin mandar datos, te regresa a la lista
-header("Location: expedientes.php"); exit;
+header("Location: expedientes"); exit;
 ?>

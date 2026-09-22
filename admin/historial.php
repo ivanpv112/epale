@@ -6,7 +6,7 @@ require_once '../security.php';
 // La validación estricta se omite aquí porque es una vista de solo lectura mediante GET.
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php");
+    header("Location: ../index");
     exit;
 }
 
@@ -115,7 +115,7 @@ function getActionStyle(string $tipo_accion)
             <p style="color: #666; margin: 5px 0 0 0;">Registro inalterable de acciones administrativas realizadas en la plataforma.</p>
         </div>
 
-        <form method="GET" action="historial.php" class="toolbar mt-20">
+        <form method="GET" action="historial" class="toolbar mt-20">
             <i class="fas fa-search icon-muted" style="align-self:center;"></i>
             <input type="text" name="q" class="search-input" placeholder="Buscar y presionar Enter..." value="<?php echo htmlspecialchars($busqueda); ?>">
             

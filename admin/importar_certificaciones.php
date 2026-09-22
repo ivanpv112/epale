@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
     $archivo = $_FILES["archivo_csv"]["tmp_name"];
-    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_certificaciones.php?msg=error_file"); exit; }
+    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_certificaciones?msg=error_file"); exit; }
 
     $file = fopen($archivo, "r");
     $fila_actual = 1;
@@ -84,17 +84,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
         }
         
         $pdo->commit(); fclose($file); 
-        header("Location: vista_csv_certificaciones.php?msg=ok_certificaciones&total=$registros_exitosos"); 
+        header("Location: vista_csv_certificaciones?msg=ok_certificaciones&total=$registros_exitosos"); 
         exit;
         
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack(); 
         if (isset($file)) fclose($file); 
-        header("Location: vista_csv_certificaciones.php?msg=error_db&fila=$fila_actual"); 
+        header("Location: vista_csv_certificaciones?msg=error_db&fila=$fila_actual"); 
         exit;
     }
 } else { 
-    header("Location: vista_csv_certificaciones.php"); 
+    header("Location: vista_csv_certificaciones"); 
     exit; 
 }
 ?>

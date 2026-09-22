@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php");
+    header("Location: ../index");
     exit;
 }
 
@@ -37,11 +37,11 @@ $inicio_virtual = !empty($_POST['inicio_virtual']) ? $_POST['inicio_virtual'] : 
 $fin_virtual = !empty($_POST['fin_virtual']) ? $_POST['fin_virtual'] : null;
 
 if (!$profesor_id || !$materia_id || !$ciclo_id) {
-    header("Location: grupos_nrc.php?error=Faltan campos");
+    header("Location: grupos_nrc?error=Faltan campos");
     exit;
 }
 if ($rnc_presencial === '' && $rnc_virtual === '') {
-    header("Location: grupos_nrc.php?error=Escribe al menos un NRC");
+    header("Location: grupos_nrc?error=Escribe al menos un NRC");
     exit;
 }
 
@@ -91,9 +91,9 @@ try {
     $pdo->commit();
 
     if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'gestionar_grupo.php') !== false) {
-        header("Location: gestionar_grupo.php?clave=$clave_grupo");
+        header("Location: gestionar_grupo?clave=$clave_grupo");
     } else {
-        header("Location: grupos_nrc.php?success=1");
+        header("Location: grupos_nrc?success=1");
     }
     exit;
 } catch (Exception $e) {

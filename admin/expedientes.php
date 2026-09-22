@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 // Para que el filtro en tiempo real funcione, cargamos todos los perfiles a la vez.
@@ -53,6 +53,7 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </select>
         </form>
 
+        <?php if (count($estudiantes) > 0): ?>
         <div class="card" style="padding: 0; overflow: hidden; margin-top: 20px;">
             <div class="table-wrapper" style="overflow-x:auto;">
                 <table class="history-table" style="width: 100%; border-collapse: collapse;">
@@ -65,7 +66,6 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         </tr>
                     </thead>
                     <tbody id="tablaExpedientes">
-                        <?php if (count($estudiantes) > 0): ?>
                             <?php foreach ($estudiantes as $e): 
                                 $ruta_destino = ($e['rol'] == 'ALUMNO') ? 'ver_expediente_alumno.php' : 'ver_expediente_profesor.php';
                             ?>
@@ -117,12 +117,18 @@ $estudiantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </td>
                             </tr>
                             <?php endforeach; ?>
-                        <?php endif; ?>
                         <tr id="noResultsRow" style="display: none;"><td colspan="4" class="empty-table-msg"><i class="fas fa-search" style="font-size: 2.5rem; margin-bottom: 10px; display: block; color: #ddd;"></i>No se encontraron perfiles.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
+        <?php else: ?>
+        <div class="card" style="text-align: center; padding: 50px; margin-top: 20px;">
+            <i class="fas fa-users" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
+            <h3 style="color: #666;">No hay perfiles registrados</h3>
+            <p style="color: #999; margin-top: 10px;">Aún no se han registrado alumnos ni profesores en el sistema.</p>
+        </div>
+        <?php endif; ?>
     </main>
     <?php include '../main_footer.php'; ?>
     

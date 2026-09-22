@@ -6,7 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,7 +23,7 @@ $nivel = intval($_POST['nivel'] ?? 0);
 
 // Validar que no estén vacíos
 if (empty($clave) || empty($nombre) || $nivel < 1) {
-    header("Location: materias.php?error=incomplete");
+    header("Location: materias?error=incomplete");
     exit;
 }
 
@@ -52,7 +52,7 @@ try {
         $check = $pdo->prepare("SELECT COUNT(*) FROM materias WHERE clave = ?");
         $check->execute([$clave]);
         if ($check->fetchColumn() > 0) {
-            header("Location: materias.php?error=duplicate_clave");
+            header("Location: materias?error=duplicate_clave");
             exit;
         }
         
@@ -63,7 +63,7 @@ try {
         registrar_historial($pdo, $_SESSION['user_id'], 'Creación', 'Clases', 'Materia creada', "$nombre $nivel ($clave)", "Se registró una nueva materia/idioma en el catálogo del sistema.");
     }
     
-    header("Location: materias.php?success=1");
+    header("Location: materias?success=1");
     exit;
 } catch (Exception $e) {
     header("Location: materias.php?error=" . urlencode($e->getMessage()));

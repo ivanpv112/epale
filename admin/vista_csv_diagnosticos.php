@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // Validar seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 $mensaje = isset($_GET['msg']) ? $_GET['msg'] : '';
@@ -44,7 +44,7 @@ if ($mensaje === 'ok_diagnosticos') {
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        <a href="interfaz_csv.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+        <a href="interfaz_csv" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
             <i class="fas fa-arrow-left"></i> Volver a Módulos de Importación
         </a>
 
@@ -104,7 +104,7 @@ if ($mensaje === 'ok_diagnosticos') {
                 <div class="excel-info-box"><i class="fas fa-info-circle" style="color:var(--udg-blue);"></i> <strong>Puntos Clave:</strong> 1. El alumno ya debe existir en el sistema. 2. El <strong>NIVEL_ASIGNADO (Col. C)</strong> debe ser un número entero. 3. El formato de <strong>Fecha (F)</strong> debe ser <strong>DD/MM/AAAA</strong>.</div>
             </div>
 
-            <form method="POST" action="importar_diagnosticos.php" enctype="multipart/form-data">
+            <form method="POST" action="importar_diagnosticos" enctype="multipart/form-data">
                  <!-- ESCUDO CSRF INYECTADO -->
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 

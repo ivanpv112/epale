@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // Validar seguridad
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 $mensaje = isset($_GET['msg']) ? $_GET['msg'] : '';
@@ -44,7 +44,7 @@ if ($mensaje === 'ok_alumnos') {
     <?php include 'menu_admin.php'; ?>
 
     <main class="main-content">
-        <a href="interfaz_csv.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+        <a href="interfaz_csv" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
             <i class="fas fa-arrow-left"></i> Volver a Módulos de Importación
         </a>
 
@@ -80,7 +80,7 @@ if ($mensaje === 'ok_alumnos') {
                 <div class="excel-info-box"><i class="fas fa-info-circle" style="color:var(--udg-blue);"></i> <strong>Nota del Sistema:</strong> Cuentas se activan automáticamente. Contraseña generada uniendo la <strong>CARRERA</strong> y los últimos <strong>6 dígitos del CÓDIGO</strong> (Ej. <strong>LTIN922367</strong>).</div>
             </div>
 
-            <form method="POST" action="importar_alumnos.php" enctype="multipart/form-data">
+            <form method="POST" action="importar_alumnos" enctype="multipart/form-data">
                 <!-- ESCUDO CSRF INYECTADO -->
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 

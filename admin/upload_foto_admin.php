@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // 1. Seguridad de Sesión
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
@@ -15,14 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
     $usuario_id = $_SESSION['user_id'];
 
     if ($file['error'] !== UPLOAD_ERR_OK || empty($file['tmp_name'])) {
-        header("Location: perfil.php?error=upload"); exit;
+        header("Location: perfil?error=upload"); exit;
     }
 
     $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
     $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     
     if (!in_array($file_ext, $allowed_ext)) {
-        header("Location: perfil.php?error=ext"); exit;
+        header("Location: perfil?error=ext"); exit;
     }
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
     
     $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!in_array($mime_type, $allowed_mimes)) {
-        header("Location: perfil.php?error=mime"); exit;
+        header("Location: perfil?error=mime"); exit;
     }
 
     $target_dir = "../img/perfiles/";
@@ -70,11 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['foto_perfil'])) {
         $stmt_update = $pdo->prepare("UPDATE usuarios SET foto_perfil = ? WHERE usuario_id = ?");
         $stmt_update->execute([$new_file_name, $usuario_id]);
         
-        header("Location: perfil.php?exito=foto"); exit;
+        header("Location: perfil?exito=foto"); exit;
     } else {
-        header("Location: perfil.php?error=save"); exit;
+        header("Location: perfil?error=save"); exit;
     }
 } else {
-    header("Location: perfil.php"); exit;
+    header("Location: perfil"); exit;
 }
 ?>

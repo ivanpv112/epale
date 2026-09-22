@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // 1. SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 // ESCUDO CSRF GLOBAL PARA PETICIONES POST
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // 2. VERIFICAR QUE SE HAYA SELECCIONADO UNA MATERIA
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header("Location: materias.php"); exit;
+    header("Location: materias"); exit;
 }
 $materia_id = $_GET['id'];
 
@@ -29,7 +29,7 @@ $stmt_mat->execute([$materia_id]);
 $materia = $stmt_mat->fetch(PDO::FETCH_ASSOC);
 
 if (!$materia) {
-    header("Location: materias.php"); exit;
+    header("Location: materias"); exit;
 }
 
 // 4. PROCESAR GUARDAR (NUEVO Y EDITAR)
@@ -171,7 +171,7 @@ foreach ($criterios as $c) {
 
     <main class="main-content">
         
-        <a href="materias.php" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
+        <a href="materias" style="display: inline-block; margin-bottom: 20px; color: var(--udg-blue); text-decoration: none; font-weight: bold;">
             <i class="fas fa-arrow-left"></i> Volver a la página anterior
         </a>
 

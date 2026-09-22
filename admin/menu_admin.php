@@ -36,13 +36,13 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
 
 <header class="main-header">
     <div class="logo-container">
-        <a href="usuarios.php" class="logo-link">
+        <a href="usuarios" class="logo-link">
             <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
     <div class="header-actions">
-        <a href="perfil.php" class="profile-btn">
+        <a href="perfil" class="profile-btn">
             <img src="<?php echo $foto_menu; ?>" class="profile-img">
             <span class="profile-name"><?php echo strtok($admin_menu['nombre'], " "); ?></span>
         </a>
@@ -61,24 +61,24 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
     </div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="usuarios.php" class="<?php echo ($pagina_actual == 'usuarios.php') ? 'active' : ''; ?>"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
-        <li><a href="expedientes.php" class="<?php echo ($pagina_actual == 'expedientes.php' || $pagina_actual == 'ver_expediente.php') ? 'active' : ''; ?>"><i class="fas fa-folder-open"></i> Expedientes</a></li>
-        <li><a href="materias.php" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Idiomas y Criterios</a></li>
-        <li><a href="grupos_nrc.php" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos </a></li>
-        <li><a href="ciclos.php" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
-        <li><a href="interfaz_csv.php" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
-        <li><a href="solicitudes.php" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
+        <li><a href="usuarios" class="<?php echo ($pagina_actual == 'usuarios.php') ? 'active' : ''; ?>"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
+        <li><a href="expedientes" class="<?php echo ($pagina_actual == 'expedientes.php' || $pagina_actual == 'ver_expediente.php') ? 'active' : ''; ?>"><i class="fas fa-folder-open"></i> Expedientes</a></li>
+        <li><a href="materias" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Idiomas y Criterios</a></li>
+        <li><a href="grupos_nrc" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos </a></li>
+        <li><a href="ciclos" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
+        <li><a href="interfaz_csv" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
+        <li><a href="solicitudes" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
                 <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
             </a></li>
-        <li><a href="avisos.php" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
-        <li><a href="reportes.php" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
-        <li><a href="historial.php" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
+        <li><a href="avisos" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
+        <li><a href="reportes" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
+        <li><a href="historial" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
     </ul>
 
     <div class="sidebar-divider"></div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="perfil.php" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
+        <li><a href="perfil" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
         <li><a href="#" onclick="confirmarSalida(event)"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> <span style="color: #ff6b6b;">Cerrar Sesión</span></a></li>
     </ul>
 </aside>

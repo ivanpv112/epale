@@ -3,7 +3,7 @@ session_start();
 require '../db.php';
 require '../security.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 $mensaje = ''; 
 $tipo_mensaje = '';
@@ -185,7 +185,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
     <div id="userModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header"> <h2 id="modalTitle" style="margin: 0;">Usuario</h2> <button class="close-btn" onclick="closeModal()">&times;</button> </div>
-            <form action="guardar_usuario.php" method="POST" style="margin: 0;">
+            <form action="guardar_usuario" method="POST" style="margin: 0;">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="usuario_id" id="userId">
                 <div class="modal-body">

@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // SEGURIDAD
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index.php"); exit; 
+    header("Location: ../index"); exit; 
 }
 
 $mensaje = ''; 
@@ -152,7 +152,7 @@ $total_idiomas = count($idiomas_present);
             <div class="stat-card"> <span class="stat-number"><?php echo $total_idiomas; ?></span> <span class="stat-label">Idiomas</span> </div>
         </div>
 
-        <form class="toolbar" method="GET" action="materias.php" style="margin-top: 20px;">
+        <form class="toolbar" method="GET" action="materias" style="margin-top: 20px;">
             <i class="fas fa-search" style="color:#aaa; align-self:center;"></i>
             <input type="text" name="q" class="search-input" placeholder="Buscar por nombre o clave..." value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
             
@@ -264,7 +264,7 @@ $total_idiomas = count($idiomas_present);
                 <h2 id="modalTitle">Nueva Materia</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
-            <form action="materias.php" method="POST">
+            <form action="materias" method="POST">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="action" value="save_materia">
                 <input type="hidden" name="materia_id" id="materiaId">

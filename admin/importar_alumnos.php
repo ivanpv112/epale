@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
     $archivo = $_FILES["archivo_csv"]["tmp_name"];
-    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_alumnos.php?msg=error_file"); exit; }
+    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_alumnos?msg=error_file"); exit; }
 
     $file = fopen($archivo, "r");
     $fila_actual = 1;
@@ -53,9 +53,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
             }
             $registros_exitosos++; $fila_actual++;
         }
-        $pdo->commit(); fclose($file); header("Location: vista_csv_alumnos.php?msg=ok_alumnos&total=$registros_exitosos"); exit;
+        $pdo->commit(); fclose($file); header("Location: vista_csv_alumnos?msg=ok_alumnos&total=$registros_exitosos"); exit;
     } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack(); if (isset($file)) fclose($file); header("Location: vista_csv_alumnos.php?msg=error_db&fila=$fila_actual"); exit;
+        if ($pdo->inTransaction()) $pdo->rollBack(); if (isset($file)) fclose($file); header("Location: vista_csv_alumnos?msg=error_db&fila=$fila_actual"); exit;
     }
-} else { header("Location: vista_csv_alumnos.php"); exit; }
+} else { header("Location: vista_csv_alumnos"); exit; }
 ?>

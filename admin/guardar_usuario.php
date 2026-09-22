@@ -4,7 +4,7 @@ require '../db.php';
 require '../security.php';
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // Función CSRF
 validar_csrf_estricto();
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ESCUDO ROOT
     if ($usuario_id == 1 && $_SESSION['user_id'] != 1) {
-        header("Location: usuarios.php?msg=error_root");
+        header("Location: usuarios?msg=error_root");
         exit;
     }
 
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($usuario_id == $_SESSION['user_id'] && $rol !== 'ADMIN') {
             $_SESSION['rol'] = $rol;
             $pdo->commit();
-            header("Location: ../index.php");
+            header("Location: ../index");
             exit;
         }
 
@@ -138,13 +138,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
-        header("Location: usuarios.php?msg=ok");
+        header("Location: usuarios?msg=ok");
         exit;
 
     } catch (PDOException $e) {
         $pdo->rollBack();
-        if ($e->errorInfo[1] == 1062) { header("Location: usuarios.php?msg=dup"); } 
-        else { header("Location: usuarios.php?msg=error"); }
+        if ($e->errorInfo[1] == 1062) { header("Location: usuarios?msg=dup"); } 
+        else { header("Location: usuarios?msg=error"); }
         exit;
     }
 }

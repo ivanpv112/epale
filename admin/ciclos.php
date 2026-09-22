@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 $mensaje = ''; $tipo_mensaje = '';
 
@@ -176,11 +176,11 @@ foreach ($rows as $row) {
                             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="ciclo_id" value="<?php echo $folder['id']; ?>">
                             <?php if ($folder['es_activo'] == 1): ?>
-                                <button type="submit" name="cerrar_grupos" style="background: white; border: 1px solid #dc3545; color: #dc3545; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#dc3545';" onclick="return confirm('¿Estás seguro de finalizar el semestre actual? Esto mandará todo al historial.');">
+                                <button type="button" style="background: white; border: 1px solid #dc3545; color: #dc3545; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#dc3545';" onclick="confirmarAccionCiclo(this, 'cerrar_grupos', '¿Estás seguro de finalizar el semestre actual?', 'Esto mandará todo al historial.', 'Sí, finalizar');">
                                     <i class="fas fa-power-off"></i> Finalizar Ciclo
                                 </button>
                             <?php else: ?>
-                                <button type="submit" name="abrir_grupos" style="background: white; border: 1px solid #28a745; color: #28a745; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#28a745'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#28a745';" onclick="return confirm('ATENCIÓN: Al establecer este ciclo como ACTUAL, todos los demás ciclos activos se cerrarán automáticamente. ¿Deseas continuar?');">
+                                <button type="button" style="background: white; border: 1px solid #28a745; color: #28a745; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s;" onmouseover="this.style.background='#28a745'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#28a745';" onclick="confirmarAccionCiclo(this, 'abrir_grupos', '¿Establecer como Ciclo Actual?', 'ATENCIÓN: Al establecer este ciclo como ACTUAL, todos los demás ciclos activos se cerrarán automáticamente. ¿Deseas continuar?', 'Sí, establecer');">
                                     <i class="fas fa-check-circle"></i> Establecer como Ciclo Actual
                                 </button>
                             <?php endif; ?>
@@ -242,6 +242,30 @@ foreach ($rows as $row) {
         function toggleMobileMenu() {
             document.getElementById('navWrapper').classList.toggle('active');
             document.getElementById('menuOverlay').classList.toggle('active');
+        }
+
+        function confirmarAccionCiclo(btn, accionNombre, titulo, texto, confirmTexto) {
+            Swal.fire({
+                title: titulo,
+                text: texto,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: (accionNombre === 'cerrar_grupos') ? '#dc3545' : '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: confirmTexto,
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = btn.closest('form');
+                    const inputAccion = document.createElement('input');
+                    inputAccion.type = 'hidden';
+                    inputAccion.name = accionNombre;
+                    inputAccion.value = '1';
+                    form.appendChild(inputAccion);
+                    form.submit();
+                }
+            });
         }
     </script>
 </body>

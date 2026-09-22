@@ -7,7 +7,7 @@ validar_csrf_estricto('POST');
 
 // 1. Seguridad: Verificar que sea ADMINISTRADOR
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index.php"); exit;
+    header("Location: ../index"); exit;
 }
 
 // 2. Protección CSRF GLOBAL
@@ -202,7 +202,7 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
                 <h2 id="modalTitle">Cambiar Foto de Perfil</h2>
                 <button class="close-btn" onclick="cerrarModalFoto()">&times;</button>
             </div>
-            <form action="upload_foto_admin.php" method="POST" enctype="multipart/form-data">
+            <form action="upload_foto_admin" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <div class="modal-body">
                     <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Formatos permitidos: JPG, PNG, WEBP (Máx 2MB).</p>

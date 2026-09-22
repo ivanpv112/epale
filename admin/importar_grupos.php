@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,7 +46,7 @@ function generarNrcVirtual($pdo) {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
     $archivo = $_FILES["archivo_csv"]["tmp_name"];
-    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_grupos.php?msg=error_file"); exit; }
+    if ($_FILES["archivo_csv"]["size"] == 0) { header("Location: vista_csv_grupos?msg=error_file"); exit; }
 
     $file = fopen($archivo, "r");
     $fila_actual = 1;
@@ -182,7 +182,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
         }
         
         $pdo->commit(); fclose($file); 
-        header("Location: vista_csv_grupos.php?msg=ok_grupos&total=$registros_exitosos"); 
+        header("Location: vista_csv_grupos?msg=ok_grupos&total=$registros_exitosos"); 
         exit;
         
     } catch (Exception $e) {
@@ -192,7 +192,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {
         exit;
     }
 } else { 
-    header("Location: vista_csv_grupos.php"); 
+    header("Location: vista_csv_grupos"); 
     exit; 
 }
 ?>

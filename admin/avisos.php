@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index.php"); exit; }
+if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
 
 // CREAR LA TABLA SILENCIOSAMENTE SI NO EXISTE
 try {

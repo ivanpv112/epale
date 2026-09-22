@@ -17,7 +17,7 @@
             <h2><i class="fas fa-edit"></i> <?php echo htmlspecialchars((string)($mat['materia'] . ' ' . $mat['nivel'])); ?></h2>
             <button class="close-btn" onclick="cerrarModalCalif(<?php echo $mat['inscripcion_id']; ?>)">&times;</button>
         </div>
-        <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+        <form action="acciones_expediente" method="POST" class="form-margin-0">
             <!-- Protección CSRF -->
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             
@@ -61,7 +61,7 @@
             <h2><i class="fas fa-award"></i> Asignar Certificación</h2>
             <button class="close-btn" onclick="cerrarModalCert()">&times;</button>
         </div>
-        <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+        <form action="acciones_expediente" method="POST" class="form-margin-0">
             <!-- Protección CSRF -->
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             
@@ -95,7 +95,7 @@
             <h2 id="modalDiagTitle"><i class="fas fa-clipboard-check"></i> Examen Diagnóstico</h2>
             <button class="close-btn" onclick="cerrarModalDiag()">&times;</button>
         </div>
-        <form action="acciones_expediente.php" method="POST" class="form-margin-0">
+        <form action="acciones_expediente" method="POST" class="form-margin-0">
             <!-- Validación CSRF -->
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             
