@@ -3,7 +3,7 @@ let charts = { genero: null, calif: null, radar: null, historico: null };
 document.addEventListener('DOMContentLoaded', cargarCiclos);
 
 function cargarCiclos() {
-    fetch('reportes_api.php', { 
+    fetch('reportes_api', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
         body: `action=get_ciclos&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -25,7 +25,7 @@ function cargarIdiomas() {
     
     if(!ciclo_id) { selId.innerHTML = '<option value="">— Seleccionar idioma —</option>'; selId.disabled = true; ocultarDashboard(); return; }
 
-    fetch('reportes_api.php', { 
+    fetch('reportes_api', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
         body: `action=get_idiomas&ciclo_id=${ciclo_id}&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -48,7 +48,7 @@ function cargarNiveles() {
 
     if(!idioma) { selNiv.innerHTML = '<option value="">— Seleccionar nivel —</option>'; selNiv.disabled = true; ocultarDashboard(); return; }
 
-    fetch('reportes_api.php', { 
+    fetch('reportes_api', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
         body: `action=get_niveles&ciclo_id=${ciclo_id}&idioma=${encodeURIComponent(idioma)}&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -72,7 +72,7 @@ function cargarDashboard() {
     let textoCiclo = document.getElementById('sel_ciclo').options[document.getElementById('sel_ciclo').selectedIndex].text;
     let textoNivelCompleto = document.getElementById('sel_nivel').options[document.getElementById('sel_nivel').selectedIndex].text;
 
-    fetch('reportes_api.php', {
+    fetch('reportes_api', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: `action=get_stats&ciclo_id=${ciclo}&materia_id=${materia_id}&idioma=${encodeURIComponent(idioma)}&csrf_token=${encodeURIComponent(csrfToken)}`

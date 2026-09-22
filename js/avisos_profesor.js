@@ -36,7 +36,7 @@ function cargarAvisos() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Cargando...</td></tr>';
     if (resumen) resumen.innerHTML = '<p style="color: #888; margin: 0;">Cargando avisos...</p>';
     
-    fetch('avisos_api.php', { 
+    fetch('avisos_api', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
         body: `action=get_avisos&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -153,7 +153,7 @@ function abrirFormularioAviso() {
 }
 
 function cargarGruposSelect(nrc_seleccionado = '') {
-    fetch('avisos_api.php', { 
+    fetch('avisos_api', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
         body: `action=get_grupos_activos&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -189,7 +189,7 @@ function guardarAviso(e) {
     formData.append('action', 'save_aviso');
     formData.append('csrf_token', csrfToken);
 
-    fetch('avisos_api.php', { method: 'POST', body: formData })
+    fetch('avisos_api', { method: 'POST', body: formData })
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
@@ -208,7 +208,7 @@ function publicarAviso(id) {
         showCancelButton: true, confirmButtonColor: '#28a745', confirmButtonText: 'Sí, publicar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('avisos_api.php', { 
+            fetch('avisos_api', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
                 body: `action=publicar_manual&aviso_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -227,7 +227,7 @@ function finalizarAviso(id) {
         showCancelButton: true, confirmButtonColor: '#fd7e14', confirmButtonText: 'Sí, finalizar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('avisos_api.php', { 
+            fetch('avisos_api', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
                 body: `action=finalizar_manual&aviso_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
@@ -246,7 +246,7 @@ function borrarAviso(id) {
         showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, borrar'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch('avisos_api.php', { 
+            fetch('avisos_api', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'}, 
                 body: `action=delete_aviso&aviso_id=${id}&csrf_token=${encodeURIComponent(csrfToken)}` 
