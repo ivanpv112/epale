@@ -107,9 +107,9 @@ if ($usuario === '' || $password === '') {
 
             $redirectUrl = '';
             switch ($user['rol']) {
-                case 'ADMIN': $redirectUrl = "admin/usuarios.php"; break;
-                case 'PROFESOR': $redirectUrl = "profesor/index.php"; break;
-                case 'ALUMNO': $redirectUrl = "estudiante/index.php"; break;
+                case 'ADMIN': $redirectUrl = "admin/usuarios"; break;
+                case 'PROFESOR': $redirectUrl = "profesor/index"; break;
+                case 'ALUMNO': $redirectUrl = "estudiante/index"; break;
                 default: $mensaje = "Rol no identificado."; break;
             }
 
