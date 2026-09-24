@@ -149,6 +149,9 @@ if (count($alumnos) > 0) {
                 </p>
             </div>
             <div style="display: flex; gap: 10px;">
+                <a href="trabajo_equipo?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:#5D5FEF; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                    <i class="fas fa-users"></i> Trabajo en Equipo
+                </a>
                 <a href="asistencia?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:var(--udg-light); color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
                     <i class="fas fa-calendar-check"></i> Lista de Asistencia
                 </a>
