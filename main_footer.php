@@ -1,14 +1,14 @@
 <footer class="main-footer">
     <div class="footer-content">
         <div class="footer-section">
-            <img src="../img/facebook.png" alt="Facebook" style="height: 45px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;">
+            <img src="../img/facebook.png" alt="Facebook" style="height: 45px; width: auto; max-width: 100%; object-fit: contain; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;">
             <div style="font-weight:bold; font-size:1.1rem; margin-bottom:5px; color: #ffffff;">CUCEA PALE</div>
         </div>
         <div class="footer-section">
-             <img src="../img/logo-udg.png" alt="Universidad de Guadalajara" class="footer-logo-img">
+             <img src="../img/logo-udg.png" alt="Universidad de Guadalajara" class="footer-logo-img" style="max-width: 100%; object-fit: contain; margin-left: auto; margin-right: auto; display: block;">
         </div>
         <div class="footer-section">
-            <img src="../img/isologo-pale.png" alt="PALE" style="height: 85px; margin-bottom: -5px; display: block; margin-left: auto; margin-right: auto;">
+            <img src="../img/isologo-pale.png" alt="PALE" style="height: 85px; width: auto; max-width: 100%; object-fit: contain; margin-bottom: -5px; display: block; margin-left: auto; margin-right: auto;">
             <strong style="color: #ffffff;">Contacto</strong><br>
             <span style="color: #e2e8f0;">+52 (33)-3770-3300</span><br>
             <span style="font-size:0.85rem; opacity:0.9; color: #e2e8f0;">plataforma.pale@cucea.udg.mx</span>

@@ -14,18 +14,21 @@ if (isset($_SESSION['user_id'])) {
     if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad'] > $tiempo_limite)) {
         session_unset();
         session_destroy();
+        session_start();
+        $_SESSION['login_error'] = "Tu sesión se ha cerrado por inactividad.";
     } else {
         $_SESSION['ultima_actividad'] = time(); // Actualiza el tiempo cada vez que hay actividad
     }
 }
 
 // 2. FUNCIÓN MAESTRA DE VALIDACIÓN
-function validar_csrf_estricto($metodo_esperado = 'POST') {
-    
+function validar_csrf_estricto($metodo_esperado = 'POST')
+{
+
     $metodo_actual = $_SERVER['REQUEST_METHOD'];
-    
+
     if ($metodo_actual === strtoupper($metodo_esperado)) {
-        
+
         $token = '';
 
         if ($metodo_actual === 'POST') {
@@ -40,12 +43,12 @@ function validar_csrf_estricto($metodo_esperado = 'POST') {
 
         // Validación criptográfica
         if (empty($_SESSION['csrf_token']) || empty($token) || !hash_equals($_SESSION['csrf_token'], $token)) {
-            
+
             // Código HTTP 403 Forbidden (Bloqueo formal a nivel de servidor)
             http_response_code(403);
-            
+
             $is_json_request = isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false;
-            
+
             if ($is_json_request) {
                 header('Content-Type: application/json');
                 // Mensaje genérico y amigable para APIs
@@ -86,7 +89,8 @@ function validar_csrf_estricto($metodo_esperado = 'POST') {
 }
 
 // 3. FUNCIÓN PARA EL HISTORIAL DE MODIFICACIONES (AUDITORÍA)
-function registrar_historial(PDO $pdo, int $admin_id, string $tipo_accion, string $categoria, string $titulo, string $afectado, string $detalle) {
+function registrar_historial(PDO $pdo, int $admin_id, string $tipo_accion, string $categoria, string $titulo, string $afectado, string $detalle)
+{
     try {
         $stmt = $pdo->prepare("INSERT INTO historial_admin (admin_id, tipo_accion, categoria, titulo, afectado, detalle, fecha) VALUES (?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([$admin_id, $tipo_accion, $categoria, $titulo, $afectado, $detalle]);
@@ -96,4 +100,3 @@ function registrar_historial(PDO $pdo, int $admin_id, string $tipo_accion, strin
         return false;
     }
 }
-?>
