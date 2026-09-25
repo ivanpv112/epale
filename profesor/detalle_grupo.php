@@ -18,7 +18,7 @@ if (!$clave_grupo) {
     exit;
 }
 
-$stmt_info = $pdo->prepare("SELECT m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.edicion_total, g.estado FROM grupos g JOIN materias m ON g.materia_id = m.materia_id JOIN ciclos c ON c.ciclo_id = g.ciclo_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
+$stmt_info = $pdo->prepare("SELECT m.materia_id, m.clave AS clave_materia, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.edicion_total, g.estado FROM grupos g JOIN materias m ON g.materia_id = m.materia_id JOIN ciclos c ON c.ciclo_id = g.ciclo_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
 $stmt_info->execute([$clave_grupo, $profesor_id]);
 $info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
 if (!$info_grupo) {
@@ -33,17 +33,19 @@ $materia_id = $info_grupo['materia_id'];
 $stmt_hor = $pdo->prepare("SELECT g.nrc, h.modalidad, h.aula FROM grupos g LEFT JOIN horarios h ON g.nrc = h.nrc WHERE g.clave_grupo = ? AND g.profesor_id = ?");
 $stmt_hor->execute([$clave_grupo, $profesor_id]);
 $horarios = $stmt_hor->fetchAll(PDO::FETCH_ASSOC);
-$txt_nrc_aula = '';
+$horarios_html = "NRC:<br>";
 foreach ($horarios as $h) {
+    $nrc_safe = htmlspecialchars($h['nrc']);
+    $aula_safe = !empty($h['aula']) ? htmlspecialchars($h['aula']) : 'Sin asignar';
     if ($h['modalidad'] === 'PRESENCIAL') {
-        $aula = !empty($h['aula']) ? $h['aula'] : 'Sin asignar';
-        $txt_nrc_aula .= "P: {$h['nrc']} (Aula: $aula) ";
+        $horarios_html .= "Presencial: $nrc_safe - Aula: $aula_safe<br>";
     } elseif ($h['modalidad'] === 'VIRTUAL') {
-        $aula = !empty($h['aula']) ? $h['aula'] : 'Virtual';
-        $txt_nrc_aula .= "| V: {$h['nrc']} (Aula: $aula)";
+        if (empty($h['aula'])) {
+            $aula_safe = 'Virtual';
+        }
+        $horarios_html .= "Virtual: $nrc_safe - Plataforma: $aula_safe<br>";
     }
 }
-$txt_nrc_aula = trim($txt_nrc_aula, " |");
 
 $stmt_crit = $pdo->prepare("SELECT codigo_examen, nombre_examen, puntos_maximos, color, icono, categoria FROM criterios_evaluacion WHERE materia_id = ?");
 $stmt_crit->execute([$materia_id]);
@@ -140,10 +142,9 @@ if (count($alumnos) > 0) {
     <main class="main-content">
         <div class="header-asistencia">
             <div>
-                <h1 class="title-asistencia"><?php echo htmlspecialchars($info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
-
+                <h1 class="title-asistencia"><?php echo htmlspecialchars($info_grupo['clave_materia'] . ' - ' . $info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
                 <p class="dg-subtitle">
-                    <span class="dg-nrc">NRC <?php echo htmlspecialchars($txt_nrc_aula); ?></span><br>
+                    <span class="dg-nrc"><?php echo $horarios_html; ?></span><br>
                     <i class="far fa-calendar-alt" style="margin-top:5px;"></i> Semestre <?php echo htmlspecialchars($info_grupo['ciclo']); ?> &nbsp;|&nbsp;
                     <i class="fas fa-users"></i> <?php echo count($alumnos); ?> Alumnos
                 </p>

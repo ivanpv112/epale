@@ -17,7 +17,7 @@ if (!$clave_grupo) {
 }
 
 // Obtener info del grupo
-$stmt_info = $pdo->prepare("SELECT m.nombre AS materia, m.nivel FROM grupos g JOIN materias m ON g.materia_id = m.materia_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
+$stmt_info = $pdo->prepare("SELECT m.clave AS clave_materia, m.nombre AS materia, m.nivel FROM grupos g JOIN materias m ON g.materia_id = m.materia_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
 $stmt_info->execute([$clave_grupo, $profesor_id]);
 $info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
 
@@ -59,7 +59,7 @@ $alumnos_json = json_encode($alumnos);
         <div class="equipos-wrapper">
             <div class="topbar-equipos">
                 <div>
-                    <span class="materia-title"><?php echo htmlspecialchars($clave_grupo . ' ' . $info_grupo['materia'] . ' - Trabajo en equipo'); ?></span>
+                    <h1 class="title-asistencia" style="margin: 0;"><?php echo htmlspecialchars($info_grupo['clave_materia'] . ' - ' . $info_grupo['materia'] . ' ' . $info_grupo['nivel'] . ' - Trabajo en Equipo'); ?></h1>
                 </div>
                 <div class="stepper">
                     <div class="step active" id="st1"><span>1</span> Configurar</div>
