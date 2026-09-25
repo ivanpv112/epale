@@ -5,12 +5,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorText = errorMessage.querySelector('span');
     const submitBtn = loginForm.querySelector('.btn-login');
 
+    loginForm.addEventListener('input', () => {
+        // Restaurar estado original si el usuario empieza a corregir sus datos
+        const formGroups = loginForm.querySelectorAll('.form-group');
+        formGroups.forEach(group => group.classList.remove('is-invalid', 'is-valid'));
+        submitBtn.style.backgroundColor = '';
+        submitBtn.textContent = 'Ingresar';
+        errorMessage.classList.add('hidden');
+    });
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault(); // Detiene el comportamiento clásico del formulario
 
         // Limpiar errores previos
         errorMessage.classList.add('hidden');
-        
+
         // Activar estado de carga en el botón
         submitBtn.classList.add('is-loading');
 
@@ -37,32 +46,42 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (result.success) {
-                // EFECTO "APERTURA DE TELÓN" (EXPANDING CANVAS)
-                const rect = submitBtn.getBoundingClientRect();
-                const expander = document.createElement('div');
-                expander.className = 'curtain-reveal';
-                
-                // Centrar exactamente en medio del botón
-                expander.style.top = (rect.top + rect.height / 2) + 'px';
-                expander.style.left = (rect.left + rect.width / 2) + 'px';
-                expander.style.width = '20px';
-                expander.style.height = '20px';
-                
-                document.body.appendChild(expander);
+                // 1) Quitar el estado de carga del botón
+                submitBtn.classList.remove('is-loading');
+                submitBtn.style.backgroundColor = '#28a745'; // Cambiar botón a verde
+                submitBtn.textContent = 'Autorizado'; // Mensaje de éxito
 
-                // Forzar un reflow para que la transición CSS se ejecute
-                void expander.offsetWidth;
-                
-                // Disparar la expansión de la cortina azul
-                expander.classList.add('expand');
-                
-                // Esperar a que la pantalla se cubra antes de redirigir (450ms)
+                // 2) Poner en verde las cajas y mostrar íconos
+                const formGroups = loginForm.querySelectorAll('.form-group');
+                formGroups.forEach(group => {
+                    group.classList.remove('is-invalid');
+                    group.classList.add('is-valid');
+                });
+
+                // 3) Esperar un poco para que el usuario vea la validación verde
                 setTimeout(() => {
-                    window.location.href = result.redirect;
-                }, 450);
+                    // Aplicar Blur Fade al contenedor completo
+                    document.body.classList.add('blur-fade-out');
+
+                    // Esperar a que la pantalla se desvanezca antes de redirigir (600ms)
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 600);
+                }, 800); // Pausa de 800ms para apreciar los íconos verdes
             } else {
                 // Si las credenciales fallan, quitamos el estado de carga y mostramos el error
                 submitBtn.classList.remove('is-loading');
+
+                // Mostrar colores de error
+                submitBtn.style.backgroundColor = '#dc3545';
+                submitBtn.textContent = 'Denegado';
+
+                const formGroups = loginForm.querySelectorAll('.form-group');
+                formGroups.forEach(group => {
+                    group.classList.remove('is-valid');
+                    group.classList.add('is-invalid');
+                });
+
                 showError(result.message);
             }
         } catch (error) {
