@@ -47,7 +47,7 @@ if (!empty($_SESSION['login_error'])) {
             <button type="submit" class="btn-login">Ingresar</button>
         </form>
         <div class="login-divider"><span>o</span></div>
-        <a href="#" class="btn-google" style="pointer-events: none; opacity: 0.5;" title="Próximamente">
+        <a href="google_auth.php" class="btn-google">
             <i class="fab fa-google"></i>
             Continuar con Google
         </a>
