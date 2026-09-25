@@ -33,7 +33,24 @@
 .form-group input:focus { outline: none; border-color: var(--primary); }
 
 /* ÍCONO DE OJITO (VER PASSWORD) */
-.toggle-password { position: absolute; right: 15px; top: 38px; cursor: pointer; color: #999; }
+.toggle-password { position: absolute; right: 15px; bottom: 21px; transform: translateY(50%); cursor: pointer; color: #999; }
+
+/* VALIDACIÓN EXITOSA (BORDES E ÍCONOS VERDES) */
+.form-group.is-valid input { border-color: #28a745; padding-right: 35px; }
+.form-group.is-valid::after { content: '\f058'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; right: 12px; bottom: 21px; transform: translateY(50%); color: #28a745; font-size: 1.1rem; }
+.form-group.is-valid .toggle-password { display: none; }
+
+/* VALIDACIÓN INCORRECTA (BORDES E ÍCONOS ROJOS) */
+.form-group.is-invalid input { border-color: #dc3545; padding-right: 35px; }
+.form-group.is-invalid::after { content: '\f057'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; right: 12px; bottom: 21px; transform: translateY(50%); color: #dc3545; font-size: 1.1rem; }
+.form-group.is-invalid .toggle-password { display: none; }
+
+/* ANIMACIÓN BLUR FADE (ÉXITO) */
+.blur-fade-out { animation: blurFade 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
+@keyframes blurFade {
+    0% { filter: blur(0); opacity: 1; transform: scale(1); }
+    100% { filter: blur(15px); opacity: 0; transform: scale(1.03); }
+}
 
 /* BOTÓN Y EFECTO EXPANDING CANVAS */
 .btn-login { width: 100%; padding: 12px; background-color: var(--bg-blue); color: var(--white); border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 44px; }
