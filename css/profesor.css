@@ -149,12 +149,12 @@
 .class-locked { color: #aaa; }
 .excel-crit-title { max-width: 90px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto; }
 .excel-crit-max { font-weight: normal; color: #aaa; font-size: 0.75rem; }
-.excel-total-col { background: #e7f3ff !important; color: var(--udg-blue) !important; border-bottom-color: #b8daff !important; }
+.excel-total-col { background: #e7f3ff !important; color: var(--udg-blue) !important; border-bottom-color: #b8daff !important; position: sticky; right: 0; z-index: 25; box-shadow: -3px 0 6px rgba(0,0,0,0.06); }
 .excel-student-cell { padding: 10px 15px; min-width: 250px; display: flex; align-items: center; gap: 12px; }
 .excel-student-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
 .excel-student-name { font-weight: bold; color: var(--udg-blue); }
 .excel-student-code { font-size: 0.8rem; color: #888; font-family: monospace; margin-top: 2px; }
-.excel-total-cell-bg { background: #f8fbff; }
+.excel-total-cell-bg { background: #f8fbff; position: sticky; right: 0; z-index: 24; box-shadow: -3px 0 6px rgba(0,0,0,0.06); }
 
 @keyframes savedFlash { 0% { background-color: #d4edda; } 100% { background-color: transparent; } }
 .flash-success { animation: savedFlash 1.5s ease-out; }
