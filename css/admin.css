@@ -307,3 +307,42 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 .detail-orange { color: #ff7043; }
 .detail-purple { color: #ab47bc; }
 .detail-green { color: #66bb6a; }
+/* ========================================= 10. DASHBOARD PRINCIPAL ========================================= */
+.dashboard-banner { background: linear-gradient(135deg, #0d2366 0%, #1a368c 100%); color: white; padding: 30px; border-radius: 16px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(13, 35, 102, 0.2); }
+.dashboard-banner::before, .dashboard-banner::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.05); }
+.dashboard-banner::before { width: 300px; height: 300px; top: -100px; right: -50px; }
+.dashboard-banner::after { width: 200px; height: 200px; bottom: -50px; right: 150px; }
+.dashboard-banner .badge { background: rgba(255, 255, 255, 0.15); color: #e0e6f8; padding: 6px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-bottom: 15px; letter-spacing: 1px; }
+.dashboard-banner h1 { margin: 0 0 5px 0; font-size: 2.2rem; font-weight: 800; }
+.dashboard-banner > p { margin: 0 0 25px 0; color: #aebce4; font-size: 1rem; }
+.banner-stats { display: flex; gap: 15px; position: relative; z-index: 2; flex-wrap: wrap; }
+.banner-stat { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; min-width: 140px; }
+.banner-stat i { font-size: 1.5rem; color: #5ed6ff; }
+.banner-stat .value { display: block; font-size: 1.2rem; font-weight: bold; line-height: 1.1; }
+.banner-stat .label { font-size: 0.75rem; color: #d1dcf5; }
+.dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.dash-card { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f3f5; position: relative; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+.dash-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+.dash-card .card-icon-wrap { width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 20px; }
+.card-alumnos .card-icon-wrap { background: #e6f7ef; color: #00d27a; }
+.card-profesores .card-icon-wrap { background: #eaf4fc; color: #0d6efd; }
+.card-admins .card-icon-wrap { background: #fdf0f1; color: #dc3545; }
+.card-total .card-icon-wrap { background: #f3e8ff; color: #8a2be2; }
+.dash-card .card-percentage { position: absolute; top: 25px; right: 25px; font-size: 0.85rem; font-weight: bold; color: #888; }
+.dash-card h3 { font-size: 2.2rem; margin: 0 0 5px 0; color: #333; }
+.dash-card p { margin: 0 0 15px 0; color: #666; font-size: 0.95rem; }
+.dash-card .progress-bg { height: 4px; background: #f1f3f5; border-radius: 2px; width: 100%; overflow: hidden; }
+.dash-card .progress-fill { height: 100%; border-radius: 2px; }
+.card-alumnos .progress-fill { background: #00d27a; }
+.card-profesores .progress-fill { background: #0d6efd; }
+.card-admins .progress-fill { background: #dc3545; }
+.card-total .progress-fill { background: #8a2be2; }
+
+/* ========================================= 12. CARGA/DESCARGA MASIVA (MÓDULOS) ========================================= */
+.module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+.module-card { background: white; border-radius: 12px; padding: 30px 20px; text-align: center; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); text-decoration: none; color: #333; transition: all 0.3s; display: block; }
+.module-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); border-color: var(--udg-blue); }
+.module-card i { font-size: 3.5rem; color: var(--udg-light); margin-bottom: 15px; transition: color 0.3s; }
+.module-card:hover i { color: var(--udg-blue); }
+.module-card h3 { margin: 0 0 10px 0; color: var(--udg-blue); font-size: 1.3rem; }
+.module-card p { margin: 0; color: #666; font-size: 0.9rem; line-height: 1.5; }
