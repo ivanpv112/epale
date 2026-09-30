@@ -93,6 +93,7 @@ if ($usuario === '' || $password === '') {
             registrar_intento($pdo, $usuario, $ip, false);
         } else {
             limpiar_intentos($pdo, $usuario);
+            registrar_intento($pdo, $usuario, $ip, true);
             session_regenerate_id(true);
 
             $_SESSION['user_id'] = $user['usuario_id'];
@@ -107,7 +108,7 @@ if ($usuario === '' || $password === '') {
 
             $redirectUrl = '';
             switch ($user['rol']) {
-                case 'ADMIN': $redirectUrl = "admin/usuarios"; break;
+                case 'ADMIN': $redirectUrl = "admin/index"; break;
                 case 'PROFESOR': $redirectUrl = "profesor/index"; break;
                 case 'ALUMNO': $redirectUrl = "estudiante/index"; break;
                 default: $mensaje = "Rol no identificado."; break;
