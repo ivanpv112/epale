@@ -220,7 +220,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
                         <div class="form-group gender-field">
                             <label>Género</label>
                             <select name="genero" id="userGender">
-                                <option value="">Selecciona uno...</option>
+                                <option value="">Indefinido</option>
                                 <option value="MASCULINO">Masculino</option>
                                 <option value="FEMENINO">Femenino</option>
                                 <option value="OTRO">Otro</option>
@@ -274,7 +274,7 @@ $total_admins = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol='ADMIN'")->
             document.querySelectorAll('.teacher-field').forEach(f => f.style.display = (role === 'PROFESOR') ? 'block' : 'none'); 
             document.querySelectorAll('.period-field').forEach(f => f.style.display = (role === 'ALUMNO' || role === 'PROFESOR') ? 'block' : 'none'); 
             document.querySelectorAll('.code-field').forEach(f => f.style.display = (role === 'ADMIN') ? 'none' : 'block'); 
-            document.querySelectorAll('.gender-field').forEach(f => f.style.display = (role === 'ADMIN') ? 'none' : 'block'); 
+            document.querySelectorAll('.gender-field').forEach(f => f.style.display = 'block'); 
         }
 
         function confirmarBorradoUsuario(url, nombre) { Swal.fire({ title: '¿Eliminar Usuario?', html: `Estás a punto de borrar a <b>${nombre}</b>.`, icon: 'error', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' }).then((result) => { if (result.isConfirmed) { window.location.href = url; } }); }
