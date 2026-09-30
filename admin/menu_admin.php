@@ -1,4 +1,8 @@
 <?php
+$is_subfolder = (strpos($_SERVER['PHP_SELF'], '/admin/carga_masiva/') !== false || strpos($_SERVER['PHP_SELF'], '/admin/descarga_masiva/') !== false);
+$base_url = $is_subfolder ? '../' : '';
+?>
+<?php
 if (!isset($_SESSION['smart_back'])) {
     $_SESSION['smart_back'] = [];
 }
@@ -6,7 +10,7 @@ $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
 // Importar archivo de seguridad (centraliza la generación del token)
-require_once '../security.php';
+require_once __DIR__ . '/../security.php';
 
 if (!empty($referer)) {
     $referer_path = basename(parse_url($referer, PHP_URL_PATH));
@@ -21,9 +25,9 @@ $stmt_foto_menu = $pdo->prepare("SELECT foto_perfil, nombre FROM usuarios WHERE 
 $stmt_foto_menu->execute([$_SESSION['user_id']]);
 $admin_menu = $stmt_foto_menu->fetch(PDO::FETCH_ASSOC);
 
-$foto_menu = "../img/avatar-default.png";
-if ($admin_menu['foto_perfil'] && file_exists("../img/perfiles/" . $admin_menu['foto_perfil'])) {
-    $foto_menu = "../img/perfiles/" . $admin_menu['foto_perfil'];
+$foto_menu = $base_url . "../img/avatar-default.png";
+if ($admin_menu['foto_perfil'] && file_exists(__DIR__ . "/../img/perfiles/" . $admin_menu['foto_perfil'])) {
+    $foto_menu = $base_url . "../img/perfiles/" . $admin_menu['foto_perfil'];
 }
 
 $stmt_notif = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'");
@@ -36,13 +40,13 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
 
 <header class="main-header">
     <div class="logo-container">
-        <a href="usuarios" class="logo-link">
-            <img src="../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
+        <a href="<?php echo $base_url ?? ''; ?>index" class="logo-link">
+            <img src="<?php echo $base_url ?? ''; ?>../img/logotipo-epale.png" alt="E-PALE" class="logo-img">
         </a>
     </div>
 
     <div class="header-actions">
-        <a href="perfil" class="profile-btn">
+        <a href="<?php echo $base_url ?? ''; ?>perfil" class="profile-btn">
             <img src="<?php echo $foto_menu; ?>" class="profile-img">
             <span class="profile-name"><?php echo strtok($admin_menu['nombre'], " "); ?></span>
         </a>
@@ -61,24 +65,25 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
     </div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="usuarios" class="<?php echo ($pagina_actual == 'usuarios.php') ? 'active' : ''; ?>"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
-        <li><a href="expedientes" class="<?php echo ($pagina_actual == 'expedientes.php' || $pagina_actual == 'ver_expediente.php') ? 'active' : ''; ?>"><i class="fas fa-folder-open"></i> Expedientes</a></li>
-        <li><a href="materias" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Idiomas y Criterios</a></li>
-        <li><a href="grupos_nrc" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos </a></li>
-        <li><a href="ciclos" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
-        <li><a href="interfaz_csv" class="<?php echo ($pagina_actual == 'interfaz_csv.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
-        <li><a href="solicitudes" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
+        <li><a href="<?php echo $base_url ?? ''; ?>usuarios" class="<?php echo ($pagina_actual == 'usuarios.php') ? 'active' : ''; ?>"><i class="fas fa-users"></i> Gestión de Usuarios</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>expedientes" class="<?php echo ($pagina_actual == 'expedientes.php' || $pagina_actual == 'ver_expediente.php') ? 'active' : ''; ?>"><i class="fas fa-folder-open"></i> Expedientes</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>materias" class="<?php echo ($pagina_actual == 'materias.php' || $pagina_actual == 'criterios_materia.php') ? 'active' : ''; ?>"><i class="fas fa-book"></i> Idiomas y Criterios</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>grupos_nrc" class="<?php echo ($pagina_actual == 'grupos_nrc.php' || $pagina_actual == 'gestionar_grupo.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard"></i> Grupos </a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>ciclos" class="<?php echo ($pagina_actual == 'ciclos.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Ciclos Escolares</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>interfaz_carga_masiva" class="<?php echo ($pagina_actual == 'interfaz_carga_masiva.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>interfaz_descarga_masiva" class="<?php echo ($pagina_actual == 'interfaz_descarga_masiva.php') ? 'active' : ''; ?>"><i class="fas fa-file-download"></i> Descarga Masiva</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>solicitudes" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
                 <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
             </a></li>
-        <li><a href="avisos" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
-        <li><a href="reportes" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
-        <li><a href="historial" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>avisos" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>reportes" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>historial" class="<?php echo ($pagina_actual == 'historial.php') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Historial de Modificaciones</a></li>
     </ul>
 
     <div class="sidebar-divider"></div>
 
     <ul class="yt-sidebar-menu">
-        <li><a href="perfil" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>perfil" class="<?php echo ($pagina_actual == 'perfil.php') ? 'active' : ''; ?>"><i class="far fa-user-circle"></i> Mi Perfil</a></li>
         <li><a href="#" onclick="confirmarSalida(event)"><i class="fas fa-sign-out-alt" style="color: #ff6b6b;"></i> <span style="color: #ff6b6b;">Cerrar Sesión</span></a></li>
     </ul>
 </aside>
@@ -128,3 +133,6 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
         });
     }
 </script>
+
+
+
