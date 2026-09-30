@@ -123,7 +123,12 @@ if ($user['google_id'] !== $google_id) {
     $upd->execute([$google_id, $user['usuario_id']]);
 }
 
-// 8) Iniciar sesión igual que el login normal (mismas variables que index.php)
+// 8) Registrar intento de login exitoso
+$ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$stmt_login = $pdo->prepare("INSERT INTO login_intentos (identificador, ip, exitoso) VALUES (?, ?, 1)");
+$stmt_login->execute([$correo_google, $ip]);
+
+// 9) Iniciar sesión igual que el login normal (mismas variables que index.php)
 session_regenerate_id(true);
 
 $_SESSION['user_id'] = $user['usuario_id'];
@@ -135,7 +140,7 @@ $_SESSION['ultima_actividad'] = time();
 
 switch ($user['rol']) {
     case 'ADMIN':
-        header('Location: admin/usuarios');
+        header('Location: admin/index');
         break;
     case 'PROFESOR':
         header('Location: profesor/index');
