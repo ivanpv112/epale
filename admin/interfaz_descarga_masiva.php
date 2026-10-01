@@ -44,8 +44,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
             }
         </style>
         
-        <div class="module-grid">
-            <a href="#" onclick="solicitarExportacion(event, 'GLOBAL')" class="module-card" id="card-GLOBAL">
+<?php
+    $stmt_carr = $pdo->query("SELECT DISTINCT carrera FROM alumnos WHERE carrera IS NOT NULL AND carrera != '' ORDER BY carrera");
+    $carreras = $stmt_carr->fetchAll(PDO::FETCH_COLUMN);
+?>
+        <div class="module-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <a href="#" onclick="solicitarExportacion(event, 'GLOBAL')" class="module-card" id="card-GLOBAL" style="text-decoration: none;">
                 <i class="fas fa-globe"></i>
                 <h3>Descarga Global</h3>
                 <p>Exporta toda la información del sitio en un archivo ZIP organizado por CSVs.</p>
@@ -57,6 +61,22 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
                     </div>
                     <div class="progress-bar-bg" style="background:#eee; height:10px; border-radius:5px; overflow:hidden;">
                         <div class="progress-bar-fill" id="progreso-fill-GLOBAL" style="width: 0%; height:100%; background: #00d27a; transition: width 0.5s ease;"></div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="#" onclick="solicitarExportacionCarrera(event)" class="module-card" id="card-CARRERA" style="text-decoration: none;">
+                <i class="fas fa-filter"></i>
+                <h3>Descarga por Carrera</h3>
+                <p>Exporta datos excluyendo Profesores y Grupos, filtrados solo para la carrera seleccionada.</p>
+                
+                <div class="progress-container" id="progreso-container-CARRERA" style="display: none; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; color: var(--udg-blue); font-weight: bold;">
+                        <span id="progreso-label-CARRERA">Procesando...</span>
+                        <span id="progreso-text-CARRERA">0%</span>
+                    </div>
+                    <div class="progress-bar-bg" style="background:#eee; height:10px; border-radius:5px; overflow:hidden;">
+                        <div class="progress-bar-fill" id="progreso-fill-CARRERA" style="width: 0%; height:100%; background: #00d27a; transition: width 0.5s ease;"></div>
                     </div>
                 </div>
             </a>
@@ -202,29 +222,86 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    $.ajax({
-                        url: 'descarga_masiva/ajax_solicitar_exportacion.php',
-                        type: 'POST',
-                        dataType: 'json',
-                        data: { tipo: tipoModulo },
-                        success: function(res) {
-                            if(res.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: '¡En cola!',
-                                    text: res.message,
-                                    timer: 3000,
-                                    showConfirmButton: false
-                                });
-                                cargarHistorial(); // Refrescar tabla de inmediato
-                            } else {
-                                Swal.fire('Error', res.message, 'error');
-                            }
-                        },
-                        error: function() {
-                            Swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
+                    ejecutarAjaxExportacion(tipoModulo);
+                }
+            });
+        }
+
+        // Lista de carreras desde PHP a JS
+        const opcionesCarreras = {
+            <?php foreach($carreras as $c): ?>
+            "<?php echo htmlspecialchars($c, ENT_QUOTES); ?>": "<?php echo htmlspecialchars($c, ENT_QUOTES); ?>",
+            <?php endforeach; ?>
+        };
+
+        function solicitarExportacionCarrera(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Selecciona una Carrera',
+                text: 'Elige de la lista la carrera para filtrar el reporte.',
+                icon: 'info',
+                input: 'select',
+                inputOptions: opcionesCarreras,
+                inputPlaceholder: 'Elige una carrera...',
+                showCancelButton: true,
+                confirmButtonColor: '#0d2366',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Siguiente',
+                cancelButtonText: 'Cancelar',
+                inputValidator: (value) => {
+                    return new Promise((resolve) => {
+                        if (value !== '') {
+                            resolve();
+                        } else {
+                            resolve('Debes seleccionar una carrera');
                         }
                     });
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    let carreraSeleccionada = result.value;
+                    // Segunda confirmación idéntica a Global
+                    Swal.fire({
+                        title: `¿Exportar datos para ${carreraSeleccionada}?`,
+                        text: "El reporte se procesará en segundo plano.",
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonColor: '#0d2366',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Sí, generar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((confirmacion) => {
+                        if (confirmacion.isConfirmed) {
+                            ejecutarAjaxExportacion('CARRERA_' + carreraSeleccionada);
+                        }
+                    });
+                }
+            });
+        }
+
+        function ejecutarAjaxExportacion(tipoModulo) {
+            $.ajax({
+                url: 'descarga_masiva/ajax_solicitar_exportacion.php',
+                type: 'POST',
+                dataType: 'json',
+                data: { tipo: tipoModulo },
+                success: function(res) {
+                    if(res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡En cola!',
+                            text: res.message,
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                        cargarHistorial(); // Refrescar tabla de inmediato
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
                 }
             });
         }
@@ -237,5 +314,4 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
         });
     </script>
 </body>
-
 </html>
