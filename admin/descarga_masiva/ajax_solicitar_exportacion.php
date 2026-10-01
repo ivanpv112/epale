@@ -42,10 +42,19 @@ try {
         $cmd = "start /B \"\" \"$php_exe\" \"$script_path\" $exportacion_id > NUL 2> NUL";
         pclose(popen($cmd, "r"));
     } else {
-        // Entorno Producción (Servidor Real Linux, cPanel, VPS, etc.)
-        // 'nohup' y '&' permiten que el proceso viva de forma independiente
-        $cmd = "nohup php " . escapeshellarg($script_path) . " " . $exportacion_id . " > /dev/null 2>&1 &";
-        exec($cmd);
+        // Entorno Producción (Servidor Compartido, cPanel, etc.)
+        // Usamos una petición HTTP asíncrona por si 'exec' está deshabilitado en el hosting
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+        $host = $_SERVER['HTTP_HOST'];
+        $uri = dirname($_SERVER['REQUEST_URI']);
+        $worker_url = $protocol . $host . $uri . '/worker_exportacion.php?id=' . $exportacion_id;
+        
+        $ch = curl_init($worker_url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 1); // Cortar la llamada HTTP en 1 segundo (abandonar pero dejar corriendo)
+        curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+        curl_exec($ch);
+        curl_close($ch);
     }
 
     echo json_encode(['success' => true, 'message' => 'Solicitud agregada a la cola. Revisa el historial en unos instantes.']);

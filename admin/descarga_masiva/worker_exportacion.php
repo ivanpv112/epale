@@ -1,10 +1,15 @@
 <?php
-// Este script se debe ejecutar por línea de comandos (CLI)
-if (php_sapi_name() !== 'cli') {
-    die('Acceso denegado. Este script solo puede correr en segundo plano.');
+// Permitir que el script siga corriendo aunque la conexión HTTP se cierre prematuramente
+ignore_user_abort(true);
+set_time_limit(0);
+
+$exportacion_id = 0;
+if (php_sapi_name() === 'cli') {
+    $exportacion_id = isset($argv[1]) ? intval($argv[1]) : 0;
+} else {
+    $exportacion_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 }
 
-$exportacion_id = isset($argv[1]) ? intval($argv[1]) : 0;
 if ($exportacion_id <= 0) {
     die("ID de exportación no válido.");
 }
@@ -28,15 +33,15 @@ if (!is_dir($temp_dir)) {
 }
 
 // Función Helper para exportar una query a CSV
-function generar_csv_desde_query(PDO $pdo, string $query, string $filename, array $headers): void
+function generar_csv_desde_query(PDO $pdo, string $query, string $filename, array $headers, array $params = []): void
 {
     $file = fopen($filename, 'w');
     // Agregar BOM para que Excel detecte los acentos y UTF-8 correctamente
     fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
     fputcsv($file, $headers);
 
-    $stmt = $pdo->query($query);
-    if ($stmt) {
+    $stmt = $pdo->prepare($query);
+    if ($stmt->execute($params)) {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             fputcsv($file, $row);
         }
@@ -44,64 +49,106 @@ function generar_csv_desde_query(PDO $pdo, string $query, string $filename, arra
     fclose($file);
 }
 
+// Obtener el tipo de exportación para saber si filtramos por carrera
+$stmt_tipo = $pdo->prepare("SELECT tipo FROM exportaciones WHERE id = ?");
+$stmt_tipo->execute([$exportacion_id]);
+$exportacion = $stmt_tipo->fetch(PDO::FETCH_ASSOC);
+$tipo_exportacion = $exportacion ? $exportacion['tipo'] : 'GLOBAL';
+
+$es_carrera = (strpos($tipo_exportacion, 'CARRERA_') === 0);
+$carrera_filtro = $es_carrera ? substr($tipo_exportacion, 8) : null;
+
+$where_alumnos = $es_carrera ? " WHERE a.carrera = :carrera " : "";
+$params_alumnos = $es_carrera ? [':carrera' => $carrera_filtro] : [];
+
+$nivel_a_romano = function($nivel) {
+    $mapa = [1=>'I', 2=>'II', 3=>'III', 4=>'IV', 5=>'V', 6=>'VI', 7=>'VII', 8=>'VIII', 9=>'IX', 10=>'X'];
+    $n = (int)$nivel;
+    return isset($mapa[$n]) ? $mapa[$n] : $nivel;
+};
+
 try {
     // 1. Alumnos (Sin IDs)
     generar_csv_desde_query(
         $pdo,
-        "SELECT u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, u.correo, a.carrera, u.telefono, u.estatus 
+        "SELECT u.codigo, CONCAT(u.nombre, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre_completo, u.correo, a.carrera, u.telefono, u.estatus 
          FROM alumnos a 
-         JOIN usuarios u ON a.usuario_id = u.usuario_id",
+         JOIN usuarios u ON a.usuario_id = u.usuario_id" . $where_alumnos,
         $temp_dir . '/01_Alumnos.csv',
-        ['Código', 'Nombre', 'Apellido Paterno', 'Apellido Materno', 'Correo', 'Carrera', 'Teléfono', 'Estatus']
+        ['Código', 'Nombre Completo', 'Correo', 'Carrera', 'Teléfono', 'Estatus'],
+        $params_alumnos
     );
     actualizar_progreso($pdo, $exportacion_id, 20);
 
-    // 2. Profesores (Sin IDs)
-    generar_csv_desde_query(
-        $pdo,
-        "SELECT u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, u.correo, p.nacionalidad, p.experiencia, u.estatus 
-         FROM profesores p 
-         JOIN usuarios u ON p.usuario_id = u.usuario_id",
-        $temp_dir . '/02_Profesores.csv',
-        ['Código', 'Nombre', 'Apellido Paterno', 'Apellido Materno', 'Correo', 'Nacionalidad', 'Experiencia', 'Estatus']
-    );
-    actualizar_progreso($pdo, $exportacion_id, 30);
+    if (!$es_carrera) {
+        // 2. Profesores (Sin IDs)
+        generar_csv_desde_query(
+            $pdo,
+            "SELECT u.codigo, CONCAT(u.nombre, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre_completo, u.correo, p.nacionalidad, p.experiencia, u.estatus 
+             FROM profesores p 
+             JOIN usuarios u ON p.usuario_id = u.usuario_id",
+            $temp_dir . '/02_Profesores.csv',
+            ['Código', 'Nombre Completo', 'Correo', 'Nacionalidad', 'Experiencia', 'Estatus']
+        );
+        actualizar_progreso($pdo, $exportacion_id, 30);
+    }
 
-    // 3. Grupos
-    generar_csv_desde_query(
-        $pdo,
-        "SELECT g.nrc, g.clave_siiau, m.nombre AS materia, c.nombre AS ciclo, u.nombre AS profesor, g.cupo, g.clave_grupo, g.estado 
-         FROM grupos g
-         LEFT JOIN materias m ON g.materia_id = m.materia_id
-         LEFT JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-         LEFT JOIN profesores p ON g.profesor_id = p.profesor_id
-         LEFT JOIN usuarios u ON p.usuario_id = u.usuario_id",
-        $temp_dir . '/03_Grupos.csv',
-        ['NRC', 'Clave SIIAU', 'Materia', 'Ciclo', 'Profesor', 'Cupo', 'Clave Grupo', 'Estado']
-    );
-    actualizar_progreso($pdo, $exportacion_id, 45);
+    if (!$es_carrera) {
+        // 3. Grupos
+        $file_grupos = fopen($temp_dir . '/03_Grupos.csv', 'w');
+        fprintf($file_grupos, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        fputcsv($file_grupos, ['Clave Materia', 'Materia', 'NRC Presencial', 'NRC Virtual', 'Profesor', 'Correo Electrónico', 'Ciclo']);
+
+        $stmt_grupos = $pdo->query("SELECT g.clave_grupo, MAX(m.clave) AS clave_materia, MAX(m.nombre) AS materia, MAX(m.nivel) AS nivel,
+                                           MAX(CONCAT(u.nombre, ' ', u.apellido_paterno, ' ', u.apellido_materno)) AS profesor, MAX(u.correo) AS correo,
+                                           MAX(c.nombre) AS ciclo,
+                                           (SELECT MAX(g2.nrc) FROM grupos g2 JOIN horarios h2 ON g2.nrc = h2.nrc WHERE g2.clave_grupo = g.clave_grupo AND h2.modalidad = 'PRESENCIAL') as nrc_presencial,
+                                           (SELECT MAX(g2.nrc) FROM grupos g2 JOIN horarios h2 ON g2.nrc = h2.nrc WHERE g2.clave_grupo = g.clave_grupo AND h2.modalidad = 'VIRTUAL') as nrc_virtual
+                                    FROM grupos g
+                                    LEFT JOIN materias m ON g.materia_id = m.materia_id
+                                    LEFT JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                                    LEFT JOIN profesores p ON g.profesor_id = p.profesor_id
+                                    LEFT JOIN usuarios u ON p.usuario_id = u.usuario_id
+                                    GROUP BY g.clave_grupo");
+
+        while ($g = $stmt_grupos->fetch(PDO::FETCH_ASSOC)) {
+            fputcsv($file_grupos, [
+                $g['clave_materia'],
+                trim($g['materia'] . ' ' . $nivel_a_romano($g['nivel'])),
+                $g['nrc_presencial'] ? $g['nrc_presencial'] : 'NA',
+                $g['nrc_virtual'] ? $g['nrc_virtual'] : 'NA',
+                trim($g['profesor']),
+                $g['correo'],
+                $g['ciclo']
+            ]);
+        }
+        fclose($file_grupos);
+        actualizar_progreso($pdo, $exportacion_id, 45);
+    }
 
     // 4. Diagnósticos
     generar_csv_desde_query(
         $pdo,
-        "SELECT u.codigo, u.nombre, u.apellido_paterno, e.idioma, e.calificacion_texto, e.nivel_asignado, e.fecha_realizacion, e.periodo 
+        "SELECT u.codigo, CONCAT(u.nombre, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre_completo, u.correo, e.idioma, e.calificacion_texto, e.nivel_asignado, e.fecha_realizacion, e.periodo 
          FROM examenes_diagnosticos e
          JOIN alumnos a ON e.alumno_id = a.alumno_id
-         JOIN usuarios u ON a.usuario_id = u.usuario_id",
+         JOIN usuarios u ON a.usuario_id = u.usuario_id" . $where_alumnos,
         $temp_dir . '/04_Diagnosticos.csv',
-        ['Código Alumno', 'Nombre', 'Apellido', 'Idioma', 'Calificación', 'Nivel Asignado', 'Fecha Realización', 'Periodo']
+        ['Código Alumno', 'Nombre Completo', 'Correo Electrónico', 'Idioma', 'Calificación', 'Nivel Asignado', 'Fecha Realización', 'Periodo'],
+        $params_alumnos
     );
     actualizar_progreso($pdo, $exportacion_id, 55);
 
     // 5. Certificaciones
     generar_csv_desde_query(
         $pdo,
-        "SELECT u.codigo, u.nombre, u.apellido_paterno, c.idioma, c.puntaje, c.nivel_obtenido, c.periodo, c.fecha_aplicacion 
+        "SELECT u.codigo, CONCAT(u.nombre, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre_completo, u.correo, c.idioma, c.puntaje, c.nivel_obtenido, c.periodo, c.fecha_aplicacion 
          FROM certificaciones c
          JOIN alumnos a ON c.alumno_id = a.alumno_id
-         JOIN usuarios u ON a.usuario_id = u.usuario_id",
+         JOIN usuarios u ON a.usuario_id = u.usuario_id" . $where_alumnos,
         $temp_dir . '/05_Certificaciones.csv',
-        ['Código Alumno', 'Nombre', 'Apellido', 'Idioma', 'Puntaje', 'Nivel', 'Periodo', 'Fecha Aplicación']
+        ['Código Alumno', 'Nombre Completo', 'Correo Electrónico', 'Idioma', 'Puntaje', 'Nivel', 'Periodo', 'Fecha Aplicación'],
+        $params_alumnos
     );
     actualizar_progreso($pdo, $exportacion_id, 65);
 
@@ -109,9 +156,10 @@ try {
     generar_csv_desde_query(
         $pdo,
         "SELECT codigo_alumno, nombre_alumno, carrera, ciclo_acreditacion, clave_materia, nombre_materia, num_dictamen, fecha_carga 
-         FROM dictamenes_estudiantes",
+         FROM dictamenes_estudiantes" . ($es_carrera ? " WHERE carrera = :carrera " : ""),
         $temp_dir . '/06_Dictamenes.csv',
-        ['Código Alumno', 'Nombre', 'Carrera', 'Ciclo Acreditación', 'Clave Materia', 'Nombre Materia', 'Num Dictamen', 'Fecha Carga']
+        ['Código Alumno', 'Nombre', 'Carrera', 'Ciclo Acreditación', 'Clave Materia', 'Nombre Materia', 'Num Dictamen', 'Fecha Carga'],
+        $params_alumnos
     );
     actualizar_progreso($pdo, $exportacion_id, 75);
 
@@ -183,8 +231,10 @@ try {
                    LEFT JOIN materias m ON g.materia_id = m.materia_id
                    LEFT JOIN ciclos cl ON g.ciclo_id = cl.ciclo_id
                    LEFT JOIN calificaciones c ON i.inscripcion_id = c.inscripcion_id
+                   $where_alumnos
                    ORDER BY u.codigo, g.nrc";
-    $stmt_base = $pdo->query($query_base);
+    $stmt_base = $pdo->prepare($query_base);
+    $stmt_base->execute($params_alumnos);
 
     $data_agrupada = [];
     while ($row = $stmt_base->fetch(PDO::FETCH_ASSOC)) {
@@ -213,13 +263,6 @@ try {
     $file_calif = fopen($temp_dir . '/07_Calificaciones.csv', 'w');
     fprintf($file_calif, chr(0xEF) . chr(0xBB) . chr(0xBF));
     fputcsv($file_calif, $headers_calif);
-
-    // Función para convertir nivel a número romano
-    $nivel_a_romano = function($nivel) {
-        $mapa = [1=>'I', 2=>'II', 3=>'III', 4=>'IV', 5=>'V', 6=>'VI', 7=>'VII', 8=>'VIII', 9=>'IX', 10=>'X'];
-        $n = (int)$nivel;
-        return isset($mapa[$n]) ? $mapa[$n] : $nivel;
-    };
 
     foreach ($data_agrupada as $ins) {
         $materia_con_nivel = trim($ins['materia'] . ' ' . $nivel_a_romano($ins['nivel']));
@@ -262,7 +305,8 @@ try {
 
     // 8. Crear archivo ZIP
     actualizar_progreso($pdo, $exportacion_id, 80);
-    $zip_filename = 'Exportacion_Global_' . date('Ymd_His') . '_ID' . $exportacion_id . '.zip';
+    $prefijo_zip = 'Exportacion_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $tipo_exportacion);
+    $zip_filename = $prefijo_zip . '_' . date('Ymd_His') . '_ID' . $exportacion_id . '.zip';
     $archivos_dir = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'archivos';
     if (!is_dir($archivos_dir)) {
         mkdir($archivos_dir, 0777, true);
