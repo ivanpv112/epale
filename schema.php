@@ -1,4 +1,4 @@
 <?php
 require 'db.php';
-$stmt=$pdo->query('SELECT * FROM horarios LIMIT 1');
-print_r($stmt->fetch(PDO::FETCH_ASSOC));
+$stmt=$pdo->query('SHOW COLUMNS FROM exportaciones');
+print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
