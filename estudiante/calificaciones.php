@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (isset($_POST['action']) && $_POST['action'] == 'cancelar_baja') {
         $solicitud_id = $_POST['solicitud_id'];
-        $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'CANCELADA' WHERE solicitud_id = ?")->execute([$solicitud_id]);
+        $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'CANCELADA', fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$solicitud_id]);
         $mensaje = "Has retirado tu solicitud de baja exitosamente."; $tipo_mensaje = "success";
     }
 }
@@ -102,7 +102,15 @@ if ($ins_activa) {
 }
 $porcentaje_total = $puntos_totales_posibles > 0 ? ($puntaje_total_acumulado / $puntos_totales_posibles) * 100 : 0;
 
+$config_file = '../config.json';
+$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : ['bajas_habilitadas' => true];
+$bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
+
 if (!function_exists('format_score')) {
+    /**
+     * @param float|int|string $num
+     * @return float|int
+     */
     function format_score($num) { return floatval($num) == intval($num) ? intval($num) : floatval($num); }
 }
 ?>
@@ -145,9 +153,17 @@ if (!function_exists('format_score')) {
                                 <i class="fas fa-clock"></i> Solicitud Pendiente
                             </button>
                         <?php else: ?>
-                            <button class="btn-baja" onclick="abrirModal('modalSolicitarBaja')">
-                                <i class="fas fa-sign-out-alt"></i> Solicitar baja
-                            </button>
+                            <?php if ($bajas_habilitadas): ?>
+                                <button class="btn-baja" onclick="abrirModal('modalSolicitarBaja')">
+                                    <i class="fas fa-sign-out-alt"></i> Solicitar baja
+                                </button>
+                            <?php else: ?>
+                                <div style="display:inline-block;" title="El periodo para solicitar la baja ha terminado">
+                                    <button class="btn-baja" style="opacity: 0.5; pointer-events: none;" disabled>
+                                        <i class="fas fa-sign-out-alt"></i> Solicitar baja
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if(count($historial_solicitudes) > 0): ?>
