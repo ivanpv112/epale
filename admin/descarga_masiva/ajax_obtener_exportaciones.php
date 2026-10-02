@@ -10,10 +10,28 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
 }
 
 $user_id = $_SESSION['user_id'];
+$fecha = $_GET['fecha'] ?? '';
+$tipo = $_GET['tipo'] ?? 'Todos';
 
 try {
-    $stmt = $pdo->prepare("SELECT id, tipo, estado, progreso, archivo_ruta, fecha_solicitud FROM exportaciones WHERE admin_id = ? ORDER BY id DESC LIMIT 10");
-    $stmt->execute([$user_id]);
+    $sql = "SELECT id, tipo, estado, progreso, archivo_ruta, fecha_solicitud FROM exportaciones WHERE admin_id = ?";
+    $params = [$user_id];
+
+    if (!empty($fecha)) {
+        $sql .= " AND DATE(fecha_solicitud) = ?";
+        $params[] = $fecha;
+    }
+
+    if ($tipo === 'GLOBAL') {
+        $sql .= " AND tipo = 'GLOBAL'";
+    } elseif ($tipo === 'CARRERA') {
+        $sql .= " AND tipo LIKE 'CARRERA_%'";
+    }
+
+    $sql .= " ORDER BY id DESC LIMIT 50";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(['success' => true, 'data' => $data]);
