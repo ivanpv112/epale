@@ -84,8 +84,20 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
 
         <!-- HISTORIAL DE DESCARGAS -->
         <div style="margin-top: 50px;">
-            <h3 style="color: var(--udg-blue);"><i class="fas fa-history"></i> Historial de Descargas</h3>
-            <p style="color: #666; font-size: 0.9rem;">Aquí aparecerán los archivos generados. Puedes seguir navegando mientras se procesan.</p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+                <div>
+                    <h3 style="color: var(--udg-blue); margin-bottom: 5px;"><i class="fas fa-history"></i> Historial de Descargas</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin: 0;">Aquí aparecerán los archivos generados. Puedes seguir navegando mientras se procesan.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="filtro_fecha" class="filter-select" style="max-width: 150px; cursor: pointer;" title="Filtrar por fecha" onchange="cargarHistorial()">
+                    <select id="filtro_tipo" class="filter-select" style="max-width: 200px; cursor: pointer;" onchange="cargarHistorial()">
+                        <option value="Todos">Todos los tipos</option>
+                        <option value="GLOBAL">Global</option>
+                        <option value="CARRERA">Por Carrera</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="table-wrapper">
                 <table class="admin-table">
@@ -120,9 +132,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
 
         // Función para consultar la BD periódicamente
         function cargarHistorial() {
+            let fecha = $('#filtro_fecha').val() || '';
+            let tipo = $('#filtro_tipo').val() || 'Todos';
+
             $.ajax({
                 url: 'descarga_masiva/ajax_obtener_exportaciones.php',
                 type: 'GET',
+                data: { fecha: fecha, tipo: tipo },
                 dataType: 'json',
                 success: function(res) {
                     if(res.success) {
