@@ -346,3 +346,28 @@ details.tree-level[open] > summary { background: #f4f9fc; border-bottom: 1px sol
 .module-card:hover i { color: var(--udg-blue); }
 .module-card h3 { margin: 0 0 10px 0; color: var(--udg-blue); font-size: 1.3rem; }
 .module-card p { margin: 0; color: #666; font-size: 0.9rem; line-height: 1.5; }
+
+/* ========================================= 13. SWITCH ON/OFF PERSONALIZADO ========================================= */
+.switch.switch-on-off { width: 64px; height: 28px; }
+.switch-on-off .slider-on-off { background-color: #dc3545; border-radius: 28px; overflow: hidden; }
+.switch-on-off .slider-on-off:before { height: 22px; width: 22px; left: 3px; bottom: 3px; z-index: 2; }
+.switch-on-off input:checked + .slider-on-off { background-color: #28a745; }
+.switch-on-off input:checked + .slider-on-off:before { transform: translateX(36px); }
+.switch-on-off .slider-on-off:after {
+    content: "OFF";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    font-family: sans-serif;
+    transition: .4s;
+    z-index: 1;
+}
+.switch-on-off input:checked + .slider-on-off:after {
+    content: "ON";
+    left: 10px;
+    right: auto;
+}
