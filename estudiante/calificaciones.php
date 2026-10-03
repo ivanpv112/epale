@@ -14,9 +14,16 @@ $alumno_id = $alumno['alumno_id'];
 
 $mensaje = ''; $tipo_mensaje = '';
 
+$config_file = '../config.json';
+$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : ['bajas_habilitadas' => true];
+$bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['action']) && $_POST['action'] == 'solicitar_baja') {
+        if (!$bajas_habilitadas) {
+            die("Error de Seguridad: El periodo para solicitar bajas se encuentra cerrado.");
+        }
         $insc_baja = $_POST['inscripcion_id'];
         $motivo = strip_tags(trim($_POST['motivo']));
         $descripcion = substr(strip_tags(trim($_POST['descripcion'])), 0, 250);
@@ -102,9 +109,6 @@ if ($ins_activa) {
 }
 $porcentaje_total = $puntos_totales_posibles > 0 ? ($puntaje_total_acumulado / $puntos_totales_posibles) * 100 : 0;
 
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : ['bajas_habilitadas' => true];
-$bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
 
 if (!function_exists('format_score')) {
     /**
@@ -147,7 +151,7 @@ if (!function_exists('format_score')) {
                     </div>
 
                 <?php else: ?>
-                    <div style="width: 250px;">
+                    <div style="display: flex; flex-direction: column; width: max-content; gap: 8px;">
                         <?php if($solicitud_pendiente): ?>
                             <button class="btn-pendiente" onclick="abrirModal('modalRetirarBaja')">
                                 <i class="fas fa-clock"></i> Solicitud Pendiente
@@ -158,11 +162,9 @@ if (!function_exists('format_score')) {
                                     <i class="fas fa-sign-out-alt"></i> Solicitar baja
                                 </button>
                             <?php else: ?>
-                                <div style="display:inline-block;" title="El periodo para solicitar la baja ha terminado">
-                                    <button class="btn-baja" style="opacity: 0.5; pointer-events: none;" disabled>
-                                        <i class="fas fa-sign-out-alt"></i> Solicitar baja
-                                    </button>
-                                </div>
+                                <button class="btn-baja" style="opacity: 0.5; pointer-events: none;" disabled title="El periodo para solicitar la baja ha terminado">
+                                    <i class="fas fa-sign-out-alt"></i> Solicitar baja
+                                </button>
                             <?php endif; ?>
                         <?php endif; ?>
 
