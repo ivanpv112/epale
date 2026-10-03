@@ -152,10 +152,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .dashboard-grid .card:nth-child(3) { border-top-color: var(--warning); }
 
 /* 4. BOTONES ESPECIALES, TABLAS Y AVISOS */
-.btn-baja { background: #dc3545 !important; color: #ffffff !important; border: none !important; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; width: 100%; text-align: center; }
+.btn-baja { background: #dc3545 !important; color: #ffffff !important; border: none !important; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
 .btn-baja:hover { background: #c82333 !important; transform: translateY(-2px); }
-.btn-pendiente { background: #ffc107; border: 1px solid #e0a800; color: #856404; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: bold; width: 100%; text-align: center; }
-.btn-historial { background: var(--bg-gray); border: 1px solid #ddd; color: var(--text-dark); padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; }
+.btn-pendiente { background: #ffc107; border: 1px solid #e0a800; color: #856404; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.btn-historial { background: var(--bg-gray); border: 1px solid #ddd; color: var(--text-dark); padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
 .clickable-row { cursor: pointer; transition: background-color 0.2s; }
 .clickable-row:hover { background-color: var(--bg-gray); }
 .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
