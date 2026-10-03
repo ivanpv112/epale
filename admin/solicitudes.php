@@ -32,15 +32,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     try {
         $pdo->beginTransaction();
 
+        // Obtener datos para el historial
+        $stmtInfo = $pdo->prepare("
+            SELECT u.nombre, u.apellido_paterno, u.codigo, m.nombre AS materia, g.nrc 
+            FROM solicitudes_bajas sb 
+            JOIN inscripciones i ON sb.inscripcion_id = i.inscripcion_id 
+            JOIN alumnos a ON i.alumno_id = a.alumno_id 
+            JOIN usuarios u ON a.usuario_id = u.usuario_id 
+            JOIN grupos g ON i.nrc = g.nrc 
+            JOIN materias m ON g.materia_id = m.materia_id 
+            WHERE sb.solicitud_id = ?
+        ");
+        $stmtInfo->execute([$solicitud_id]);
+        $info = $stmtInfo->fetch(PDO::FETCH_ASSOC);
+        $afectado = $info ? $info['nombre'] . ' ' . $info['apellido_paterno'] . ' (' . $info['codigo'] . ')' : 'Desconocido';
+        $clase_info = $info ? $info['materia'] . " (NRC: " . $info['nrc'] . ")" : 'Clase Desconocida';
+
         if ($_POST['action'] === 'aprobar') {
             $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'APROBADA', respuesta_admin = ?, fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$respuesta, $solicitud_id]);
             // Solo cambiamos el estatus a BAJA, ya NO borramos las calificaciones del Kárdex
             $pdo->prepare("UPDATE inscripciones SET estatus = 'BAJA' WHERE inscripcion_id = ?")->execute([$inscripcion_id]);
 
+            registrar_historial($pdo, $_SESSION['user_id'], 'Estado', 'Solicitudes', 'Aprobación de Baja', $afectado, "Clase: $clase_info • Estado: Pendiente → Aprobada");
+
             $mensaje = "Solicitud aprobada: El alumno ha sido dado de baja, pero sus calificaciones se conservan en el Kárdex.";
             $tipo_mensaje = "success";
         } elseif ($_POST['action'] === 'rechazar') {
             $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'RECHAZADA', respuesta_admin = ?, fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$respuesta, $solicitud_id]);
+            
+            registrar_historial($pdo, $_SESSION['user_id'], 'Estado', 'Solicitudes', 'Rechazo de Baja', $afectado, "Clase: $clase_info • Estado: Pendiente → Rechazada");
+
             $mensaje = "Solicitud rechazada. El alumno permanece en la clase.";
             $tipo_mensaje = "success";
         }
@@ -57,15 +78,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // LÓGICA DE PESTAÑAS Y FILTROS (PENDIENTES VS HISTORIAL)
 // =======================================================
 $vista = isset($_GET['vista']) ? $_GET['vista'] : 'pendientes';
-$filtro_fecha = "";
-if ($vista === 'historial' && !empty($_GET['fecha'])) {
-    $fecha_limpia = preg_replace('/[^0-9\-]/', '', $_GET['fecha']);
-    $filtro_fecha = " AND DATE(sb.fecha_solicitud) = '$fecha_limpia'";
+$busqueda = isset($_GET['q']) ? trim($_GET['q']) : '';
+
+$condiciones = [];
+$params = [];
+
+if ($vista === 'historial') {
+    $condiciones[] = "sb.estatus != 'PENDIENTE'";
+    
+    if (!empty($_GET['fecha'])) {
+        $condiciones[] = "DATE(sb.fecha_solicitud) = ?";
+        $params[] = preg_replace('/[^0-9\-]/', '', $_GET['fecha']);
+    }
+    
+    if (!empty($busqueda)) {
+        $condiciones[] = "(u.codigo LIKE ? OR u.nombre LIKE ? OR u.apellido_paterno LIKE ?)";
+        $q_like = "%$busqueda%";
+        $params[] = $q_like;
+        $params[] = $q_like;
+        $params[] = $q_like;
+    }
+    $orden = "sb.fecha_solicitud DESC";
+} else {
+    $condiciones[] = "sb.estatus = 'PENDIENTE'";
+    $orden = "sb.fecha_solicitud ASC";
 }
 
-$filtro_estatus = ($vista === 'historial') ? "sb.estatus != 'PENDIENTE'" : "sb.estatus = 'PENDIENTE'";
-$filtro_estatus .= $filtro_fecha;
-$orden = ($vista === 'historial') ? "sb.fecha_solicitud DESC" : "sb.fecha_solicitud ASC";
+$where_clause = implode(' AND ', $condiciones);
 
 $sql = "SELECT sb.*, u.nombre, u.apellido_paterno, u.codigo, u.correo, 
                m.nombre AS materia, m.nivel, m.clave, c.nombre AS ciclo, g.nrc
@@ -76,9 +115,12 @@ $sql = "SELECT sb.*, u.nombre, u.apellido_paterno, u.codigo, u.correo,
         JOIN grupos g ON i.nrc = g.nrc
         JOIN materias m ON g.materia_id = m.materia_id
         JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-        WHERE $filtro_estatus
+        WHERE $where_clause
         ORDER BY $orden";
-$solicitudes = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$solicitudes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Contar pendientes para la pestaña
 $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'")->fetchColumn();
@@ -136,9 +178,23 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
         </div>
 
         <?php if ($vista == 'historial'): ?>
-            <form method="GET" action="" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; justify-content: flex-end;">
+            <form method="GET" action="" class="toolbar" style="margin-bottom: 20px; justify-content: flex-end;">
                 <input type="hidden" name="vista" value="historial">
+                
+                <i class="fas fa-search icon-muted" style="align-self:center;"></i>
+                <input type="text" name="q" class="search-input" placeholder="Buscar código o nombre..." value="<?php echo htmlspecialchars($busqueda); ?>" style="width: 250px;">
+                
                 <input type="date" id="fecha" name="fecha" value="<?php echo htmlspecialchars($_GET['fecha'] ?? ''); ?>" class="filter-select" style="max-width: 150px; cursor: pointer;" title="Filtrar por fecha" onchange="this.form.submit()">
+                
+                <button type="submit" style="background: var(--udg-blue); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: 0.2s;">
+                    Buscar
+                </button>
+
+                <?php if(!empty($busqueda) || !empty($_GET['fecha'])): ?>
+                    <a href="?vista=historial" style="padding: 8px 15px; background: #6c757d; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.95rem; transition: 0.2s;" title="Limpiar Filtros">
+                        Limpiar
+                    </a>
+                <?php endif; ?>
             </form>
         <?php endif; ?>
 

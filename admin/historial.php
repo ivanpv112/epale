@@ -123,7 +123,7 @@ function getActionStyle(string $tipo_accion)
             
             <select name="cat" class="filter-select" style="max-width: 200px; cursor: pointer;" onchange="this.form.submit()">
                 <?php
-                $categorias = ['Todos', 'Usuarios', 'Calificaciones', 'Archivos', 'Grupos / Idioma'];
+                $categorias = ['Todos', 'Usuarios', 'Calificaciones', 'Archivos', 'Grupos / Idioma', 'Solicitudes'];
                 foreach ($categorias as $c):
                     $sel = ($filtro_categoria === $c) ? 'selected' : '';
                     echo "<option value=\"$c\" $sel>$c</option>";
