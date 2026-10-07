@@ -6,7 +6,8 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index"); exit;
+    header("Location: ../index");
+    exit;
 }
 
 $stmt_alumno = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
@@ -14,51 +15,70 @@ $stmt_alumno->execute([$_SESSION['user_id']]);
 $alumno_id = $stmt_alumno->fetchColumn();
 
 // OBTENER SOLO MATERIAS ACTIVAS
-$sql_horarios = "SELECT m.materia_id, m.nombre as materia, c.nombre as ciclo, 
-                        h.modalidad, h.dias_patron, h.hora_inicio, h.hora_fin, h.aula
-                 FROM inscripciones i
-                 JOIN grupos g ON i.nrc = g.nrc
-                 JOIN materias m ON g.materia_id = m.materia_id
-                 JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-                 JOIN horarios h ON g.nrc = h.nrc
-                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'
-                 ORDER BY h.hora_inicio ASC";
-                 
+$sql_horarios = "
+    SELECT m.materia_id, m.nombre as materia, m.nivel, c.nombre as ciclo, 
+           h.modalidad, h.dias_patron, h.hora_inicio, h.hora_fin, h.aula, i.estatus
+    FROM inscripciones i
+    JOIN grupos g_inscrito ON i.nrc = g_inscrito.nrc
+    JOIN grupos g_todos ON 
+        (g_inscrito.clave_grupo IS NOT NULL AND g_inscrito.clave_grupo != '' 
+         AND g_todos.clave_grupo = g_inscrito.clave_grupo 
+         AND g_todos.materia_id = g_inscrito.materia_id 
+         AND g_todos.ciclo_id = g_inscrito.ciclo_id)
+        OR (g_todos.nrc = g_inscrito.nrc)
+    JOIN materias m ON g_todos.materia_id = m.materia_id
+    JOIN ciclos c ON g_todos.ciclo_id = c.ciclo_id
+    JOIN horarios h ON g_todos.nrc = h.nrc
+    WHERE i.alumno_id = ? AND i.estatus IN ('INSCRITO', 'SOLICITUD_ALTA') AND g_todos.estado = 'ACTIVO'
+    ORDER BY h.hora_inicio ASC
+";
+
 $stmt_h = $pdo->prepare($sql_horarios);
 $stmt_h->execute([$alumno_id]);
 $horarios_db = $stmt_h->fetchAll(PDO::FETCH_ASSOC);
 
 $ciclo_actual = count($horarios_db) > 0 ? $horarios_db[0]['ciclo'] : 'Sin clases activas';
 
-function descifrarDias($cadena) {
+function descifrarDias(string $cadena)
+{
     $columnas = [];
     $s = strtoupper($cadena);
-    
-    if(strpos($s, 'LUN')!==false) $columnas[] = 2; 
-    if(strpos($s, 'MAR')!==false) $columnas[] = 3; 
-    if(strpos($s, 'MIE')!==false || strpos($s, 'MIÉ')!==false) $columnas[] = 4; 
-    if(strpos($s, 'JUE')!==false) $columnas[] = 5; 
-    if(strpos($s, 'VIE')!==false) $columnas[] = 6; 
 
-    if(empty($columnas)) {
-        if(strpos($s, 'L')!==false) $columnas[] = 2;
-        if(strpos($s, 'M')!==false) $columnas[] = 3; 
-        if(strpos($s, 'I')!==false || strpos($s, 'X')!==false || strpos($s, 'W')!==false) $columnas[] = 4; 
-        if(strpos($s, 'J')!==false) $columnas[] = 5;
-        if(strpos($s, 'V')!==false) $columnas[] = 6;
+    if (strpos($s, 'LUN') !== false) $columnas[] = 2;
+    if (strpos($s, 'MAR') !== false) $columnas[] = 3;
+    if (strpos($s, 'MIE') !== false || strpos($s, 'MIÉ') !== false) $columnas[] = 4;
+    if (strpos($s, 'JUE') !== false) $columnas[] = 5;
+    if (strpos($s, 'VIE') !== false) $columnas[] = 6;
+    if (strpos($s, 'SAB') !== false || strpos($s, 'SÁB') !== false) $columnas[] = 7;
+
+    if (empty($columnas)) {
+        if (strpos($s, 'L') !== false) $columnas[] = 2;
+        if (strpos($s, 'M') !== false) $columnas[] = 3;
+        if (strpos($s, 'I') !== false || strpos($s, 'X') !== false || strpos($s, 'W') !== false) $columnas[] = 4;
+        if (strpos($s, 'J') !== false) $columnas[] = 5;
+        if (strpos($s, 'V') !== false) $columnas[] = 6;
+        if (strpos($s, 'S') !== false) $columnas[] = 7;
     }
     return array_unique($columnas);
 }
 
 // Paleta de colores para el horario que se ve bien en ambos modos
 $paleta = [
-    ['bg' => 'rgba(0, 86, 179, 0.1)', 'border' => '#8bb9ff', 'text' => 'var(--udg-blue)'], 
-    ['bg' => 'rgba(25, 135, 84, 0.1)', 'border' => '#89dfa9', 'text' => '#198754'], 
-    ['bg' => 'rgba(255, 193, 7, 0.1)', 'border' => '#ffe69c', 'text' => '#d39e00'], 
-    ['bg' => 'rgba(220, 53, 69, 0.1)', 'border' => '#f1aeb5', 'text' => '#dc3545'], 
-    ['bg' => 'rgba(111, 66, 193, 0.1)', 'border' => '#c29ffa', 'text' => '#6f42c1'], 
-    ['bg' => 'rgba(23, 162, 184, 0.1)', 'border' => '#9eeaf9', 'text' => '#17a2b8']  
+    ['bg' => 'rgba(0, 86, 179, 0.1)', 'border' => '#8bb9ff', 'text' => 'var(--udg-blue)'],
+    ['bg' => 'rgba(25, 135, 84, 0.1)', 'border' => '#89dfa9', 'text' => '#198754'],
+    ['bg' => 'rgba(255, 193, 7, 0.1)', 'border' => '#ffe69c', 'text' => '#d39e00'],
+    ['bg' => 'rgba(220, 53, 69, 0.1)', 'border' => '#f1aeb5', 'text' => '#dc3545'],
+    ['bg' => 'rgba(111, 66, 193, 0.1)', 'border' => '#c29ffa', 'text' => '#6f42c1'],
+    ['bg' => 'rgba(23, 162, 184, 0.1)', 'border' => '#9eeaf9', 'text' => '#17a2b8']
 ];
+
+if (!function_exists('getRomanNumeralHorario')) {
+    function getRomanNumeralHorario(int $num): string
+    {
+        $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+        return (string)($map[$num] ?? $num);
+    }
+}
 
 $colores_asignados = [];
 $color_index = 0;
@@ -76,10 +96,10 @@ foreach ($horarios_db as $h) {
     $hora_ini = (int)date('H', strtotime($h['hora_inicio']));
     $hora_fin = (int)date('H', strtotime($h['hora_fin']));
     $min_fin = (int)date('i', strtotime($h['hora_fin']));
-    
-    if ($min_fin > 0) $hora_fin++; 
 
-    $fila_inicio = ($hora_ini - 7) + 2; 
+    if ($min_fin > 0) $hora_fin++;
+
+    $fila_inicio = ($hora_ini - 7) + 2;
     $fila_fin = ($hora_fin - 7) + 2;
 
     $dias = descifrarDias($h['dias_patron']);
@@ -91,11 +111,12 @@ foreach ($horarios_db as $h) {
             'row_ini' => $fila_inicio,
             'row_fin' => $fila_fin,
             'color' => $color,
-            'titulo' => $h['materia'],
+            'titulo' => $h['materia'] . ' ' . getRomanNumeralHorario((int)$h['nivel']),
             'tiempo' => date('H:i', strtotime($h['hora_inicio'])) . ' - ' . date('H:i', strtotime($h['hora_fin'])),
             'aula' => $h['aula'],
             'icono' => $icono,
-            'modalidad' => $h['modalidad']
+            'modalidad' => $h['modalidad'],
+            'estatus' => $h['estatus']
         ];
     }
 }
@@ -103,6 +124,7 @@ foreach ($horarios_db as $h) {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -112,54 +134,72 @@ foreach ($horarios_db as $h) {
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
     <?php include 'menu_estudiante.php'; ?>
 
     <main class="main-content">
-        
+
         <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: var(--udg-blue); margin: 0; font-size: 2rem;">
                 <i class="far fa-calendar-alt"></i> Mi Horario
             </h1>
-            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 5px;">Ciclo: <?php echo htmlspecialchars($ciclo_actual); ?></p>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 5px;">Ciclo <?php echo htmlspecialchars($ciclo_actual); ?></p>
         </div>
 
         <div class="schedule-wrapper">
             <div class="schedule-grid">
-                
+
                 <div class="grid-header" style="grid-column: 1; grid-row: 1;"><i class="far fa-clock" style="font-size: 1.2rem;"></i></div>
                 <div class="grid-header" style="grid-column: 2; grid-row: 1;">Lunes</div>
                 <div class="grid-header" style="grid-column: 3; grid-row: 1;">Martes</div>
                 <div class="grid-header" style="grid-column: 4; grid-row: 1;">Miércoles</div>
                 <div class="grid-header" style="grid-column: 5; grid-row: 1;">Jueves</div>
                 <div class="grid-header" style="grid-column: 6; grid-row: 1;">Viernes</div>
+                <div class="grid-header" style="grid-column: 7; grid-row: 1;">Sábado</div>
 
-                <?php for ($h = 7; $h <= 19; $h++): 
-                    $fila = ($h - 7) + 2; 
+                <?php for ($h = 7; $h <= 19; $h++):
+                    $fila = ($h - 7) + 2;
                     $hora_str = str_pad($h, 2, '0', STR_PAD_LEFT) . ':00';
                 ?>
                     <div class="time-label" style="grid-row: <?php echo $fila; ?>;"><?php echo $hora_str; ?></div>
-                    
-                    <?php for($col = 2; $col <= 6; $col++): ?>
+
+                    <?php for ($col = 2; $col <= 7; $col++): ?>
                         <div class="grid-line" style="grid-column: <?php echo $col; ?>; grid-row: <?php echo $fila; ?>;"></div>
                     <?php endfor; ?>
                 <?php endfor; ?>
 
-                <?php foreach ($bloques_render as $b): ?>
+                <?php foreach ($bloques_render as $b): 
+                    $is_skeleton = ($b['estatus'] === 'SOLICITUD_ALTA');
+                    $bg_color = $is_skeleton ? 'transparent' : $b['color']['bg'];
+                    $border_color = $is_skeleton ? 'rgba(108, 117, 125, 0.4)' : $b['color']['border'];
+                    $border_style = $is_skeleton ? 'dashed' : 'solid';
+                    $text_color = $is_skeleton ? 'var(--text-muted)' : $b['color']['text'];
+                    $opacity = $is_skeleton ? '0.7' : '1';
+                ?>
                     <div class="class-block" style="
                         grid-column: <?php echo $b['col']; ?>; 
                         grid-row: <?php echo $b['row_ini']; ?> / <?php echo $b['row_fin']; ?>;
-                        background-color: <?php echo $b['color']['bg']; ?>;
-                        border-left-color: <?php echo $b['color']['border']; ?>;
-                        color: <?php echo $b['color']['text']; ?>;
+                        background-color: <?php echo $bg_color; ?>;
+                        border-left-color: <?php echo $border_color; ?>;
+                        border-left-style: <?php echo $border_style; ?>;
+                        color: <?php echo $text_color; ?>;
+                        opacity: <?php echo $opacity; ?>;
+                        <?php if($is_skeleton) echo 'border: 2px dashed ' . $border_color . '; border-left-width: 5px;'; ?>
                     ">
+                        <?php if($is_skeleton): ?>
+                            <div style="font-size: 0.7rem; color: #ffc107; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-hourglass-half"></i> Pendiente
+                            </div>
+                        <?php endif; ?>
+                        <div class="class-modality-badge"><?php echo htmlspecialchars($b['modalidad']); ?></div>
                         <div class="class-title"><?php echo htmlspecialchars($b['titulo']); ?></div>
-                        
+
                         <div class="class-details" style="font-weight: bold;">
                             <?php echo $b['icono']; ?> <?php echo htmlspecialchars($b['aula'] ?: 'Sin Aula'); ?>
                         </div>
-                        
+
                         <div class="class-details">
                             <i class="far fa-clock"></i> <?php echo $b['tiempo']; ?>
                         </div>
@@ -173,4 +213,5 @@ foreach ($horarios_db as $h) {
 
     <?php include '../main_footer.php'; ?>
 </body>
+
 </html>

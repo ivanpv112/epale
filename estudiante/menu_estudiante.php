@@ -76,6 +76,8 @@ if ($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto
     <ul class="yt-sidebar-menu">
         <li><a href="index" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
 
+        <li><a href="oferta_academica" class="<?php echo ($pagina_actual == 'oferta_academica.php') ? 'active' : ''; ?>"><i class="fas fa-book-reader"></i> Oferta Académica</a></li>
+
         <li><a href="calificaciones" class="<?php echo ($pagina_actual == 'calificaciones.php') ? 'active' : ''; ?>"><i class="fas fa-clipboard-check"></i> Calificaciones</a></li>
 
         <li><a href="horario" class="<?php echo ($pagina_actual == 'horario.php' || $pagina_actual == 'detalle_materia.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Horario</a></li>
