@@ -232,7 +232,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .cert-detail-value { color: var(--text-dark); font-size: 1.1rem; font-weight: bold; }
 
 /* 6. RESPONSIVE DESIGN */
-@media (max-width: 900px) { .main-header { height: auto !important; padding: 10px 15px !important; flex-direction: row !important; align-items: center !important; } .logo-container { width: auto !important; } .user-actions { width: auto !important; display: flex !important; gap: 10px !important; } .profile-name { display: none !important; } .profile-btn { padding: 4px !important; } .main-nav { display: none !important; } .dashboard-grid { grid-template-columns: 1fr; } .footer-content { flex-direction: column; } }
+@media (max-width: 900px) { .main-header { height: auto !important; padding: 10px 15px !important; flex-direction: row !important; align-items: center !important; } .logo-container { width: auto !important; } .user-actions { width: auto !important; display: flex !important; gap: 10px !important; } .profile-btn { padding: 4px !important; } .main-nav { display: none !important; } .dashboard-grid { grid-template-columns: 1fr; } .footer-content { flex-direction: column; } }
 
 /* 7. MODO OSCURO (GLOBAL) */
 [data-theme="dark"] { --bg-gray: #0b1121; --white: #151e32; --text-dark: #f8fafc; --text-muted: #94a3b8; --udg-blue: #3ba5ff; --udg-light: #60a5fa; }
