@@ -34,6 +34,10 @@ $stmt_notif = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus 
 $notif_bajas = $stmt_notif->fetchColumn();
 // Burbuja roja elegante (Pegada al texto)
 $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_bajas . '</span>' : '';
+
+$stmt_notif_altas = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE estatus = 'PENDIENTE'");
+$notif_altas = $stmt_notif_altas->fetchColumn();
+$badge_altas_html = ($notif_altas > 0) ? '<span class="badge-red-circle">' . $notif_altas . '</span>' : '';
 ?>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -73,7 +77,10 @@ $badge_html = ($notif_bajas > 0) ? '<span class="badge-red-circle">' . $notif_ba
         <li><a href="<?php echo $base_url ?? ''; ?>interfaz_carga_masiva" class="<?php echo ($pagina_actual == 'interfaz_carga_masiva.php') ? 'active' : ''; ?>"><i class="fas fa-file-upload"></i> Carga Masiva</a></li>
         <li><a href="<?php echo $base_url ?? ''; ?>interfaz_descarga_masiva" class="<?php echo ($pagina_actual == 'interfaz_descarga_masiva.php') ? 'active' : ''; ?>"><i class="fas fa-file-download"></i> Descarga Masiva</a></li>
         <li><a href="<?php echo $base_url ?? ''; ?>solicitudes" class="<?php echo ($pagina_actual == 'solicitudes.php') ? 'active' : ''; ?>">
-                <i class="fas fa-envelope-open-text"></i> Solicitudes Baja <?php echo $badge_html; ?>
+                <i class="fas fa-user-xmark"></i> Solicitudes Baja <?php echo $badge_html; ?>
+            </a></li>
+        <li><a href="<?php echo $base_url ?? ''; ?>solicitudes_altas" class="<?php echo ($pagina_actual == 'solicitudes_altas.php') ? 'active' : ''; ?>">
+                <i class="fas fa-user-check"></i> Solicitudes Alta <?php echo $badge_altas_html; ?>
             </a></li>
         <li><a href="<?php echo $base_url ?? ''; ?>avisos" class="<?php echo ($pagina_actual == 'avisos.php') ? 'active' : ''; ?>"><i class="fas fa-bullhorn"></i> Avisos Generales</a></li>
         <li><a href="<?php echo $base_url ?? ''; ?>reportes" class="<?php echo ($pagina_actual == 'reportes.php') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reportes Generales</a></li>

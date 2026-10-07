@@ -28,6 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $solicitud_id = $_POST['solicitud_id'];
     $inscripcion_id = $_POST['inscripcion_id'];
     $respuesta = strip_tags(trim($_POST['respuesta_admin']));
+    if (empty($respuesta)) {
+        $respuesta = ($_POST['action'] === 'aprobar') ? 'Su solicitud de baja ha sido aprobada.' : 'Su solicitud de baja ha sido rechazada.';
+    }
 
     try {
         $pdo->beginTransaction();
@@ -59,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $tipo_mensaje = "success";
         } elseif ($_POST['action'] === 'rechazar') {
             $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'RECHAZADA', respuesta_admin = ?, fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$respuesta, $solicitud_id]);
-            
+
             registrar_historial($pdo, $_SESSION['user_id'], 'Estado', 'Solicitudes', 'Rechazo de Baja', $afectado, "Clase: $clase_info • Estado: Pendiente → Rechazada");
 
             $mensaje = "Solicitud rechazada. El alumno permanece en la clase.";
@@ -85,12 +88,12 @@ $params = [];
 
 if ($vista === 'historial') {
     $condiciones[] = "sb.estatus != 'PENDIENTE'";
-    
+
     if (!empty($_GET['fecha'])) {
         $condiciones[] = "DATE(sb.fecha_solicitud) = ?";
         $params[] = preg_replace('/[^0-9\-]/', '', $_GET['fecha']);
     }
-    
+
     if (!empty($busqueda)) {
         $condiciones[] = "(u.codigo LIKE ? OR u.nombre LIKE ? OR u.apellido_paterno LIKE ?)";
         $q_like = "%$busqueda%";
@@ -107,7 +110,7 @@ if ($vista === 'historial') {
 $where_clause = implode(' AND ', $condiciones);
 
 $sql = "SELECT sb.*, u.nombre, u.apellido_paterno, u.codigo, u.correo, 
-               m.nombre AS materia, m.nivel, m.clave, c.nombre AS ciclo, g.nrc
+               m.materia_id, m.nombre AS materia, m.nivel, m.clave AS clave_materia, c.nombre AS ciclo, g.nrc, g.clave_grupo
         FROM solicitudes_bajas sb
         JOIN inscripciones i ON sb.inscripcion_id = i.inscripcion_id
         JOIN alumnos a ON i.alumno_id = a.alumno_id
@@ -121,6 +124,38 @@ $sql = "SELECT sb.*, u.nombre, u.apellido_paterno, u.codigo, u.correo,
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $solicitudes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+function getRomanNumeralBajas(int $num): string
+{
+    $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+    return $map[$num] ?? (string)$num;
+}
+
+foreach ($solicitudes as &$s) {
+    $stmtG = $pdo->prepare("SELECT g.nrc, h.modalidad 
+                            FROM grupos g LEFT JOIN horarios h ON g.nrc = h.nrc
+                            WHERE g.materia_id = ? AND g.clave_grupo = ?");
+    $stmtG->execute([$s['materia_id'], $s['clave_grupo']]);
+    $grupos_clase = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+
+    $nrc_presencial = 'NA';
+    $nrc_virtual = 'NA';
+
+    foreach ($grupos_clase as $gc) {
+        $mod = strtoupper($gc['modalidad'] ?? '');
+        if ($mod == 'PRESENCIAL') {
+            $nrc_presencial = $gc['nrc'];
+        } elseif ($mod == 'VIRTUAL') {
+            $nrc_virtual = $gc['nrc'];
+        } else {
+            if ($nrc_presencial == 'NA') $nrc_presencial = $gc['nrc'];
+        }
+    }
+
+    $s['nrc_presencial'] = $nrc_presencial;
+    $s['nrc_virtual'] = $nrc_virtual;
+    $s['nivel_romano'] = getRomanNumeralBajas($s['nivel']);
+}
 
 // Contar pendientes para la pestaña
 $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'")->fetchColumn();
@@ -141,6 +176,12 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .swal2-container {
+            z-index: 999999 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -149,7 +190,7 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
 
     <main class="main-content">
         <div class="page-title-center" style="margin-bottom: 20px; position: relative;">
-            <h1><i class="fas fa-envelope-open-text"></i> Solicitudes de Baja</h1>
+            <h1><i class="fas fa-user-xmark"></i> Solicitudes de Baja</h1>
             <p>Administra las peticiones de los alumnos o consulta el archivo histórico.</p>
 
             <div style="position: absolute; right: 0; top: 0; background: #fff; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 10px; border: 1px solid #eee;">
@@ -180,17 +221,17 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
         <?php if ($vista == 'historial'): ?>
             <form method="GET" action="" class="toolbar" style="margin-bottom: 20px; justify-content: flex-end;">
                 <input type="hidden" name="vista" value="historial">
-                
+
                 <i class="fas fa-search icon-muted" style="align-self:center;"></i>
                 <input type="text" name="q" class="search-input" placeholder="Buscar código o nombre..." value="<?php echo htmlspecialchars($busqueda); ?>" style="width: 250px;">
-                
+
                 <input type="date" id="fecha" name="fecha" value="<?php echo htmlspecialchars($_GET['fecha'] ?? ''); ?>" class="filter-select" style="max-width: 150px; cursor: pointer;" title="Filtrar por fecha" onchange="this.form.submit()">
-                
+
                 <button type="submit" style="background: var(--udg-blue); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: 0.2s;">
                     Buscar
                 </button>
 
-                <?php if(!empty($busqueda) || !empty($_GET['fecha'])): ?>
+                <?php if (!empty($busqueda) || !empty($_GET['fecha'])): ?>
                     <a href="?vista=historial" style="padding: 8px 15px; background: #6c757d; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.95rem; transition: 0.2s;" title="Limpiar Filtros">
                         Limpiar
                     </a>
@@ -232,8 +273,12 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
                                         <div style="font-size: 0.8rem; color: #888;"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($s['correo']); ?></div>
                                     </td>
                                     <td style="padding: 15px;">
-                                        <div style="font-weight: bold; color: #333;"><?php echo htmlspecialchars($s['materia'] . ' ' . $s['nivel']); ?></div>
-                                        <div style="font-size: 0.8rem; color: #888;">NRC: <?php echo htmlspecialchars($s['nrc']); ?> | Clave: <?php echo htmlspecialchars($s['clave']); ?> | <?php echo htmlspecialchars($s['ciclo']); ?></div>
+                                        <div style="font-weight: bold; color: #333;"><?php echo htmlspecialchars($s['materia']) . ' ' . $s['nivel_romano']; ?></div>
+                                        <div style="font-size: 0.8rem; color: #888; margin-top:2px;">Clave: <?php echo htmlspecialchars($s['clave_materia'] ?? $s['clave_grupo']); ?> | <?php echo htmlspecialchars($s['ciclo']); ?></div>
+                                        <div style="font-size: 0.8rem; color: #555; margin-top:2px; font-weight:bold;">
+                                            <span style="color:#ffc107;"><i class="fas fa-building"></i> <?php echo $s['nrc_presencial']; ?></span> -
+                                            <span style="color:#17a2b8;"><i class="fas fa-laptop"></i> <?php echo $s['nrc_virtual']; ?></span>
+                                        </div>
                                     </td>
 
                                     <?php if ($vista == 'historial'): ?>
@@ -316,11 +361,11 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
 
                 <div class="modal-body">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="sol-box">
+                        <div class="sol-box" style="border-left: 4px solid var(--udg-blue);">
                             <h4>Estudiante</h4>
                             <div style="font-size:1rem; color:var(--udg-blue); font-weight:bold;" id="txt_alumno"></div>
                         </div>
-                        <div class="sol-box" style="border-left: 4px solid var(--udg-light);">
+                        <div class="sol-box" style="border-left: 4px solid var(--udg-blue);">
                             <h4>Clase afectada</h4>
                             <div id="txt_clase" style="font-weight:bold; color:#333; font-size: 0.95rem;"></div>
                         </div>
@@ -332,9 +377,31 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
                         <div id="txt_desc"></div>
                     </div>
 
-                    <div id="admin_input_area">
-                        <label style="font-weight:bold; display:block; margin-bottom:5px;">Nota / Respuesta (Opcional)</label>
-                        <textarea name="respuesta_admin" rows="2" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;" placeholder="Mensaje visible para el alumno..."></textarea>
+                    <div id="admin_input_area" class="sol-box" style="background: #e2f0d9; border-color: #c3e6cb; border-left: 4px solid #28a745; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <h4 style="margin: 0;">Nota / Respuesta (Opcional)</h4>
+                            <button type="button" onclick="togglePanelRespuestas()" style="background:#f3e8ff; color:#6f42c1; border:1px solid #6f42c1; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#e2d6f8'" onmouseout="this.style.background='#f3e8ff'"><i class="fas fa-bolt"></i> Automatizado</button>
+                        </div>
+                        <textarea name="respuesta_admin" id="mComentarios" rows="2" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;" placeholder="Si no agregas un comentario, se usará uno predeterminado."></textarea>
+
+                        <div id="panelAutomatizado" style="display: none; background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-weight: bold; font-size: 0.85rem; color: #555;"><i class="fas fa-list-ul"></i> Respuestas Guardadas</span>
+                                <button type="button" onclick="mostrarFormNuevaRespuesta()" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"><i class="fas fa-plus"></i> Nueva</button>
+                            </div>
+
+                            <div id="formNuevaRespuesta" style="display: none; margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; border: 1px dashed #ccc;">
+                                <input type="text" id="nuevaRespTitulo" placeholder="Título (ej. Falta de cupo)" style="width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; box-sizing:border-box;">
+                                <textarea id="nuevaRespCuerpo" rows="2" placeholder="Cuerpo de la respuesta..." style="width: 100%; padding: 6px; margin-bottom: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; box-sizing:border-box;"></textarea>
+                                <div style="text-align: right;">
+                                    <button type="button" onclick="ocultarFormNuevaRespuesta()" style="background: none; border: none; color: #888; cursor: pointer; font-size: 0.8rem; margin-right: 10px; padding: 4px;">Cancelar</button>
+                                    <button type="button" onclick="guardarNuevaRespuesta()" style="background: #007bff; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;"><i class="fas fa-save"></i> Guardar</button>
+                                </div>
+                            </div>
+
+                            <div id="listaRespuestas" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px;">
+                            </div>
+                        </div>
 
                         <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-top: 15px;">
                             <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> Si apruebas esta solicitud, el alumno será dado de baja de la clase, pero sus calificaciones actuales se conservarán en su Kárdex para temas de auditoría.
@@ -431,7 +498,14 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
             document.getElementById('insc_id').value = solicitud.inscripcion_id;
 
             document.getElementById('txt_alumno').innerHTML = solicitud.nombre + ' ' + solicitud.apellido_paterno + '<br><span style="font-size:0.85rem; color:#666; font-family:monospace;">Código: ' + solicitud.codigo + '</span><br><span style="font-size:0.85rem; color:#666;"><i class="fas fa-envelope"></i> ' + solicitud.correo + '</span>';
-            document.getElementById('txt_clase').innerHTML = solicitud.materia + ' ' + solicitud.nivel + '<br><span style="font-size:0.85rem; color:#666;">NRC: ' + solicitud.nrc + ' | Clave: ' + solicitud.clave + ' | Ciclo: ' + solicitud.ciclo + '</span>';
+            document.getElementById('txt_clase').innerHTML = `
+                <div style="font-weight: bold; color: #333;">${solicitud.materia} ${solicitud.nivel_romano}</div>
+                <div style="font-size: 0.85rem; color: #666; margin-top:2px;">Clave: ${solicitud.clave_materia || solicitud.clave_grupo || solicitud.clave} | Ciclo: ${solicitud.ciclo}</div>
+                <div style="font-size: 0.85rem; color: #555; margin-top:2px; font-weight:bold;">
+                    <span style="color:#ffc107;"><i class="fas fa-building"></i> ${solicitud.nrc_presencial}</span> - 
+                    <span style="color:#17a2b8;"><i class="fas fa-laptop"></i> ${solicitud.nrc_virtual}</span>
+                </div>
+            `;
             document.getElementById('txt_motivo').innerText = solicitud.motivo;
             document.getElementById('txt_desc').innerText = solicitud.descripcion ? '"' + solicitud.descripcion + '"' : 'Sin descripción adicional.';
 
@@ -446,6 +520,7 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
                 adminResponseArea.style.display = 'none';
                 actionFooter.style.display = 'flex';
                 closeFooter.style.display = 'none';
+                document.getElementById('mComentarios').value = '';
             } else {
                 document.getElementById('modalTitle').innerHTML = '<i class="fas fa-archive"></i> Archivo Histórico';
                 adminInputArea.style.display = 'none';
@@ -494,6 +569,99 @@ $bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
 
         function cerrarReview() {
             document.getElementById('modalReview').style.display = 'none';
+            document.getElementById('panelAutomatizado').style.display = 'none';
+            ocultarFormNuevaRespuesta();
+        }
+
+        // ==========================
+        // Respuestas Automatizadas
+        // ==========================
+        function togglePanelRespuestas() {
+            const panel = document.getElementById('panelAutomatizado');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                cargarRespuestas();
+            } else {
+                panel.style.display = 'none';
+                ocultarFormNuevaRespuesta();
+            }
+        }
+
+        function mostrarFormNuevaRespuesta() {
+            document.getElementById('formNuevaRespuesta').style.display = 'block';
+        }
+
+        function ocultarFormNuevaRespuesta() {
+            document.getElementById('formNuevaRespuesta').style.display = 'none';
+            document.getElementById('nuevaRespTitulo').value = '';
+            document.getElementById('nuevaRespCuerpo').value = '';
+        }
+
+        function cargarRespuestas() {
+            fetch('api_respuestas.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const container = document.getElementById('listaRespuestas');
+                        container.innerHTML = '';
+                        if (data.data.length === 0) {
+                            container.innerHTML = '<span style="font-size:0.8rem; color:#888;">No hay respuestas guardadas.</span>';
+                            return;
+                        }
+                        data.data.forEach(r => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.style.textAlign = 'left';
+                            btn.style.background = '#f8f9fa';
+                            btn.style.border = '1px solid #ddd';
+                            btn.style.padding = '8px 10px';
+                            btn.style.borderRadius = '4px';
+                            btn.style.cursor = 'pointer';
+                            btn.style.fontSize = '0.85rem';
+                            btn.style.color = '#333';
+                            btn.style.transition = '0.2s';
+
+                            btn.onmouseover = () => btn.style.background = '#e9ecef';
+                            btn.onmouseout = () => btn.style.background = '#f8f9fa';
+
+                            btn.innerHTML = `<i class="fas fa-comment-dots" style="color:#6f42c1;"></i> <strong style="margin-left:5px;">${r.titulo}</strong>`;
+                            btn.onclick = () => {
+                                document.getElementById('mComentarios').value = r.cuerpo;
+                                document.getElementById('panelAutomatizado').style.display = 'none';
+                            };
+                            container.appendChild(btn);
+                        });
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function guardarNuevaRespuesta() {
+            const titulo = document.getElementById('nuevaRespTitulo').value.trim();
+            const cuerpo = document.getElementById('nuevaRespCuerpo').value.trim();
+            if (!titulo || !cuerpo) {
+                Swal.fire('Atención', 'Debes ingresar un título y un cuerpo para la respuesta.', 'warning');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('action', 'save');
+            formData.append('titulo', titulo);
+            formData.append('cuerpo', cuerpo);
+
+            fetch('api_respuestas.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        ocultarFormNuevaRespuesta();
+                        cargarRespuestas();
+                    } else {
+                        Swal.fire('Error', data.error || 'Ocurrió un error al guardar.', 'error');
+                    }
+                })
+                .catch(err => console.error(err));
         }
 
         function procesar(accion) {
