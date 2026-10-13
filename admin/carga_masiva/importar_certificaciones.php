@@ -5,13 +5,11 @@ require_once '../../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
+requerir_rol('ADMIN');
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_FILES["archivo_csv"])) {

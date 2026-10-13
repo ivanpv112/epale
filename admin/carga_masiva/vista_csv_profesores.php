@@ -6,9 +6,7 @@ require_once '../../security.php';
 validar_csrf_estricto('POST');
 
 // Validar seguridad
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index"); exit;
-}
+requerir_rol('ADMIN');
 
 $mensaje = isset($_GET['msg']) ? $_GET['msg'] : '';
 $total = isset($_GET['total']) ? (int)$_GET['total'] : 0;
