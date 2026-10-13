@@ -5,10 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ALUMNO');
 
 $stmt_alumno = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
 $stmt_alumno->execute([$_SESSION['user_id']]);

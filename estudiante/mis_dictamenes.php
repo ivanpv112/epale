@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // Validar seguridad: Solo Alumnos
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index"); exit;
-}
+requerir_rol('ALUMNO');
 
 $usuario_id = $_SESSION['user_id'];
 

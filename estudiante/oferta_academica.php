@@ -4,10 +4,7 @@ require '../db.php';
 require_once '../security.php';
 
 // Validar que sea alumno
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ALUMNO');
 
 $alumno_id_usuario = $_SESSION['user_id'];
 $stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
@@ -19,9 +16,7 @@ $alumno_id = $alumno['alumno_id'];
 $stmt_ciclo = $pdo->query("SELECT nombre FROM ciclos WHERE activo = 1 LIMIT 1");
 $nombre_ciclo = $stmt_ciclo->fetchColumn() ?: 'Actual';
 
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : [];
-$altas_habilitadas = isset($config['altas_habilitadas']) ? (bool)$config['altas_habilitadas'] : false;
+$altas_habilitadas = config_get('altas_habilitadas', false);
 
 // Obtener los grupos activos (Agrupados por clave_grupo)
 $sql_grupos = "

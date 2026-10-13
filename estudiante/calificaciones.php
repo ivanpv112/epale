@@ -5,18 +5,23 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') { header("Location: ../index"); exit; }
+requerir_rol('ALUMNO');
 
 $stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
 $stmt_al->execute([$_SESSION['user_id']]);
 $alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
 $alumno_id = $alumno['alumno_id'];
 
+if (!function_exists('nivel_a_romano')) {
+    function nivel_a_romano(int $nivel) {
+        $romanos = [1=>'I', 2=>'II', 3=>'III', 4=>'IV', 5=>'V', 6=>'VI', 7=>'VII', 8=>'VIII', 9=>'IX', 10=>'X'];
+        return isset($romanos[$nivel]) ? $romanos[$nivel] : (string)$nivel;
+    }
+}
+
 $mensaje = ''; $tipo_mensaje = '';
 
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : ['bajas_habilitadas' => true];
-$bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
+$bajas_habilitadas = config_get('bajas_habilitadas', true);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -192,7 +197,7 @@ if (!function_exists('format_score')) {
             <div class="page-title-center">
                 <h1><i class="fas fa-award"></i> Calificaciones</h1>
                 <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 5px;">
-                    <?php echo htmlspecialchars($materia_actual['materia'] . ' ' . $materia_actual['nivel'] . ' - NRC: ' . $materia_actual['nrc'] . ' - ' . $materia_actual['ciclo']); ?>
+                    <?php echo htmlspecialchars($materia_actual['materia'] . ' ' . nivel_a_romano($materia_actual['nivel']) . ' - NRC: ' . $materia_actual['nrc'] . ' - ' . $materia_actual['ciclo']); ?>
                 </p>
                 <p style="color: var(--text-dark); font-weight: 500; margin-top: 10px;"><i class="fas fa-chalkboard-teacher" style="color:var(--text-muted);"></i> Profesor: <?php echo htmlspecialchars(trim($materia_actual['prof_nombre'] . ' ' . $materia_actual['prof_ap_pat'])); ?></p>
 
@@ -201,7 +206,7 @@ if (!function_exists('format_score')) {
                         <select class="subject-selector" style="font-size: 1rem; padding: 10px 20px; text-align: center; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;" onchange="window.location.href='calificaciones?ins='+this.value">
                             <?php foreach($materias_activas as $m): ?>
                                 <option value="<?php echo $m['inscripcion_id']; ?>" <?php echo ($m['inscripcion_id'] == $ins_activa) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($m['materia'] . ' ' . $m['nivel']); ?>
+                                    <?php echo htmlspecialchars($m['materia'] . ' ' . nivel_a_romano($m['nivel'])); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>

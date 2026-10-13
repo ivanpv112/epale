@@ -14,14 +14,9 @@ if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_tok
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ALUMNO') {
-    echo json_encode(['status' => 'error', 'message' => 'No autorizado.']);
-    exit;
-}
+requerir_rol('ALUMNO');
 
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : [];
-if (empty($config['altas_habilitadas'])) {
+if (!config_get('altas_habilitadas', false)) {
     echo json_encode(['status' => 'error', 'message' => 'El periodo de altas se encuentra cerrado actualmente.']);
     exit;
 }
@@ -70,7 +65,7 @@ if ($action === 'cancelar') {
         }
     } catch (Exception $e) {
         $pdo->rollBack();
-        echo json_encode(['status' => 'error', 'message' => 'Error del servidor: ' . $e->getMessage()]);
+        echo json_encode(['status' => 'error', 'message' => 'Error del servidor: ' . mensaje_error_amigable($e)]);
     }
     exit;
 }
@@ -153,56 +148,11 @@ foreach ($horarios_req as $req) {
 
 // 2. Procesamiento de la Imagen (Horario Externo)
 $file = $_FILES['horario_img'];
-if ($file['error'] !== UPLOAD_ERR_OK || empty($file['tmp_name'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Error al subir la imagen.']);
-    exit;
-}
-
-$allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
-$file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if (!in_array($file_ext, $allowed_ext)) {
-    echo json_encode(['status' => 'error', 'message' => 'Extensión de archivo no permitida.']);
-    exit;
-}
-
-$finfo = finfo_open(FILEINFO_MIME_TYPE);
-$mime_type = finfo_file($finfo, $file['tmp_name']);
-finfo_close($finfo);
-
-$allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-if (!in_array($mime_type, $allowed_mimes)) {
-    echo json_encode(['status' => 'error', 'message' => 'Tipo de archivo no permitido.']);
-    exit;
-}
-
 $target_dir = "../img/horarios/";
-if (!file_exists($target_dir)) { 
-    mkdir($target_dir, 0755, true); 
-}
+$new_file_name = secure_image_upload($file, $target_dir);
 
-$new_file_name = bin2hex(random_bytes(10)) . '.webp';
-$target_file = $target_dir . $new_file_name;
-
-if ($mime_type == 'image/jpeg') {
-    $img_source = @imagecreatefromjpeg($file['tmp_name']);
-} elseif ($mime_type == 'image/png') {
-    $img_source = @imagecreatefrompng($file['tmp_name']);
-    if ($img_source !== false) {
-        imagepalettetotruecolor($img_source);
-        imagealphablending($img_source, false);
-        imagesavealpha($img_source, true);
-    }
-} elseif ($mime_type == 'image/webp') {
-    $img_source = @imagecreatefromwebp($file['tmp_name']);
-} else {
-    $img_source = false;
-}
-
-if ($img_source) {
-    imagewebp($img_source, $target_file, 80); 
-    imagedestroy($img_source);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'No se pudo procesar la imagen.']);
+if (!$new_file_name) {
+    echo json_encode(['status' => 'error', 'message' => 'Error al subir o procesar la imagen (Solo JPG/PNG permitidos).']);
     exit;
 }
 
@@ -243,7 +193,7 @@ try {
 } catch (Exception $e) {
     $pdo->rollBack();
     // Borrar imagen si falló BD
-    if (file_exists($target_file)) { unlink($target_file); }
-    echo json_encode(['status' => 'error', 'message' => 'Error al procesar: ' . $e->getMessage()]);
+    if (file_exists($target_dir . $new_file_name)) { unlink($target_dir . $new_file_name); }
+    echo json_encode(['status' => 'error', 'message' => 'Error al procesar: ' . mensaje_error_amigable($e)]);
 }
 ?>
