@@ -4,7 +4,7 @@ require '../db.php';
 require '../security.php';
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
+requerir_rol('ADMIN');
 
 // Función CSRF
 validar_csrf_estricto();

@@ -5,16 +5,11 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
 $mensaje = '';
@@ -72,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
-        $mensaje = "Error al procesar: " . $e->getMessage();
+        $mensaje = "Error al procesar: " . mensaje_error_amigable($e);
         $tipo_mensaje = "error";
     }
 }
@@ -161,9 +156,7 @@ foreach ($solicitudes as &$s) {
 $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_bajas WHERE estatus = 'PENDIENTE'")->fetchColumn();
 
 // Leer configuración de bajas
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : ['bajas_habilitadas' => true];
-$bajas_habilitadas = $config['bajas_habilitadas'] ?? true;
+$bajas_habilitadas = config_get('bajas_habilitadas', true);
 ?>
 
 <!DOCTYPE html>

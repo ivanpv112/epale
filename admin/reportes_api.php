@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    echo json_encode(['error' => 'No autorizado']); exit;
-}
+requerir_rol('ADMIN');
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (is_array($input)) {
@@ -16,9 +14,7 @@ if (is_array($input)) {
 }
 
 // ESCUDO CSRF
-if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-    echo json_encode(['error' => 'Error de Seguridad: Token CSRF inválido o ausente.']); exit;
-}
+validar_csrf_estricto('POST');
 
 $action = $_POST['action'] ?? '';
 

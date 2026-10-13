@@ -5,10 +5,7 @@ require_once '../security.php';
 
 // La validación estricta se omite aquí porque es una vista de solo lectura mediante GET.
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 // --- Lógica de Filtros y Búsqueda por Servidor ---
 $filtro_categoria = $_GET['cat'] ?? 'Todos';
@@ -23,7 +20,7 @@ $params = [];
 
 if ($filtro_categoria !== 'Todos') {
     if ($filtro_categoria === 'Grupos / Idioma') {
-        $sql_base .= " AND h.categoria = 'Grupos'";
+        $sql_base .= " AND h.categoria IN ('Grupos', 'Clases')";
     } else {
         $sql_base .= " AND h.categoria = ?";
         $params[] = $filtro_categoria;

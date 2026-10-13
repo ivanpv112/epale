@@ -12,17 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Método no permitido.']); exit;
 }
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    echo json_encode(['success' => false, 'error' => 'Acceso denegado.']); exit;
-}
+requerir_rol('ADMIN');
 
 $action = $_POST['action'] ?? '';
 
 // Validación estricta del Token CSRF
 $token_post = $_POST['csrf_token'] ?? '';
-if (empty($_SESSION['csrf_token']) || empty($token_post) || !hash_equals($_SESSION['csrf_token'], $token_post)) {
-    echo json_encode(['success' => false, 'error' => 'Token de seguridad inválido (CSRF). Recarga la página.']); exit;
-}
+validar_csrf_estricto('POST');
 
 // Limpiar filas corruptas previas (como la de "N" y "Nombre de la materia") por seguridad
 try {
@@ -180,7 +176,7 @@ if ($action === 'get_status') {
 
         echo json_encode($resultados);
     } catch(PDOException $e) {
-        error_log("Error PDO en api_dictamenes: " . $e->getMessage());
+        error_log("Error PDO en api_dictamenes: " . mensaje_error_amigable($e));
         echo json_encode(['error' => 'Error al conectar con la base de datos.']);
     }
     exit;

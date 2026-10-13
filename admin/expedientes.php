@@ -5,9 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index"); exit; 
-}
+requerir_rol('ADMIN');
 
 // Para que el filtro en tiempo real funcione, cargamos todos los perfiles a la vez.
 $sql = "SELECT u.*, a.carrera 

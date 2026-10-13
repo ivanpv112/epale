@@ -6,16 +6,11 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 // 2. ESCUDO CSRF: Bloquear peticiones de origen cruzado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
 $action = $_POST['action'] ?? 'create';
@@ -98,6 +93,6 @@ try {
     exit;
 } catch (Exception $e) {
     $pdo->rollBack();
-    header("Location: grupos_nrc.php?error=" . urlencode($e->getMessage()));
+    header("Location: grupos_nrc.php?error=" . urlencode(mensaje_error_amigable($e)));
     exit;
 }

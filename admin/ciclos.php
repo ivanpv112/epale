@@ -5,7 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
+requerir_rol('ADMIN');
 
 $mensaje = ''; $tipo_mensaje = '';
 
@@ -14,9 +14,7 @@ $mensaje = ''; $tipo_mensaje = '';
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ESCUDO CSRF
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 
     if (isset($_POST['cerrar_grupos'])) {
         $id_cerrar = $_POST['ciclo_id'];

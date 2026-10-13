@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index"); exit; 
-}
+requerir_rol('ADMIN');
 
 $mensaje = ''; 
 $tipo_mensaje = '';
@@ -18,9 +16,7 @@ $tipo_mensaje = '';
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'save_materia') {
     // ESCUDO CSRF
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 
     $materia_id = $_POST['materia_id'] ?? null;
     
@@ -54,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $tipo_mensaje = "success";
         }
     } catch (Exception $e) {
-        $mensaje = $e->getMessage();
+        $mensaje = mensaje_error_amigable($e);
         $tipo_mensaje = "error";
     }
 }
@@ -64,15 +60,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // =======================================================
 if (isset($_GET['borrar'])) {
     // ESCUDO CSRF
-    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
-    }
+    validar_csrf_estricto('GET');
 
     $id = $_GET['borrar'];
     try {
+        $stmt_info = $pdo->prepare("SELECT nombre, nivel, clave FROM materias WHERE materia_id = ?");
+        $stmt_info->execute([$id]);
+        $mat_info = $stmt_info->fetch(PDO::FETCH_ASSOC);
+
         $pdo->prepare("DELETE FROM materias WHERE materia_id = ?")->execute([$id]);
         $mensaje = "Materia eliminada correctamente.";
         $tipo_mensaje = "success";
+
+        if ($mat_info) {
+            registrar_historial($pdo, $_SESSION['user_id'], 'Borrado', 'Clases', 'Materia eliminada', $mat_info['nombre'] . ' Nivel ' . $mat_info['nivel'] . ' (' . $mat_info['clave'] . ')', "Se eliminó definitivamente la materia del catálogo.");
+        }
     } catch(PDOException $e) {
         $mensaje = "No se puede eliminar la materia porque ya tiene grupos o calificaciones asignadas.";
         $tipo_mensaje = "error";
@@ -183,7 +185,14 @@ $total_idiomas = count($idiomas_present);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (count($materias) > 0): ?>
+                        <?php 
+                        if (!function_exists('getRomanNumeralMateria')) {
+                            function getRomanNumeralMateria(int|string $num): string {
+                                $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+                                return $map[(int)$num] ?? (string)$num;
+                            }
+                        }
+                        if (count($materias) > 0): ?>
                             <?php foreach ($materias as $m): 
                                 // CORRECCIÓN: Contamos claves únicas
                                 $count_grupos = $pdo->prepare("SELECT COUNT(DISTINCT clave_grupo) FROM grupos WHERE materia_id = ?");
@@ -204,7 +213,7 @@ $total_idiomas = count($idiomas_present);
                                     <h4 style="margin: 0; color: var(--udg-blue); font-size: 1.1rem; text-transform: uppercase;">
                                         <?php echo htmlspecialchars($m['nombre']); ?>
                                     </h4>
-                                    <span class="tag-aprobado" style="background-color: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 5px;">Nivel <?php echo $m['nivel']; ?></span>
+                                    <span class="tag-aprobado" style="background-color: #e7f3ff; color: var(--udg-blue); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; margin-top: 5px;">Nivel <?php echo getRomanNumeralMateria($m['nivel']); ?></span>
                                 </td>
                                 <td style="padding: 15px; text-align: center;">
                                     <span style="background: #f1f3f5; padding: 5px 12px; border-radius: 20px; font-weight: bold; color: #555;">
@@ -272,11 +281,11 @@ $total_idiomas = count($idiomas_present);
                     <div class="form-grid-materias">
                         <div class="form-group full-width"> 
                             <label>Nombre del Idioma/Materia</label> 
-                            <input type="text" name="nombre" id="materiaNombre" required placeholder="EJ. INGLÉS, FRANCÉS, ETC." style="text-transform: uppercase;"> 
+                            <input type="text" name="nombre" id="materiaNombre" required placeholder="EJ. INGLÉS, FRANCÉS, ETC." style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');"> 
                         </div>
                         <div class="form-group"> 
                             <label>Clave</label> 
-                            <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101" style="text-transform: uppercase;"> 
+                            <input type="text" name="clave" id="materiaclave" required placeholder="Ej. ING101" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');"> 
                         </div>
                         <div class="form-group"> 
                             <label>Nivel</label> 

@@ -6,15 +6,11 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // 1. Seguridad: Verificar que sea ADMINISTRADOR
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index"); exit;
-}
+requerir_rol('ADMIN');
 
 // 2. Protección CSRF GLOBAL
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
 // 3. PROCESAR ACTUALIZACIÓN DE DATOS

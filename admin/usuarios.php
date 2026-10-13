@@ -3,7 +3,7 @@ session_start();
 require '../db.php';
 require '../security.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
+requerir_rol('ADMIN');
 
 $mensaje = ''; 
 $tipo_mensaje = '';

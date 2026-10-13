@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index"); exit; 
-}
+requerir_rol('ADMIN');
 
 // Función auxiliar para obtener el nombre completo rápidamente para los logs
 function obtener_nombre_afectado(PDO $pdo, int $id) {
@@ -21,9 +19,7 @@ function obtener_nombre_afectado(PDO $pdo, int $id) {
 // 1. PROCESAR BORRADO DE FOTO DE PERFIL (MÉTODO GET)
 if (isset($_GET['borrar_foto']) && $_GET['borrar_foto'] == 1 && isset($_GET['id'])) {
     // ESCUDO CSRF
-    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
-    }
+    validar_csrf_estricto('GET');
 
     $usuario_id = $_GET['id'];
     $stmt_foto = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
@@ -45,9 +41,7 @@ if (isset($_GET['borrar_foto']) && $_GET['borrar_foto'] == 1 && isset($_GET['id'
 
 // ESCUDO CSRF GLOBAL PARA TODAS LAS PETICIONES POST SIGUIENTES
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
 // 2. PROCESAR ACTUALIZACIÓN MANUAL DE CALIFICACIONES

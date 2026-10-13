@@ -5,20 +5,13 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 }
 
-$config_file = '../config.json';
-$config = file_exists($config_file) ? json_decode(file_get_contents($config_file), true) : [];
-$altas_habilitadas = isset($config['altas_habilitadas']) ? (bool)$config['altas_habilitadas'] : false;
+$altas_habilitadas = config_get('altas_habilitadas', false);
 
 
 $mensaje = '';
@@ -85,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
-        $mensaje = "Error al procesar: " . $e->getMessage();
+        $mensaje = "Error al procesar: " . mensaje_error_amigable($e);
         $tipo_mensaje = "error";
     }
 }

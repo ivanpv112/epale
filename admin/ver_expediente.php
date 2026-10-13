@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // 1. SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { 
-    header("Location: ../index"); exit; 
-}
+requerir_rol('ADMIN');
 
 // 2. VERIFICAR ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {

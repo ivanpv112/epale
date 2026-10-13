@@ -5,10 +5,7 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 // Ampliar silenciosamente las tablas para soportar las nuevas funciones
 try {
@@ -126,16 +123,14 @@ function checkEstudianteCollision(int $alumno_id, string $nrc_nuevo, int $ciclo_
 
 // ESCUDO CSRF GLOBAL PARA TODAS LAS PETICIONES POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (empty($_POST['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido o ausente. Petición bloqueada.");
-    }
+    validar_csrf_estricto('POST');
 
     // --- QUITAR ALUMNO ---
     if (isset($_POST['action']) && $_POST['action'] === 'remove_student') {
         $alumno_quitar = $_POST['alumno_id'];
         $nrc_grupo = $_POST['nrc_base'];
         $pdo->prepare("UPDATE inscripciones SET estatus = 'BAJA' WHERE alumno_id = ? AND nrc = ?")->execute([$alumno_quitar, $nrc_grupo]);
-        
+
         // LOG HISTORIAL
         $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
         $stmt_al->execute([$alumno_quitar]);
@@ -176,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $tipo_mensaje = "error";
                     } else {
                         $pdo->prepare("UPDATE inscripciones SET estatus = 'INSCRITO' WHERE alumno_id = ? AND nrc = ?")->execute([$nuevo_alumno_id, $nrc_grupo]);
-                        
+
                         $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
                         $stmt_al->execute([$nuevo_alumno_id]);
                         $nom_al = $stmt_al->fetchColumn();
@@ -187,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 } else {
                     $pdo->prepare("INSERT INTO inscripciones (alumno_id, nrc, estatus) VALUES (?, ?, 'INSCRITO')")->execute([$nuevo_alumno_id, $nrc_grupo]);
-                    
+
                     $stmt_al = $pdo->prepare("SELECT CONCAT(nombre, ' ', apellido_paterno) FROM usuarios WHERE usuario_id = ?");
                     $stmt_al->execute([$nuevo_alumno_id]);
                     $nom_al = $stmt_al->fetchColumn();
@@ -281,27 +276,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($n_cupo < $inscritos_actuales) throw new Exception("No puedes reducir la capacidad a {$n_cupo}. Ya tienes {$inscritos_actuales} alumnos inscritos.");
 
                 // OLD DATA CHECK
-                $stmt_old_g = $pdo->prepare("SELECT materia_id FROM grupos WHERE clave_grupo = ? LIMIT 1");
+                $stmt_old_g = $pdo->prepare("SELECT materia_id, profesor_id, cupo FROM grupos WHERE clave_grupo = ? LIMIT 1");
                 $stmt_old_g->execute([$clave]);
                 $old_g = $stmt_old_g->fetch(PDO::FETCH_ASSOC);
 
+                $n_clave_input = strtoupper(trim($_POST['clave_grupo'] ?? ''));
+                if (!empty($n_clave_input) && $n_clave_input !== $clave) {
+                    $chk_clave = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE clave_grupo = ?");
+                    $chk_clave->execute([$n_clave_input]);
+                    if ($chk_clave->fetchColumn() > 0) throw new Exception("La clave de grupo '$n_clave_input' ya existe. Elige otra.");
+
+                    // Actualizar en base de datos la clave
+                    $pdo->prepare("UPDATE grupos SET clave_grupo=? WHERE clave_grupo=?")->execute([$n_clave_input, $clave]);
+                    $clave = $n_clave_input; // Para que el resto del script use la nueva clave
+                }
+
                 $pdo->prepare("UPDATE grupos SET profesor_id=?, materia_id=?, ciclo_id=?, cupo=?, edicion_total=?, estado=? WHERE clave_grupo=?")->execute([$n_prof, $n_mat, $n_ciclo, $n_cupo, $n_edicion_total, $n_estado, $clave]);
-                
+
                 // LOG HISTORIAL
                 if ($old_g && $old_g['materia_id'] != $n_mat) {
                     $s_old = $pdo->prepare("SELECT nombre, clave FROM materias WHERE materia_id = ?");
                     $s_old->execute([$old_g['materia_id']]);
                     $om = $s_old->fetch(PDO::FETCH_ASSOC);
-                    
+
                     $s_new = $pdo->prepare("SELECT nombre, clave FROM materias WHERE materia_id = ?");
                     $s_new->execute([$n_mat]);
                     $nm = $s_new->fetch(PDO::FETCH_ASSOC);
-                    
+
                     $old_str = $om ? $om['nombre'] . ' (' . $om['clave'] . ')' : 'Desconocida';
                     $new_str = $nm ? $nm['nombre'] . ' (' . $nm['clave'] . ')' : 'Desconocida';
-                    
+
                     $detalle = "Se modificó la materia asignada al grupo (Materia: $old_str → $new_str).";
                     registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Grupos', 'Cambio de materia en grupo', 'Grupo ' . $clave, $detalle);
+                }
+
+                if ($old_g && $old_g['profesor_id'] != $n_prof) {
+                    $s_old_p = $pdo->prepare("SELECT nombre, apellido_paterno FROM usuarios WHERE usuario_id = ?");
+                    $s_old_p->execute([$old_g['profesor_id']]);
+                    $op = $s_old_p->fetch(PDO::FETCH_ASSOC);
+
+                    $s_new_p = $pdo->prepare("SELECT nombre, apellido_paterno FROM usuarios WHERE usuario_id = ?");
+                    $s_new_p->execute([$n_prof]);
+                    $np = $s_new_p->fetch(PDO::FETCH_ASSOC);
+
+                    $old_p_str = $op ? trim($op['nombre'] . ' ' . $op['apellido_paterno']) : 'Sin asignar';
+                    $new_p_str = $np ? trim($np['nombre'] . ' ' . $np['apellido_paterno']) : 'Sin asignar';
+
+                    $detalle = "Se modificó el profesor asignado al grupo (Profesor: $old_p_str → $new_p_str).";
+                    registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Grupos', 'Cambio de profesor en grupo', 'Grupo ' . $clave, $detalle);
+                }
+
+                if ($old_g && $old_g['cupo'] != $n_cupo) {
+                    $detalle = "Se modificó el cupo máximo del grupo (De: " . $old_g['cupo'] . " → A: $n_cupo).";
+                    registrar_historial($pdo, $_SESSION['user_id'], 'Edición', 'Grupos', 'Cambio de cupo en grupo', 'Grupo ' . $clave, $detalle);
                 }
 
                 // Módulo Presencial (Guardado Seguro)
@@ -333,7 +360,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tipo_mensaje = "success";
             } else {
                 // Modo Creación
-                $nueva_clave = uniqid('grp_');
+                $n_clave_input = strtoupper(trim($_POST['clave_grupo'] ?? ''));
+                if (empty($n_clave_input)) {
+                    $nueva_clave = uniqid('grp_');
+                } else {
+                    $chk_clave = $pdo->prepare("SELECT COUNT(*) FROM grupos WHERE clave_grupo = ?");
+                    $chk_clave->execute([$n_clave_input]);
+                    if ($chk_clave->fetchColumn() > 0) throw new Exception("La clave de grupo '$n_clave_input' ya existe. Elige otra.");
+                    $nueva_clave = $n_clave_input;
+                }
+
                 $insertGrupo = $pdo->prepare("INSERT INTO grupos (nrc, materia_id, profesor_id, ciclo_id, cupo, edicion_total, estado, clave_grupo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $insertHorario = $pdo->prepare("INSERT INTO horarios (nrc, dias_patron, hora_inicio, hora_fin, modalidad, aula) VALUES (?, ?, ?, ?, ?, ?)");
 
@@ -351,7 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            $mensaje = $e->getMessage();
+            $mensaje = mensaje_error_amigable($e);
             $tipo_mensaje = "error";
         }
     }
@@ -359,7 +395,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Obtener catálogos para los selects
 $list_profesores = $pdo->query("SELECT usuario_id, codigo, nombre, apellido_paterno, apellido_materno FROM usuarios WHERE rol='PROFESOR' AND estatus='ACTIVO' ORDER BY nombre ASC")->fetchAll(PDO::FETCH_ASSOC);
-$list_materias = $pdo->query("SELECT materia_id, clave, nombre FROM materias ORDER BY clave")->fetchAll(PDO::FETCH_ASSOC);
+$list_materias = $pdo->query("SELECT materia_id, clave, nombre, nivel FROM materias ORDER BY nombre ASC, nivel ASC")->fetchAll(PDO::FETCH_ASSOC);
 $list_ciclos = $pdo->query("SELECT nombre FROM ciclos ORDER BY nombre DESC")->fetchAll(PDO::FETCH_ASSOC);
 $list_alumnos = $pdo->query("SELECT a.alumno_id, u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, a.carrera FROM alumnos a JOIN usuarios u ON a.usuario_id = u.usuario_id WHERE u.estatus='ACTIVO' ORDER BY u.nombre")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -551,8 +587,8 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                         <div class="card" style="margin: 0; border-top: 4px solid #28a745;">
                             <h4 style="margin: 0 0 15px 0; color: #28a745;"><i class="fas fa-building"></i> Presencial</h4>
                             <div class="form-group"><label>NRC</label><input type="number" name="rnc_presencial" value="<?php echo htmlspecialchars($v_nrc_p); ?>" <?php if ($es_edicion && $g['nrc_presencial']) echo 'readonly class="readonly-input" title="El NRC no se puede editar"'; ?> placeholder="Ej. 60495"></div>
-                            <div class="form-group"><label>Aula</label><input type="text" name="aula_presencial" value="<?php echo htmlspecialchars($v_aula_p); ?>" placeholder="Ej. A-202"></div>
-                            <div class="form-group"><label>Días</label><input type="text" name="dias_presencial" value="<?php echo htmlspecialchars($v_dias_p); ?>" placeholder="Ej. L-M o L-M-V" title="Usa L, M, I, J, V separados por guiones"></div>
+                            <div class="form-group"><label>Aula</label><input type="text" name="aula_presencial" value="<?php echo htmlspecialchars($v_aula_p); ?>" placeholder="Ej. A-202" oninput="this.value = this.value.toUpperCase();"></div>
+                            <div class="form-group"><label>Días</label><input type="text" name="dias_presencial" value="<?php echo htmlspecialchars($v_dias_p); ?>" placeholder="Ej. L-M o L-M-V" title="Usa L, M, I, J, V separados por guiones" oninput="this.value = this.value.toUpperCase();"></div>
                             <div class="form-group" style="display: flex; gap: 5px; margin-bottom: 0;">
                                 <div style="flex:1"><label>De</label><input type="time" name="inicio_presencial" value="<?php echo htmlspecialchars($v_ini_p); ?>"></div>
                                 <div style="flex:1"><label>A</label><input type="time" name="fin_presencial" value="<?php echo htmlspecialchars($v_fin_p); ?>"></div>
@@ -562,8 +598,8 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                         <div class="card" style="margin: 0; border-top: 4px solid #17a2b8;">
                             <h4 style="margin: 0 0 15px 0; color: #17a2b8;"><i class="fas fa-laptop-house"></i> Virtual</h4>
                             <div class="form-group"><label>NRC</label><input type="number" name="rnc_virtual" value="<?php echo htmlspecialchars($v_nrc_v); ?>" <?php if ($es_edicion && $g['nrc_virtual']) echo 'readonly class="readonly-input" title="El NRC no se puede editar"'; ?> placeholder="Ej. 60501"></div>
-                            <div class="form-group"><label>Plataforma</label><input type="text" name="aula_virtual" value="<?php echo htmlspecialchars($v_aula_v); ?>" placeholder="Ej. Zoom o Meet"></div>
-                            <div class="form-group"><label>Días</label><input type="text" name="dias_virtual" value="<?php echo htmlspecialchars($v_dias_v); ?>" placeholder="Ej. J-V"></div>
+                            <div class="form-group"><label>Plataforma</label><input type="text" name="aula_virtual" value="<?php echo htmlspecialchars($v_aula_v); ?>" placeholder="Ej. Zoom o Meet" oninput="this.value = this.value.toUpperCase();"></div>
+                            <div class="form-group"><label>Días</label><input type="text" name="dias_virtual" value="<?php echo htmlspecialchars($v_dias_v); ?>" placeholder="Ej. J-V" oninput="this.value = this.value.toUpperCase();"></div>
                             <div class="form-group" style="display: flex; gap: 5px; margin-bottom: 0;">
                                 <div style="flex:1"><label>De</label><input type="time" name="inicio_virtual" value="<?php echo htmlspecialchars($v_ini_v); ?>"></div>
                                 <div style="flex:1"><label>A</label><input type="time" name="fin_virtual" value="<?php echo htmlspecialchars($v_fin_v); ?>"></div>
@@ -594,24 +630,45 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                                 <input type="hidden" name="profesor_id" id="hiddenProfesorId" value="<?php echo htmlspecialchars($v_prof); ?>">
 
                                 <div class="custom-select-wrapper">
-                                    <input type="text" id="searchProfInput" placeholder="Buscar docente por nombre o código..." value="<?php echo htmlspecialchars($nombre_profesor_actual); ?>" style="width: 100%; padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-family: inherit; font-size: 1rem;" autocomplete="off">
+                                    <input type="text" id="searchProfInput" placeholder="Buscar docente por nombre o código..." value="<?php echo htmlspecialchars($nombre_profesor_actual); ?>" style="width: 100%; padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-family: inherit; font-size: 1rem;" autocomplete="off" oninput="this.value = this.value.toUpperCase();">
                                     <div class="custom-options" id="optionsProfContainer"></div>
                                 </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Clave de Grupo</label>
+                                <input type="text" name="clave_grupo" value="<?php echo htmlspecialchars($clave); ?>" placeholder="Ej. ING-101" oninput="this.value = this.value.toUpperCase();">
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                 <div class="form-group">
                                     <label>Materia <span style="color:red;">*</span></label>
-                                    <select name="materia_id" required>
-                                        <option value="">Seleccionar...</option>
-                                        <?php foreach ($list_materias as $m): ?>
-                                            <option value="<?php echo $m['materia_id']; ?>" <?php if ($v_mat == $m['materia_id']) echo 'selected'; ?>><?php echo htmlspecialchars($m['clave'] . ' - ' . $m['nombre']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <?php
+                                    $nombre_materia_actual = '';
+                                    if (!function_exists('getRomanNumeralMateria')) {
+                                        function getRomanNumeralMateria(int|string $num): string
+                                        {
+                                            $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+                                            return $map[(int)$num] ?? (string)$num;
+                                        }
+                                    }
+                                    foreach ($list_materias as $m) {
+                                        if ($v_mat == $m['materia_id']) {
+                                            $nombre_materia_actual = $m['clave'] . ' - ' . $m['nombre'] . ' ' . getRomanNumeralMateria($m['nivel']);
+                                            break;
+                                        }
+                                    }
+                                    ?>
+                                    <input type="hidden" name="materia_id" id="hiddenMateriaId" value="<?php echo htmlspecialchars($v_mat); ?>">
+
+                                    <div class="custom-select-wrapper">
+                                        <input type="text" id="searchMatInput" placeholder="Buscar materia por código o nombre..." value="<?php echo htmlspecialchars($nombre_materia_actual); ?>" style="width: 100%; padding: 10px 15px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; font-family: inherit; font-size: 1rem;" autocomplete="off" required oninput="this.value = this.value.toUpperCase();">
+                                        <div class="custom-options" id="optionsMatContainer"></div>
+                                    </div>
                                 </div>
                                 <div class="form-group">
                                     <label>Ciclo Escolar <span style="color:red;">*</span></label>
-                                    <input type="text" name="ciclo_nombre" list="ciclosList" value="<?php echo htmlspecialchars($v_ciclo_nombre); ?>" required placeholder="Ej. 2026-A" style="text-transform: uppercase;">
+                                    <input type="text" name="ciclo_nombre" list="ciclosList" value="<?php echo htmlspecialchars($v_ciclo_nombre); ?>" required placeholder="Ej. 2026-A" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                                     <datalist id="ciclosList">
                                         <?php foreach ($list_ciclos as $c): ?>
                                             <option value="<?php echo htmlspecialchars($c['nombre']); ?>">
@@ -739,7 +796,7 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                 const div = document.createElement('div');
                 div.className = 'custom-option';
                 const fullName = `${p.nombre} ${p.apellido_paterno} ${p.apellido_materno || ''}`;
-                div.innerHTML = `<div class="opt-name">${fullName}</div><div class="opt-details"><span>Cód: ${p.codigo || 'N/A'}</span></div>`;
+                div.innerHTML = `<div class="opt-name">${fullName}</div><div class="opt-details"><span>${p.codigo || 'N/A'}</span></div>`;
                 div.onclick = () => {
                     searchProfInput.value = fullName;
                     hiddenProfInput.value = p.usuario_id;
@@ -761,6 +818,80 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
             if (!searchProfInput.contains(e.target) && !optionsProfContainer.contains(e.target)) optionsProfContainer.style.display = 'none';
         });
 
+        const materiasData = <?php echo json_encode($list_materias, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const searchMatInput = document.getElementById('searchMatInput');
+        const optionsMatContainer = document.getElementById('optionsMatContainer');
+        const hiddenMatInput = document.getElementById('hiddenMateriaId');
+
+        function getRomanNumeralJs(num) {
+            const map = {
+                1: 'I',
+                2: 'II',
+                3: 'III',
+                4: 'IV',
+                5: 'V',
+                6: 'VI',
+                7: 'VII',
+                8: 'VIII',
+                9: 'IX',
+                10: 'X'
+            };
+            return map[parseInt(num)] || num;
+        }
+
+        function renderMatOptions(filterText = '') {
+            optionsMatContainer.innerHTML = '';
+            const lowerFilter = filterText.toLowerCase();
+
+            const filteredMat = materiasData.filter(m => {
+                const roman = getRomanNumeralJs(m.nivel);
+                const fullName = `${m.clave} ${m.nombre} ${roman}`.toLowerCase();
+                return fullName.includes(lowerFilter);
+            });
+
+            if (filteredMat.length === 0) {
+                optionsMatContainer.innerHTML = '<div style="padding:15px; color:#888; text-align:center;">No se encontró ninguna materia</div>';
+                optionsMatContainer.style.display = 'block';
+                return;
+            }
+
+            filteredMat.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'custom-option';
+                const roman = getRomanNumeralJs(m.nivel);
+                const displayFullName = `${m.clave} - ${m.nombre} ${roman}`;
+
+                div.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <span style="font-size: 0.85em; color: #555; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-weight: bold; white-space: nowrap;">${m.clave}</span>
+                        <span style="font-weight: bold; font-size: 1.05em; color: #2d3748; flex-grow: 1;">${m.nombre}</span>
+                        <span style="font-weight: bold; color: var(--udg-blue); font-size: 1.1em; background: #eef2ff; padding: 4px 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${roman}</span>
+                    </div>
+                `;
+                div.onclick = () => {
+                    searchMatInput.value = displayFullName;
+                    hiddenMatInput.value = m.materia_id;
+                    optionsMatContainer.style.display = 'none';
+                };
+                optionsMatContainer.appendChild(div);
+            });
+            optionsMatContainer.style.display = 'block';
+        }
+
+        searchMatInput.addEventListener('input', (e) => {
+            hiddenMatInput.value = '';
+            renderMatOptions(e.target.value);
+            if (e.target.value === '') {
+                searchMatInput.removeAttribute('required');
+            }
+        });
+        searchMatInput.addEventListener('focus', () => {
+            renderMatOptions(searchMatInput.value);
+        });
+        document.addEventListener('click', (e) => {
+            if (!searchMatInput.contains(e.target) && !optionsMatContainer.contains(e.target)) optionsMatContainer.style.display = 'none';
+        });
+
         document.getElementById('configForm').addEventListener('submit', function(e) {
             if (!hiddenProfInput.value) {
                 e.preventDefault();
@@ -770,6 +901,17 @@ $v_fin_v = ($tipo_mensaje == 'error' && isset($_POST['fin_virtual'])) ? $_POST['
                     icon: 'warning',
                     confirmButtonColor: '#001a57'
                 });
+                return;
+            }
+            if (!hiddenMatInput.value) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Materia Inválida',
+                    text: 'Debes buscar y seleccionar una materia de la lista desplegable.',
+                    icon: 'warning',
+                    confirmButtonColor: '#001a57'
+                });
+                return;
             }
         });
     </script>

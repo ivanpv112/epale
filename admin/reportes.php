@@ -4,7 +4,7 @@ require '../db.php';
 require_once '../security.php';
 
 validar_csrf_estricto('POST');
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') { header("Location: ../index"); exit; }
+requerir_rol('ADMIN');
 ?>
 <!DOCTYPE html>
 <html lang="es">

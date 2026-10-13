@@ -5,19 +5,14 @@ require_once '../security.php';
 
 validar_csrf_estricto('POST');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    header("Location: ../index");
-    exit;
-}
+requerir_rol('ADMIN');
 
 // ===============================================
 // ELIMINACIÓN DE GRUPO (BLINDADO CON TRANSACCIÓN Y CSRF)
 // ===============================================
 if (isset($_GET['del_clave'])) {
     // ESCUDO CSRF PARA MÉTODO GET
-    if (empty($_GET['csrf_token']) || empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])) {
-        die("Error de Seguridad Crítico: Token CSRF inválido. Petición bloqueada.");
-    }
+    validar_csrf_estricto('GET');
 
     try {
         $pdo->beginTransaction();
@@ -81,6 +76,33 @@ if (isset($_GET['ciclo_id']) && is_numeric($_GET['ciclo_id'])) {
 $stmt_mat = $pdo->prepare("SELECT DISTINCT m.nombre FROM materias m JOIN grupos g ON m.materia_id = g.materia_id WHERE g.ciclo_id = ? ORDER BY m.nombre");
 $stmt_mat->execute([$ciclo_seleccionado]);
 $materias_unicas = $stmt_mat->fetchAll(PDO::FETCH_COLUMN);
+
+// Extraemos los niveles para el filtro
+$stmt_niveles = $pdo->prepare("SELECT DISTINCT m.nivel FROM materias m JOIN grupos g ON m.materia_id = g.materia_id WHERE g.ciclo_id = ? ORDER BY m.nivel");
+$stmt_niveles->execute([$ciclo_seleccionado]);
+$niveles_unicos = $stmt_niveles->fetchAll(PDO::FETCH_COLUMN);
+
+if (!function_exists('getRomanNumeralGrupos')) {
+    function getRomanNumeralGrupos(int|string $num): string
+    {
+        $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+        return $map[(int)$num] ?? (string)$num;
+    }
+}
+if (!function_exists('getDiasCompletosGrupos')) {
+    function getDiasCompletosGrupos(string|null $dias_patron): string
+    {
+        if (!$dias_patron) return '';
+        $map = ['L' => 'Lunes', 'M' => 'Martes', 'I' => 'Miércoles', 'J' => 'Jueves', 'V' => 'Viernes', 'S' => 'Sábado', 'D' => 'Domingo'];
+        $letras = explode('-', $dias_patron);
+        $nombres = [];
+        foreach ($letras as $l) {
+            $l = trim($l);
+            if (isset($map[$l])) $nombres[] = $map[$l];
+        }
+        return !empty($nombres) ? implode('-', $nombres) : (string)$dias_patron;
+    }
+}
 
 // Extraemos todos los grupos del ciclo
 $sql = "SELECT g.clave_grupo, c.nombre AS periodo, c.ciclo_id,
@@ -156,8 +178,15 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endforeach; ?>
             </select>
 
-            <a href="gestionar_grupo" class="btn-save" style="margin-left: auto; text-decoration: none; display: flex; align-items: center; height: 44px;">
-                <i class="fas fa-plus-circle"></i> Nuevo Grupo
+            <select id="filtroNivel" class="filter-select">
+                <option value="">Todos los niveles</option>
+                <?php foreach ($niveles_unicos as $niv): ?>
+                    <option value="<?php echo htmlspecialchars($niv); ?>">NIVEL <?php echo getRomanNumeralGrupos($niv); ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <a href="gestionar_grupo" class="btn-save" style="margin-left: auto; text-decoration: none; display: flex; align-items: center;">
+                Nuevo Grupo
             </a>
         </form>
 
@@ -169,17 +198,18 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <tr>
                                 <th>Materia / Ciclo</th>
                                 <th>Profesor</th>
-                                <th style="text-align: center;">NRC y Aula</th>
+                                <th style="text-align: center;">NRC / Aula</th>
                                 <th style="text-align: center;">Horario</th>
                                 <th style="text-align: center;">Estudiantes</th>
                                 <th style="text-align: center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($grupos as $g):
+                            <?php
+                            foreach ($grupos as $g):
                                 $cupo = $g['cupo'];
                                 $inscritos = $g['inscritos'];
-                                
+
                                 if (!$es_ciclo_activo) {
                                     $badge_bg = '#e2e3e5';
                                     $badge_color = '#383d41';
@@ -202,21 +232,38 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     }
                                 }
                             ?>
-                                <tr class="group-row" style="<?php echo $row_style; ?>" data-materia="<?php echo htmlspecialchars($g['materia']); ?>" onclick="window.location.href='gestionar_grupo?clave=<?php echo $g['clave_grupo']; ?>'">
+                                <tr class="group-row" style="<?php echo $row_style; ?>" data-materia="<?php echo htmlspecialchars($g['materia']); ?>" data-nivel="<?php echo htmlspecialchars($g['nivel']); ?>" onclick="window.location.href='gestionar_grupo?clave=<?php echo $g['clave_grupo']; ?>'">
                                     <td class="td-clean">
-                                        <div class="user-name" style="font-weight: bold; font-size: 1.1rem;"><?php echo htmlspecialchars($g['materia']); ?></div>
-                                        <div class="user-email">Ciclo: <?php echo htmlspecialchars($g['periodo']); ?> | Nivel <?php echo htmlspecialchars($g['nivel']); ?></div>
+                                        <div class="user-name" style="font-weight: bold; font-size: 1.1rem; color: #333;">
+                                            <span style="color: #6c757d; font-size: 0.95rem; margin-right: 5px;"><?php echo htmlspecialchars($g['curso']); ?></span>
+                                            <?php echo htmlspecialchars($g['materia']) . ' ' . getRomanNumeralGrupos($g['nivel']); ?>
+                                        </div>
+                                        <div class="user-email" style="margin-top: 4px; color: #555;">
+                                            <i class="far fa-calendar-alt icon-muted"></i> Ciclo: <?php echo htmlspecialchars($g['periodo']); ?>
+                                        </div>
                                     </td>
                                     <td class="td-clean"><i class="fas fa-chalkboard-teacher icon-muted"></i><?php echo htmlspecialchars($g['profesor'] . ' ' . $g['prof_ap']); ?></td>
 
                                     <td class="td-center" style="font-size: 0.85rem; white-space: nowrap;">
-                                        <div style="color: #28a745; margin-bottom: 3px;"><strong>NRC P:</strong> <?php echo $g['nrc_presencial'] ? $g['nrc_presencial'] . ' | ' . htmlspecialchars($g['aula_presencial'] ?: 'S/A') : '---'; ?></div>
-                                        <div style="color: #17a2b8;"><strong>NRC V:</strong> <?php echo $g['nrc_virtual'] ? $g['nrc_virtual'] . ' | ' . htmlspecialchars($g['aula_virtual'] ?: 'S/A') : '---'; ?></div>
+                                        <div style="color: #28a745; margin-bottom: 5px;">
+                                            <i class="fas fa-building" style="width: 15px; color:#ffc107;" title="Presencial"></i> <?php echo $g['nrc_presencial'] ? $g['nrc_presencial'] : 'NA'; ?>
+                                            <span style="margin: 0 4px; color: #ccc;">|</span>
+                                            <i class="fas fa-map-marker-alt" style="width: 15px; color:#ffc107;"></i> <?php echo htmlspecialchars($g['aula_presencial'] ?: 'NA'); ?>
+                                        </div>
+                                        <div style="color: #17a2b8;">
+                                            <i class="fas fa-laptop" style="width: 15px; color:#17a2b8;" title="Virtual"></i> <?php echo $g['nrc_virtual'] ? $g['nrc_virtual'] : 'NA'; ?>
+                                            <span style="margin: 0 4px; color: #ccc;">|</span>
+                                            <i class="fas fa-video" style="width: 15px; color:#17a2b8;"></i> <?php echo htmlspecialchars($g['aula_virtual'] ?: 'NA'); ?>
+                                        </div>
                                     </td>
 
                                     <td class="td-center" style="font-size: 0.85rem; white-space: nowrap;">
-                                        <div style="color: #28a745; margin-bottom: 3px;"><strong>P:</strong> <?php echo $g['dias_presencial'] ? htmlspecialchars($g['dias_presencial']) . ' ' . date('H:i', strtotime($g['inicio_presencial'])) . '-' . date('H:i', strtotime($g['fin_presencial'])) : '---'; ?></div>
-                                        <div style="color: #17a2b8;"><strong>V:</strong> <?php echo $g['dias_virtual'] ? htmlspecialchars($g['dias_virtual']) . ' ' . date('H:i', strtotime($g['inicio_virtual'])) . '-' . date('H:i', strtotime($g['fin_virtual'])) : '---'; ?></div>
+                                        <div style="color: #28a745; margin-bottom: 5px;">
+                                            <strong><i class="far fa-clock" style="width: 15px; color:#ffc107;"></i></strong> <?php echo $g['dias_presencial'] ? htmlspecialchars(getDiasCompletosGrupos($g['dias_presencial'])) . ' <span style="color:#666;">' . date('H:i', strtotime($g['inicio_presencial'])) . ' - ' . date('H:i', strtotime($g['fin_presencial'])) . '</span>' : 'NA'; ?>
+                                        </div>
+                                        <div style="color: #17a2b8;">
+                                            <strong><i class="far fa-clock" style="width: 15px; color:#17a2b8;"></i></strong> <?php echo $g['dias_virtual'] ? htmlspecialchars(getDiasCompletosGrupos($g['dias_virtual'])) . ' <span style="color:#666;">' . date('H:i', strtotime($g['inicio_virtual'])) . ' - ' . date('H:i', strtotime($g['fin_virtual'])) . '</span>' : 'NA'; ?>
+                                        </div>
                                     </td>
 
                                     <td class="td-center">
@@ -284,17 +331,25 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('buscadorGrupos');
             const matSelect = document.getElementById('filtroMateria');
+            const nivSelect = document.getElementById('filtroNivel');
             const rows = document.querySelectorAll('.group-row');
 
             function filterTable() {
                 const term = searchInput.value.toLowerCase();
                 const mat = matSelect.value;
+                const niv = nivSelect.value;
                 let found = false;
 
                 rows.forEach(row => {
                     const txt = row.innerText.toLowerCase();
                     const m = row.getAttribute('data-materia');
-                    if (txt.includes(term) && (mat === '' || m === mat)) {
+                    const n = row.getAttribute('data-nivel');
+
+                    const matchText = txt.includes(term);
+                    const matchMat = (mat === '' || m === mat);
+                    const matchNiv = (niv === '' || n === niv);
+
+                    if (matchText && matchMat && matchNiv) {
                         row.style.display = '';
                         found = true;
                     } else {
@@ -306,6 +361,7 @@ $grupos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             searchInput.addEventListener('input', filterTable);
             matSelect.addEventListener('change', filterTable);
+            nivSelect.addEventListener('change', filterTable);
         });
     </script>
 </body>

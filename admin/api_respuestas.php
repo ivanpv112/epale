@@ -4,10 +4,7 @@ require '../db.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    echo json_encode(['success' => false, 'error' => 'No autorizado']);
-    exit;
-}
+requerir_rol('ADMIN');
 
 $admin_id = $_SESSION['user_id'];
 $method = $_SERVER['REQUEST_METHOD'];
