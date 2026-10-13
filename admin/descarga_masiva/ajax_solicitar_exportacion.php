@@ -5,10 +5,7 @@ require_once '../../security.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'ADMIN') {
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
-    exit;
-}
+requerir_rol('ADMIN');
 
 $user_id = $_SESSION['user_id'];
 $tipo = isset($_POST['tipo']) ? strtoupper($_POST['tipo']) : 'GLOBAL';
@@ -59,6 +56,6 @@ try {
 
     echo json_encode(['success' => true, 'message' => 'Solicitud agregada a la cola. Revisa el historial en unos instantes.']);
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Error al solicitar exportación: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error al solicitar exportación: ' . mensaje_error_amigable($e)]);
 }
 ?>
