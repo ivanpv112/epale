@@ -21,6 +21,68 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 
+// 1.2 FUNCIONES DE CONFIGURACIÓN GLOBAL (config.json)
+/**
+ * Obtiene el valor de una llave de configuración desde config.json.
+ * Implementa caché en memoria para no leer el disco múltiples veces en una misma petición.
+ */
+function config_get(string $key, $default = null) {
+    static $config_cache = null;
+    $path = __DIR__ . '/config.json';
+    
+    if ($config_cache === null) {
+        $config_cache = file_exists($path) ? json_decode(file_get_contents($path), true) : [];
+        if (!is_array($config_cache)) $config_cache = [];
+    }
+    
+    return array_key_exists($key, $config_cache) ? $config_cache[$key] : $default;
+}
+
+/**
+ * Guarda o actualiza un valor en config.json
+ */
+function config_set(string $key, mixed $value) {
+    $path = __DIR__ . '/config.json';
+    $config = file_exists($path) ? json_decode(file_get_contents($path), true) : [];
+    if (!is_array($config)) $config = [];
+    
+    $config[$key] = $value;
+    file_put_contents($path, json_encode($config, JSON_PRETTY_PRINT));
+}
+
+/**
+ * Verifica que haya una sesión activa y que corresponda al rol requerido.
+ * Si falla, destruye variables sensibles (por seguridad) y expulsa al usuario.
+ * 
+ * @param string $rol_esperado 'ADMIN', 'PROFESOR' o 'ALUMNO'
+ * @param string $redirect_url Ruta relativa hacia donde expulsar al usuario
+ */
+function requerir_rol(string $rol_esperado, string $redirect_url = '../index') {
+    if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== $rol_esperado) {
+        $login_error = $_SESSION['login_error'] ?? null;
+        session_unset();
+        session_destroy();
+        if ($login_error) {
+            session_start();
+            $_SESSION['login_error'] = $login_error;
+        }
+        header("Location: " . $redirect_url);
+        exit;
+    }
+}
+
+/**
+ * Filtra los mensajes de error para no exponer información delicada de SQL (PDOException)
+ * al usuario final, manteniendo los mensajes de lógica de negocio normales.
+ */
+function mensaje_error_amigable(Exception $e) {
+    if ($e instanceof \PDOException) {
+        error_log("Error Base de Datos: " . $e->getMessage());
+        return "Ocurrió un error inesperado al procesar la información. Por favor, intenta de nuevo más tarde.";
+    }
+    return $e->getMessage();
+}
+
 // 2. FUNCIÓN MAESTRA DE VALIDACIÓN
 function validar_csrf_estricto($metodo_esperado = 'POST')
 {
@@ -99,4 +161,52 @@ function registrar_historial(PDO $pdo, int $admin_id, string $tipo_accion, strin
         // En un entorno de producción real podríamos registrar este error en un log de sistema (file).
         return false;
     }
+}
+
+/**
+ * Valida, purga malware y convierte a WebP una imagen subida.
+ * 
+ * @param array $file $_FILES['input_name']
+ * @param string $target_dir Directorio destino (ej. '../img/perfiles/')
+ * @param int $quality Calidad WebP (0-100)
+ * @return string|false Nombre del archivo generado (ej. 'ab12cd.webp'), o false si falla.
+ */
+function secure_image_upload($file, $target_dir, $quality = 80) {
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK || empty($file['tmp_name'])) return false;
+
+    $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
+    $file_ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($file_ext, $allowed_ext)) return false;
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!in_array($mime_type, $allowed_mimes)) return false;
+
+    $target_dir = rtrim($target_dir, '/') . '/';
+    if (!file_exists($target_dir)) { @mkdir($target_dir, 0755, true); }
+
+    $new_file_name = bin2hex(random_bytes(10)) . '.webp';
+    $target_file = $target_dir . $new_file_name;
+
+    if ($mime_type == 'image/jpeg') $img_source = @imagecreatefromjpeg($file['tmp_name']);
+    elseif ($mime_type == 'image/png') {
+        $img_source = @imagecreatefrompng($file['tmp_name']);
+        if ($img_source !== false) {
+            imagepalettetotruecolor($img_source);
+            imagealphablending($img_source, false);
+            imagesavealpha($img_source, true);
+        }
+    } elseif ($mime_type == 'image/webp') {
+        $img_source = @imagecreatefromwebp($file['tmp_name']);
+    } else $img_source = false;
+
+    if ($img_source) {
+        imagewebp($img_source, $target_file, $quality); 
+        imagedestroy($img_source); 
+        return $new_file_name;
+    }
+    return false;
 }
