@@ -4,9 +4,7 @@ require '../db.php';
 require_once '../security.php';
 
 // SEGURIDAD
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') { 
-    header("Location: ../index"); exit; 
-}
+requerir_rol('PROFESOR');
 
 // Función CSRF
 validar_csrf_estricto('POST');
@@ -35,35 +33,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 3. Procesar Foto de Perfil
         if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-            $fileTmpPath = $_FILES['foto']['tmp_name'];
-            $fileName = $_FILES['foto']['name'];
-            $fileNameCmps = explode(".", $fileName);
-            $fileExtension = strtolower(end($fileNameCmps));
+            $uploadFileDir = '../img/perfiles/';
+            $newFileName = secure_image_upload($_FILES['foto'], $uploadFileDir);
             
-            $allowedfileExtensions = array('jpg', 'gif', 'png', 'jpeg');
-            if (in_array($fileExtension, $allowedfileExtensions)) {
-                // Crear nombre único para la foto
-                $newFileName = 'prof_' . $usuario_id . '_' . time() . '.' . $fileExtension;
-                $uploadFileDir = '../img/perfiles/';
-                
-                // Crear la carpeta si no existe
-                if (!is_dir($uploadFileDir)) { mkdir($uploadFileDir, 0755, true); }
-                
-                $dest_path = $uploadFileDir . $newFileName;
-                
-                if(move_uploaded_file($fileTmpPath, $dest_path)) {
-                    // Borrar foto anterior si existe
-                    $stmt_old = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
-                    $stmt_old->execute([$usuario_id]);
-                    $old_photo = $stmt_old->fetchColumn();
-                    if ($old_photo && file_exists($uploadFileDir . $old_photo)) {
-                        unlink($uploadFileDir . $old_photo);
-                    }
-                    // Guardar nueva foto en BD
-                    $pdo->prepare("UPDATE usuarios SET foto_perfil = ? WHERE usuario_id = ?")->execute([$newFileName, $usuario_id]);
+            if ($newFileName) {
+                // Borrar foto anterior si existe
+                $stmt_old = $pdo->prepare("SELECT foto_perfil FROM usuarios WHERE usuario_id = ?");
+                $stmt_old->execute([$usuario_id]);
+                $old_photo = $stmt_old->fetchColumn();
+                if ($old_photo && file_exists($uploadFileDir . $old_photo)) {
+                    unlink($uploadFileDir . $old_photo);
                 }
+                // Guardar nueva foto en BD
+                $pdo->prepare("UPDATE usuarios SET foto_perfil = ? WHERE usuario_id = ?")->execute([$newFileName, $usuario_id]);
             } else {
-                throw new Exception("Formato de imagen no permitido. Usa JPG o PNG.");
+                throw new Exception("Formato de imagen no permitido o archivo inválido. Usa JPG o PNG.");
             }
         }
         
@@ -71,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tipo_mensaje = "success";
         
     } catch (Exception $e) {
-        $mensaje = $e->getMessage();
+        $mensaje = mensaje_error_amigable($e);
         $tipo_mensaje = "error";
     }
 }

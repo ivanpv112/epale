@@ -4,10 +4,7 @@ header('Content-Type: application/json');
 
 require '../db.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
-    echo json_encode(['success' => false, 'error' => 'No autorizado']);
-    exit;
-}
+requerir_rol('PROFESOR');
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
@@ -57,7 +54,7 @@ if ($action === 'guardar_equipos') {
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => mensaje_error_amigable($e)]);
     }
 } elseif ($action === 'cargar_equipos') {
     try {
@@ -89,7 +86,7 @@ if ($action === 'guardar_equipos') {
         echo json_encode(['success' => true, 'equipos' => $resultado]);
 
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => mensaje_error_amigable($e)]);
     }
 } else {
     echo json_encode(['success' => false, 'error' => 'Acción no válida']);

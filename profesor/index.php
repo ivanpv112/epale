@@ -6,9 +6,7 @@ require_once '../security.php';
 validar_csrf_estricto('POST');
 
 // SEGURIDAD: Solo Profesores
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
-    header("Location: ../index"); exit;
-}
+requerir_rol('PROFESOR');
 
 $profesor_id = $_SESSION['user_id'];
 $nombre_profesor = $_SESSION['nombre'] . ' ' . $_SESSION['apellido_paterno'];

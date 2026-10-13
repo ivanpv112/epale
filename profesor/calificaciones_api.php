@@ -81,10 +81,10 @@ if ($input['action'] === 'save_single') {
         echo json_encode(['success' => true]);
         
     } catch(PDOException $e) {
-        error_log("Error PDO en calificaciones_api: " . $e->getMessage());
+        error_log("Error PDO en calificaciones_api: " . mensaje_error_amigable($e));
         echo json_encode(['success' => false, 'error' => 'Ocurrió un error interno al guardar en la base de datos.']);
     } catch(Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => mensaje_error_amigable($e)]);
     }
 }
 ?>

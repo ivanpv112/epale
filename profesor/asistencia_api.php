@@ -41,11 +41,11 @@ if ($input['action'] === 'batch') {
         
     } catch(PDOException $e) { 
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
-        error_log("Error PDO en asistencia_api (batch): " . $e->getMessage());
+        error_log("Error PDO en asistencia_api (batch): " . mensaje_error_amigable($e));
         echo json_encode(['success' => false, 'error' => 'Error interno de base de datos al guardar la lista.']); 
     } catch(Exception $e) { 
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]); 
+        echo json_encode(['success' => false, 'error' => mensaje_error_amigable($e)]); 
     }
 }
 
@@ -63,10 +63,10 @@ if ($input['action'] === 'single') {
         echo json_encode(['success' => $success]);
         
     } catch(PDOException $e) {
-        error_log("Error PDO en asistencia_api (single): " . $e->getMessage());
+        error_log("Error PDO en asistencia_api (single): " . mensaje_error_amigable($e));
         echo json_encode(['success' => false, 'error' => 'Error interno de base de datos.']);
     } catch(Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        echo json_encode(['success' => false, 'error' => mensaje_error_amigable($e)]);
     }
 }
 ?>

@@ -11,10 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!isset($_SESSION['user_id']) || $_SESSION['rol'] !== 'PROFESOR') {
-    echo json_encode(['status' => 'error', 'message' => 'No autorizado']); 
-    exit;
-}
+requerir_rol('PROFESOR');
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (is_array($input)) { 
