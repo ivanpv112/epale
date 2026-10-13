@@ -150,6 +150,104 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .dashboard-grid .card:nth-child(1) { border-top-color: var(--udg-light); }
 .dashboard-grid .card:nth-child(2) { border-top-color: var(--success); }
 .dashboard-grid .card:nth-child(3) { border-top-color: var(--warning); }
+.dashboard-grid .card:nth-child(4), .card-avisos-generales { border-top-color: #6f42c1; }
+
+/* Dashboard PC Layout & Tarjetas de Altura Homogénea */
+@media (min-width: 901px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(3, 1fr);
+        align-items: stretch;
+    }
+    .card-avisos-generales {
+        grid-column: 1 / -1;
+    }
+    .dashboard-card-top {
+        height: 480px;
+        display: flex;
+        flex-direction: column;
+    }
+}
+@media (max-width: 900px) {
+    .dashboard-card-top {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+.card-scrollable-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+.card-scrollable-body::-webkit-scrollbar {
+    width: 6px;
+}
+.card-scrollable-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+.card-scrollable-body::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+[data-theme="dark"] .card-scrollable-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Cuadrícula de Avisos Generales (De 3 en 3) */
+.avisos-generales-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    align-items: stretch;
+}
+@media (max-width: 900px) {
+    .avisos-generales-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.aviso-card-tile {
+    background: var(--bg-gray);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.aviso-card-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 86, 179, 0.3);
+}
+
+/* Modal Extendido para Anuncios en PC */
+.modal-card-lg {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 95%;
+    max-width: 1100px;
+    position: relative;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.4s ease;
+}
+.modal-avisos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+@media (max-width: 900px) {
+    .modal-avisos-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
 /* 4. BOTONES ESPECIALES, TABLAS Y AVISOS */
 .btn-baja { background: #dc3545 !important; color: #ffffff !important; border: none !important; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
@@ -167,6 +265,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 .history-card.aprobada { border-left-color: #28a745; }
 .tag-aprobado { background-color: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2); }
 .tag-rechazada { background-color: rgba(220,53,69,0.1); color: #dc3545; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(220,53,69,0.2); }
+.tag-aprobada { background-color: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2); }
 .aviso-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; transition: border-color 0.4s; }
 .aviso-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
 .tag-aviso { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 5px; }
@@ -252,6 +351,10 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-
 [data-theme="dark"] .dashboard-grid .card:nth-child(1) { border-top-color: #3ba5ff; box-shadow: 0 0 20px rgba(59, 165, 255, 0.1), inset 0 4px 15px rgba(59, 165, 255, 0.05); }
 [data-theme="dark"] .dashboard-grid .card:nth-child(2) { border-top-color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.1), inset 0 4px 15px rgba(16, 185, 129, 0.05); }
 [data-theme="dark"] .dashboard-grid .card:nth-child(3) { border-top-color: #f59e0b; box-shadow: 0 0 20px rgba(245, 158, 11, 0.1), inset 0 4px 15px rgba(245, 158, 11, 0.05); }
+[data-theme="dark"] .dashboard-grid .card:nth-child(4), [data-theme="dark"] .card-avisos-generales { border-top-color: #a855f7; box-shadow: 0 0 20px rgba(168, 85, 247, 0.1), inset 0 4px 15px rgba(168, 85, 247, 0.05); }
+[data-theme="dark"] .aviso-card-tile { background-color: #151e32; border-color: #1e293b; color: var(--text-dark); }
+[data-theme="dark"] .aviso-card-tile:hover { background-color: #1e293b; border-color: #3ba5ff; box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+[data-theme="dark"] .modal-card-lg { background-color: var(--white) !important; border-color: #1e293b !important; color: var(--text-dark); }
 
 /* Ajustes Específicos Modo Oscuro para Insignias */
 [data-theme="dark"] .cert-card.obtained { background-color: rgba(59, 165, 255, 0.05) !important; border-color: #1e293b !important; }
