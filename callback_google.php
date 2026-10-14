@@ -6,7 +6,17 @@
 // (con su correo institucional). Este archivo solo VINCULA esa cuenta ya
 // existente con su Google ID, para futuros logins más rápidos.
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
 require 'db.php';
 require 'google_config.php';
 
@@ -32,6 +42,9 @@ if (!isset($_GET['code']) || !isset($_GET['state'])) {
 
 // 3) Validar el "state" contra el que guardamos al iniciar el flujo (anti-CSRF)
 if (empty($_SESSION['google_oauth_state']) || !hash_equals($_SESSION['google_oauth_state'], $_GET['state'])) {
+    $sess_state = $_SESSION['google_oauth_state'] ?? 'VACIO';
+    $get_state = $_GET['state'] ?? 'VACIO';
+    error_log("Google OAuth State mismatch: guardado={$sess_state}, recibido={$get_state}, session_id=" . session_id());
     unset($_SESSION['google_oauth_state']);
     volver_con_error('La sesión de autenticación con Google no es válida. Intenta de nuevo.');
 }
@@ -128,15 +141,25 @@ $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 $stmt_login = $pdo->prepare("INSERT INTO login_intentos (identificador, ip, exitoso) VALUES (?, ?, 1)");
 $stmt_login->execute([$correo_google, $ip]);
 
-// 9) Iniciar sesión igual que el login normal (mismas variables que index.php)
+// 9) Iniciar sesión igual que el login normal (mismas variables que index.php y login_process.php)
 session_regenerate_id(true);
+
+require_once __DIR__ . '/security.php';
 
 $_SESSION['user_id'] = $user['usuario_id'];
 $_SESSION['nombre'] = $user['nombre'];
-$_SESSION['apellido_paterno'] = $user['apellido_paterno'];
-$_SESSION['apellido_materno'] = $user['apellido_materno'];
+if (isset($user['apellido_paterno'])) {
+    $_SESSION['apellido_paterno'] = $user['apellido_paterno'];
+    $_SESSION['apellido_materno'] = $user['apellido_materno'];
+} else {
+    $_SESSION['apellidos'] = $user['apellidos'] ?? '';
+}
 $_SESSION['rol'] = $user['rol'];
 $_SESSION['ultima_actividad'] = time();
+
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 switch ($user['rol']) {
     case 'ADMIN':

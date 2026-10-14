@@ -2,7 +2,17 @@
 // google_auth.php - Inicia el flujo OAuth 2.0 con Google.
 // Se llega aquí desde el botón "Continuar con Google" de index.php.
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
 require 'google_config.php';
 
 // "state" aleatorio de un solo uso: Google nos lo regresa tal cual en el
