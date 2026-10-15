@@ -62,6 +62,13 @@ requerir_rol('ADMIN');
                 <p>Registra la oferta académica, asignando el NRC, materia, profesor y horarios correspondientes.</p>
             </a>
 
+            <!-- NUEVO MÓDULO DE ASIGNACIÓN DE ALUMNOS A GRUPOS -->
+            <a href="carga_masiva/vista_csv_inscripciones" class="module-card">
+                <i class="fas fa-users-cog"></i>
+                <h3>Asignar Alumnos a Grupos</h3>
+                <p>Inscribe alumnos masivamente a sus clases correspondientes con auto-ajuste de cupo y detección de choques.</p>
+            </a>
+
             <!-- NUEVO MÓDULO DE DICTÁMENES -->
             <a href="carga_masiva/vista_csv_dictamenes" class="module-card">
                 <i class="fas fa-file-signature"></i>

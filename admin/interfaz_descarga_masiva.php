@@ -191,7 +191,12 @@ requerir_rol('ADMIN');
 
                         // Actualizar UI de las tarjetas bloqueadas
                         actualizarTarjetasUI(modulosActivos);
+                    } else {
+                        $('#tabla-exportaciones').html('<tr><td colspan="6" class="empty-table-msg" style="color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> Error al cargar el historial.</td></tr>');
                     }
+                },
+                error: function(xhr, status, error) {
+                    $('#tabla-exportaciones').html('<tr><td colspan="6" class="empty-table-msg" style="color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> Error de conexión con el servidor.</td></tr>');
                 }
             });
         }
