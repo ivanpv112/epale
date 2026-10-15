@@ -10,14 +10,29 @@ date_default_timezone_set('America/Mexico_City');
 requerir_rol('ALUMNO');
 
 $stmt_al = $pdo->prepare("SELECT a.alumno_id, u.nombre, u.apellido_paterno, u.apellido_materno 
-                          FROM alumnos a 
-                          JOIN usuarios u ON a.usuario_id = u.usuario_id 
-                          WHERE a.usuario_id = ?");
+                          FROM usuarios u 
+                          LEFT JOIN alumnos a ON u.usuario_id = a.usuario_id 
+                          WHERE u.usuario_id = ?");
 $stmt_al->execute([$_SESSION['user_id']]);
 $alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
 
-$alumno_id = $alumno['alumno_id'];
-$nombre_completo = trim($alumno['nombre'] . ' ' . $alumno['apellido_paterno'] . ' ' . $alumno['apellido_materno']);
+if (!$alumno) {
+    requerir_rol('ALUMNO'); // Expulsa si no existe el usuario
+}
+
+// Si es un usuario alumno pero no tenía registro en la tabla `alumnos`, lo creamos automáticamente
+if (empty($alumno['alumno_id'])) {
+    $ins_al = $pdo->prepare("INSERT INTO alumnos (usuario_id, carrera) VALUES (?, '')");
+    $ins_al->execute([$_SESSION['user_id']]);
+    $alumno_id = (int)$pdo->lastInsertId();
+} else {
+    $alumno_id = (int)$alumno['alumno_id'];
+}
+
+$nombre_completo = trim(($alumno['nombre'] ?? '') . ' ' . ($alumno['apellido_paterno'] ?? '') . ' ' . ($alumno['apellido_materno'] ?? ''));
+if ($nombre_completo === '') {
+    $nombre_completo = $_SESSION['nombre'] ?? 'Estudiante';
+}
 
 // MATERIAS ACTIVAS ORDENADAS POR IDIOMA Y NIVEL
 $sql_materias = "SELECT i.inscripcion_id, m.materia_id, m.nombre, m.nivel, g.nrc 
@@ -64,29 +79,43 @@ $meses_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Ag
 $dias_es = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 $fecha_texto_es = $dias_es[date('w')] . ', ' . date('d') . ' de ' . $meses_es[date('n') - 1];
 
-$sql_notif_dinamicas = "
-    (SELECT sb.estatus, sb.fecha_respuesta, m.nombre, m.nivel, 'BAJA' as tipo_solicitud
-     FROM solicitudes_bajas sb
-     JOIN inscripciones i ON sb.inscripcion_id = i.inscripcion_id
-     JOIN grupos g ON i.nrc = g.nrc
-     JOIN materias m ON g.materia_id = m.materia_id
-     WHERE i.alumno_id = ? 
-       AND (sb.estatus = 'APROBADA' OR sb.estatus = 'RECHAZADA')
-       AND sb.fecha_respuesta >= DATE_SUB(NOW(), INTERVAL 15 DAY))
-    UNION
-    (SELECT sa.estatus, sa.fecha_respuesta, m.nombre, m.nivel, 'ALTA' as tipo_solicitud
-     FROM solicitudes_altas sa
-     JOIN inscripciones i ON sa.inscripcion_id = i.inscripcion_id
-     JOIN grupos g ON i.nrc = g.nrc
-     JOIN materias m ON g.materia_id = m.materia_id
-     WHERE i.alumno_id = ? 
-       AND (sa.estatus = 'APROBADA' OR sa.estatus = 'RECHAZADA')
-       AND sa.fecha_respuesta >= DATE_SUB(NOW(), INTERVAL 15 DAY))
-    ORDER BY fecha_respuesta DESC LIMIT 9
+// Notificaciones dinámicas de solicitudes (consultas separadas para evitar error de collation en MySQL)
+$sql_bajas = "
+    SELECT sb.estatus, sb.fecha_respuesta, m.nombre, m.nivel, 'BAJA' as tipo_solicitud
+    FROM solicitudes_bajas sb
+    JOIN inscripciones i ON sb.inscripcion_id = i.inscripcion_id
+    JOIN grupos g ON i.nrc = g.nrc
+    JOIN materias m ON g.materia_id = m.materia_id
+    WHERE i.alumno_id = ? 
+      AND (sb.estatus = 'APROBADA' OR sb.estatus = 'RECHAZADA')
+      AND sb.fecha_respuesta >= DATE_SUB(NOW(), INTERVAL 15 DAY)
+    ORDER BY sb.fecha_respuesta DESC LIMIT 9
 ";
-$stmt_notif = $pdo->prepare($sql_notif_dinamicas);
-$stmt_notif->execute([$alumno_id, $alumno_id]);
-$avisos_dinamicos = $stmt_notif->fetchAll(PDO::FETCH_ASSOC);
+$stmt_bajas = $pdo->prepare($sql_bajas);
+$stmt_bajas->execute([$alumno_id]);
+$notif_bajas = $stmt_bajas->fetchAll(PDO::FETCH_ASSOC);
+
+$sql_altas = "
+    SELECT sa.estatus, sa.fecha_respuesta, m.nombre, m.nivel, 'ALTA' as tipo_solicitud
+    FROM solicitudes_altas sa
+    JOIN inscripciones i ON sa.inscripcion_id = i.inscripcion_id
+    JOIN grupos g ON i.nrc = g.nrc
+    JOIN materias m ON g.materia_id = m.materia_id
+    WHERE i.alumno_id = ? 
+      AND (sa.estatus = 'APROBADA' OR sa.estatus = 'RECHAZADA')
+      AND sa.fecha_respuesta >= DATE_SUB(NOW(), INTERVAL 15 DAY)
+    ORDER BY sa.fecha_respuesta DESC LIMIT 9
+";
+$stmt_altas = $pdo->prepare($sql_altas);
+$stmt_altas->execute([$alumno_id]);
+$notif_altas = $stmt_altas->fetchAll(PDO::FETCH_ASSOC);
+
+// Unir y ordenar en PHP
+$avisos_dinamicos = array_merge($notif_bajas, $notif_altas);
+usort($avisos_dinamicos, function ($a, $b) {
+    return strtotime($b['fecha_respuesta'] ?? '') <=> strtotime($a['fecha_respuesta'] ?? '');
+});
+$avisos_dinamicos = array_slice($avisos_dinamicos, 0, 9);
 
 if (!function_exists('format_score')) {
     function format_score(mixed $num)
