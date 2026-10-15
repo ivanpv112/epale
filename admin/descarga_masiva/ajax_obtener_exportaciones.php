@@ -1,12 +1,13 @@
 <?php
 session_start();
 require '../../db.php';
+require_once '../../security.php';
 
 header('Content-Type: application/json');
 
 requerir_rol('ADMIN');
 
-$user_id = $_SESSION['user_id'];
+$user_id = $_SESSION['user_id'] ?? 0;
 $fecha = $_GET['fecha'] ?? '';
 $tipo = $_GET['tipo'] ?? 'Todos';
 
