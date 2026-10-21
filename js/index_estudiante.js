@@ -10,8 +10,70 @@ function cambiarMateriaDash(idContenedor) {
     contenedores.forEach(function(cont) {
         cont.style.display = 'none';
     });
-    document.getElementById(idContenedor).style.display = 'block';
+    let targetCont = document.getElementById(idContenedor);
+    if (targetCont) {
+        targetCont.style.display = 'block';
+    }
+
+    // Sincronizar el selector desplegable si existe
+    let selector = document.querySelector('.subject-selector');
+    if (selector && selector.value !== idContenedor) {
+        selector.value = idContenedor;
+    }
+
+    // Resaltar el item correspondiente en el widget de asistencias
+    let asistItems = document.querySelectorAll('.asist-item');
+    asistItems.forEach(function(item) {
+        if (item.getAttribute('data-eval-id') === idContenedor) {
+            item.classList.add('asist-item-active');
+        } else {
+            item.classList.remove('asist-item-active');
+        }
+    });
+
+    // Resaltar también la clase de hoy si coincide con la materia seleccionada
+    let hoyItems = document.querySelectorAll('.hoy-class-card');
+    hoyItems.forEach(function(item) {
+        if (item.getAttribute('data-eval-id') === idContenedor) {
+            item.classList.add('hoy-class-active');
+        } else {
+            item.classList.remove('hoy-class-active');
+        }
+    });
 }
+
+function irADesgloseActual() {
+    let selector = document.querySelector('.subject-selector');
+    let insId = '';
+    if (selector && selector.value) {
+        insId = selector.value.replace('eval-', '');
+    } else {
+        let firstCont = document.querySelector('.eval-container');
+        if (firstCont && firstCont.id) {
+            insId = firstCont.id.replace('eval-', '');
+        }
+    }
+    if (insId) {
+        window.location.href = 'calificaciones?ins=' + encodeURIComponent(insId);
+    } else {
+        window.location.href = 'calificaciones';
+    }
+}
+
+// Sincronizar estados visuales de las tarjetas activas al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    let selector = document.querySelector('.subject-selector');
+    let evalId = selector ? selector.value : '';
+    if (!evalId) {
+        let firstCont = document.querySelector('.eval-container');
+        if (firstCont && firstCont.id) {
+            evalId = firstCont.id;
+        }
+    }
+    if (evalId) {
+        cambiarMateriaDash(evalId);
+    }
+});
 
 // --- MODAL DE TODAS LAS ACTIVIDADES (Historial) ---
 function abrirModalTodasActividades() {
