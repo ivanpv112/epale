@@ -1,128 +1,27 @@
 <?php
-session_start();
-require '../db.php';
-require_once '../security.php';
+require_once 'calificaciones_logic.php';
 
-validar_csrf_estricto('POST');
-
-requerir_rol('ALUMNO');
-
-$stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
-$stmt_al->execute([$_SESSION['user_id']]);
-$alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
-$alumno_id = $alumno['alumno_id'];
-
-if (!function_exists('nivel_a_romano')) {
-    function nivel_a_romano(int $nivel) {
-        $romanos = [1=>'I', 2=>'II', 3=>'III', 4=>'IV', 5=>'V', 6=>'VI', 7=>'VII', 8=>'VIII', 9=>'IX', 10=>'X'];
-        return isset($romanos[$nivel]) ? $romanos[$nivel] : (string)$nivel;
-    }
-}
-
-$mensaje = ''; $tipo_mensaje = '';
-
-$bajas_habilitadas = config_get('bajas_habilitadas', true);
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    if (isset($_POST['action']) && $_POST['action'] == 'solicitar_baja') {
-        if (!$bajas_habilitadas) {
-            die("Error de Seguridad: El periodo para solicitar bajas se encuentra cerrado.");
-        }
-        $insc_baja = $_POST['inscripcion_id'];
-        $motivo = strip_tags(trim($_POST['motivo']));
-        $descripcion = substr(strip_tags(trim($_POST['descripcion'])), 0, 250);
-        
-        $chk = $pdo->prepare("SELECT COUNT(*) FROM solicitudes_bajas WHERE inscripcion_id = ? AND estatus = 'PENDIENTE'");
-        $chk->execute([$insc_baja]);
-        if ($chk->fetchColumn() == 0) {
-            $pdo->prepare("INSERT INTO solicitudes_bajas (inscripcion_id, motivo, descripcion) VALUES (?, ?, ?)")->execute([$insc_baja, $motivo, $descripcion]);
-            $mensaje = "Tu solicitud de baja ha sido enviada a Administración."; $tipo_mensaje = "success";
-        }
-    }
-    
-    if (isset($_POST['action']) && $_POST['action'] == 'cancelar_baja') {
-        $solicitud_id = $_POST['solicitud_id'];
-        $pdo->prepare("UPDATE solicitudes_bajas SET estatus = 'CANCELADA', fecha_respuesta = NOW() WHERE solicitud_id = ?")->execute([$solicitud_id]);
-        $mensaje = "Has retirado tu solicitud de baja exitosamente."; $tipo_mensaje = "success";
-    }
-}
-
-$sql_materias_activas = "SELECT i.inscripcion_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.nrc
-                         FROM inscripciones i
-                         JOIN grupos g ON i.nrc = g.nrc
-                         JOIN materias m ON g.materia_id = m.materia_id
-                         JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-                         WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO'
-                         ORDER BY m.nombre ASC, m.nivel ASC";
-$stmt_mat = $pdo->prepare($sql_materias_activas); $stmt_mat->execute([$alumno_id]);
-$materias_activas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
-
-$ins_activa = isset($_GET['ins']) ? $_GET['ins'] : (count($materias_activas) > 0 ? $materias_activas[0]['inscripcion_id'] : null);
-
-$materia_actual = null;
-if ($ins_activa) {
-    $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado, g.nrc,
-                                         u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap_pat
-                                  FROM inscripciones i
-                                  JOIN grupos g ON i.nrc = g.nrc
-                                  JOIN materias m ON g.materia_id = m.materia_id
-                                  JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-                                  JOIN usuarios u ON g.profesor_id = u.usuario_id
-                                  WHERE i.inscripcion_id = ? AND i.alumno_id = ?");
-    $stmt_actual->execute([$ins_activa, $alumno_id]);
-    $materia_actual = $stmt_actual->fetch(PDO::FETCH_ASSOC);
-}
-
-$historial_solicitudes = [];
-$solicitud_pendiente = null;
-$hay_rechazada_reciente = false;
-
-if ($ins_activa && $materia_actual && $materia_actual['grupo_estado'] == 'ACTIVO') {
-    $stmt_sol = $pdo->prepare("SELECT * FROM solicitudes_bajas WHERE inscripcion_id = ? ORDER BY fecha_solicitud DESC");
-    $stmt_sol->execute([$ins_activa]);
-    $historial_solicitudes = $stmt_sol->fetchAll(PDO::FETCH_ASSOC);
-
-    if (count($historial_solicitudes) > 0) {
-        $ultima = $historial_solicitudes[0];
-        if ($ultima['estatus'] === 'PENDIENTE') { $solicitud_pendiente = $ultima; } 
-        elseif ($ultima['estatus'] === 'RECHAZADA') { $hay_rechazada_reciente = true; }
-    }
-}
-
-$evaluacion = []; $puntos_totales_posibles = 0;
-if ($materia_actual) {
-    $stmt_crit = $pdo->prepare("SELECT * FROM criterios_evaluacion WHERE materia_id = ? ORDER BY categoria ASC");
-    $stmt_crit->execute([$materia_actual['materia_id']]);
-    $criterios_bd = $stmt_crit->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($criterios_bd as $crit) {
-        $cat = $crit['categoria'];
-        if (!isset($evaluacion[$cat])) { $evaluacion[$cat] = ['icono' => $crit['icono'], 'color' => $crit['color'], 'items' => []]; }
-        $evaluacion[$cat]['items'][$crit['codigo_examen']] = ['nombre' => $crit['nombre_examen'], 'max' => floatval($crit['puntos_maximos'])];
-        $puntos_totales_posibles += floatval($crit['puntos_maximos']);
-    }
-}
-
-$calificaciones_bd = []; $puntaje_total_acumulado = 0;
-if ($ins_activa) {
-    $stmt_cal = $pdo->prepare("SELECT tipo_examen, puntaje FROM calificaciones WHERE inscripcion_id = ?");
-    $stmt_cal->execute([$ins_activa]);
-    while ($row = $stmt_cal->fetch(PDO::FETCH_ASSOC)) {
-        $calificaciones_bd[$row['tipo_examen']] = $row['puntaje'];
-        if ($row['puntaje'] !== null) $puntaje_total_acumulado += floatval($row['puntaje']);
-    }
-}
-$porcentaje_total = $puntos_totales_posibles > 0 ? ($puntaje_total_acumulado / $puntos_totales_posibles) * 100 : 0;
-
-
-if (!function_exists('format_score')) {
-    /**
-     * @param float|int|string $num
-     * @return float|int
-     */
-    function format_score($num) { return floatval($num) == intval($num) ? intval($num) : floatval($num); }
-}
+/**
+ * Declaración de variables importadas desde calificaciones_logic.php
+ * para evitar falsos positivos de "Undefined variable" en el IDE.
+ * 
+ * @var array|null $materia_actual
+ * @var array $materias_activas
+ * @var int|string|null $ins_activa
+ * @var array $evaluacion
+ * @var array $calificaciones_bd
+ * @var float|int $puntaje_total_acumulado
+ * @var float|int $puntos_totales_posibles
+ * @var float|int $porcentaje_total
+ * @var array $historial_solicitudes
+ * @var array|null $solicitud_pendiente
+ * @var bool $hay_rechazada_reciente
+ * @var bool $bajas_habilitadas
+ * @var string $mensaje
+ * @var string $tipo_mensaje
+ */
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -226,7 +125,7 @@ if (!function_exists('format_score')) {
 
                 <?php foreach($evaluacion as $categoria => $datos_cat): ?>
                     <div class="grade-category-card" style="border-top-color: <?php echo $datos_cat['color']; ?>;">
-                        <h4><i class="fas <?php echo $datos_cat['icono']; ?>"></i> <?php echo $categoria; ?></h4>
+                        <h4><i class="fas <?php echo $datos_cat['icono']; ?>"></i> <?php echo htmlspecialchars($categoria); ?></h4>
                         <?php foreach($datos_cat['items'] as $codigo => $item): 
                             $esta_registrada = array_key_exists($codigo, $calificaciones_bd);
                             $puntaje = $esta_registrada ? $calificaciones_bd[$codigo] : null;
@@ -244,7 +143,7 @@ if (!function_exists('format_score')) {
                         ?>
                             <div class="detailed-grade-item">
                                 <div class="dg-info">
-                                    <strong><?php echo $item['nombre']; ?></strong>
+                                    <strong><?php echo htmlspecialchars($item['nombre']); ?></strong>
                                     <span><?php echo ($puntaje !== null) ? 'Evaluado' : '---'; ?></span>
                                 </div>
                                 <div class="dg-score">
@@ -330,34 +229,85 @@ if (!function_exists('format_score')) {
                             <button class="close-btn" onclick="cerrarModal('modalHistorial')">&times;</button>
                         </div>
                         <div class="modal-body">
-                            <p style="font-size:0.9rem; color:var(--text-muted); margin-top:0;">Historial de peticiones de baja para <strong><?php echo htmlspecialchars($materia_actual['materia']); ?></strong>.</p>
+                            <?php 
+                                $nombre_materia_completo = htmlspecialchars($materia_actual['materia'] . ' ' . nivel_a_romano((int)($materia_actual['nivel'] ?? 1)));
+                            ?>
+                            <p style="font-size:0.9rem; color:var(--text-muted); margin-top:0;">Historial de peticiones de baja para <strong><?php echo $nombre_materia_completo; ?></strong>.</p>
                             
                             <?php foreach($historial_solicitudes as $h): 
-                                $class_card = strtolower($h['estatus']);
-                                $icono_estatus = ''; $color_estatus = '';
+                                $estatus_raw = strtoupper($h['estatus']);
+                                $class_card = strtolower($estatus_raw);
+                                $icono_estatus = 'fa-clock';
+                                $neon_badge_class = 'neon-badge-pendiente';
                                 
-                                switch($h['estatus']) {
-                                    case 'PENDIENTE': $icono_estatus = 'fa-clock'; $color_estatus = '#856404'; break;
-                                    case 'RECHAZADA': $icono_estatus = 'fa-times-circle'; $color_estatus = '#dc3545'; break;
-                                    case 'CANCELADA': $icono_estatus = 'fa-ban'; $color_estatus = '#6c757d'; break;
-                                    case 'APROBADA':  $icono_estatus = 'fa-check-circle'; $color_estatus = '#28a745'; break;
+                                switch($estatus_raw) {
+                                    case 'APROBADA': 
+                                        $icono_estatus = 'fa-check-circle'; 
+                                        $neon_badge_class = 'neon-badge-aprobada'; 
+                                        break;
+                                    case 'RECHAZADA': 
+                                        $icono_estatus = 'fa-times-circle'; 
+                                        $neon_badge_class = 'neon-badge-rechazada'; 
+                                        break;
+                                    case 'CANCELADA': 
+                                        $icono_estatus = 'fa-ban'; 
+                                        $neon_badge_class = 'neon-badge-cancelada'; 
+                                        break;
+                                    case 'PENDIENTE': 
+                                    default:
+                                        $icono_estatus = 'fa-clock'; 
+                                        $neon_badge_class = 'neon-badge-pendiente'; 
+                                        break;
                                 }
                             ?>
                                 <div class="history-card <?php echo $class_card; ?>">
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                        <div style="font-weight: bold; color: var(--text-dark); font-size: 0.95rem;"><?php echo htmlspecialchars($h['motivo']); ?></div>
-                                        <div style="font-size: 0.8rem; font-weight: bold; color: <?php echo $color_estatus; ?>; padding: 3px 8px; border-radius: 12px; border: 1px solid <?php echo $color_estatus; ?>;">
-                                            <i class="fas <?php echo $icono_estatus; ?>"></i> <?php echo $h['estatus']; ?>
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                                        <div>
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                                <span class="notif-sub-badge neon-sub-tramite">
+                                                    <i class="fas fa-file-signature"></i> Solicitud de Baja
+                                                </span>
+                                            </div>
+                                            <div style="font-weight: 700; color: var(--text-dark); font-size: 0.98rem;">
+                                                <?php echo htmlspecialchars($h['motivo']); ?>
+                                            </div>
+                                            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                                                <?php echo $nombre_materia_completo; ?>
+                                            </div>
                                         </div>
+                                        <span class="neon-badge <?php echo $neon_badge_class; ?>">
+                                            <i class="fas <?php echo $icono_estatus; ?>"></i> <?php echo $estatus_raw; ?>
+                                        </span>
                                     </div>
-                                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;"><i class="far fa-calendar-alt"></i> Solicitada el: <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?></div>
+
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                        <i class="far fa-calendar-alt"></i> Solicitada el <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?>
+                                    </div>
+
                                     <?php if(!empty($h['descripcion'])): ?>
-                                        <div style="font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-style: italic;">"<?php echo htmlspecialchars($h['descripcion']); ?>"</div>
+                                        <div style="font-size: 0.86rem; color: var(--text-dark); line-height: 1.45; background: rgba(128, 128, 128, 0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128, 128, 128, 0.1); margin-bottom: 10px;">
+                                            <strong style="color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 2px;">Detalle / Justificación:</strong>
+                                            <?php echo htmlspecialchars($h['descripcion']); ?>
+                                        </div>
                                     <?php endif; ?>
-                                    <?php if($h['estatus'] !== 'PENDIENTE' && $h['estatus'] !== 'CANCELADA'): ?>
-                                        <div style="border-top: 1px dashed var(--text-muted); padding-top: 10px; margin-top: 10px;">
-                                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;"><i class="fas fa-reply"></i> Respuesta de Administración (<?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>):</div>
-                                            <div style="font-size: 0.9rem; color: var(--text-dark); font-weight: 500;"><?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?></div>
+
+                                    <?php if($estatus_raw !== 'PENDIENTE' && $estatus_raw !== 'CANCELADA'): ?>
+                                        <div class="history-resp-callout <?php echo $estatus_raw === 'APROBADA' ? 'history-resp-aprobada' : 'history-resp-rechazada'; ?>">
+                                            <div class="history-resp-header">
+                                                <i class="fas fa-reply"></i> Respuesta de Administración • <?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>
+                                            </div>
+                                            <div class="history-resp-text">
+                                                <?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?>
+                                            </div>
+                                        </div>
+                                    <?php elseif($estatus_raw === 'CANCELADA'): ?>
+                                        <div class="history-resp-callout history-resp-cancelada">
+                                            <div class="history-resp-header">
+                                                <i class="fas fa-ban"></i> Resolución del Estudiante • <?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>
+                                            </div>
+                                            <div class="history-resp-text">
+                                                El estudiante canceló la solicitud.
+                                            </div>
                                         </div>
                                     <?php endif; ?>
                                 </div>

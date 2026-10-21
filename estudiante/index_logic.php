@@ -1,4 +1,15 @@
 <?php
+/**
+ * index_logic.php
+ * Controlador y lógica del dashboard principal del estudiante.
+ */
+
+// Si se intenta acceder directamente al archivo de lógica por URL, redirigir a index
+if (basename($_SERVER['PHP_SELF']) === 'index_logic.php') {
+    header('Location: index');
+    exit;
+}
+
 session_start();
 require '../db.php';
 require_once '../security.php';
@@ -34,6 +45,28 @@ if ($nombre_completo === '') {
     $nombre_completo = $_SESSION['nombre'] ?? 'Estudiante';
 }
 
+// Saludo dinámico según la hora del día (Zona horaria de México)
+$hora_actual = (int)date('G');
+if ($hora_actual >= 6 && $hora_actual < 12) {
+    $saludo_tiempo = '¡Buenos días';
+    $icono_saludo = 'fa-sun';
+    $color_icono_saludo = '#f59e0b';
+} elseif ($hora_actual >= 12 && $hora_actual < 19) {
+    $saludo_tiempo = '¡Buenas tardes';
+    $icono_saludo = 'fa-cloud-sun';
+    $color_icono_saludo = '#f97316';
+} else {
+    $saludo_tiempo = '¡Buenas noches';
+    $icono_saludo = 'fa-moon';
+    $color_icono_saludo = '#6366f1';
+}
+
+// Extraer el primer nombre para un saludo más personal o mostrar el nombre completo
+$primer_nombre = trim(explode(' ', trim($alumno['nombre'] ?? ''))[0]);
+if ($primer_nombre === '') {
+    $primer_nombre = $nombre_completo;
+}
+
 // MATERIAS ACTIVAS ORDENADAS POR IDIOMA Y NIVEL
 $sql_materias = "SELECT i.inscripcion_id, m.materia_id, m.nombre, m.nivel, g.nrc 
                  FROM inscripciones i
@@ -46,32 +79,64 @@ $stmt_mat = $pdo->prepare($sql_materias);
 $stmt_mat->execute([$alumno_id]);
 $materias_inscritas = $stmt_mat->fetchAll(PDO::FETCH_ASSOC);
 
-$dias_map = ['Monday' => 'L', 'Tuesday' => 'M', 'Wednesday' => 'I', 'Thursday' => 'J', 'Friday' => 'V', 'Saturday' => 'S', 'Sunday' => 'D'];
-$dia_hoy_letra = $dias_map[date('l')];
+$dias_map = ['Monday' => 2, 'Tuesday' => 3, 'Wednesday' => 4, 'Thursday' => 5, 'Friday' => 6, 'Saturday' => 7, 'Sunday' => 1];
+$columna_hoy = $dias_map[date('l')];
 
-// HORARIOS ACTIVOS
-$sql_horarios = "SELECT h.hora_inicio, h.hora_fin, h.aula, h.modalidad, h.dias_patron, m.nombre, m.nivel 
-                 FROM horarios h
-                 JOIN grupos g ON h.nrc = g.nrc
-                 JOIN materias m ON g.materia_id = m.materia_id
-                 JOIN inscripciones i ON g.nrc = i.nrc
-                 JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-                 WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g.estado = 'ACTIVO' AND c.activo = 1
-                 ORDER BY h.hora_inicio ASC";
+if (!function_exists('descifrarDiasHoy')) {
+    function descifrarDiasHoy(string $cadena): array
+    {
+        $columnas = [];
+        $s = strtoupper($cadena);
+
+        if (strpos($s, 'LUN') !== false) $columnas[] = 2;
+        if (strpos($s, 'MAR') !== false) $columnas[] = 3;
+        if (strpos($s, 'MIE') !== false || strpos($s, 'MIÉ') !== false) $columnas[] = 4;
+        if (strpos($s, 'JUE') !== false) $columnas[] = 5;
+        if (strpos($s, 'VIE') !== false) $columnas[] = 6;
+        if (strpos($s, 'SAB') !== false || strpos($s, 'SÁB') !== false) $columnas[] = 7;
+
+        if (empty($columnas)) {
+            if (strpos($s, 'L') !== false) $columnas[] = 2;
+            if (strpos($s, 'M') !== false) $columnas[] = 3;
+            if (strpos($s, 'I') !== false || strpos($s, 'X') !== false || strpos($s, 'W') !== false) $columnas[] = 4;
+            if (strpos($s, 'J') !== false) $columnas[] = 5;
+            if (strpos($s, 'V') !== false) $columnas[] = 6;
+            if (strpos($s, 'S') !== false) $columnas[] = 7;
+        }
+        return array_unique($columnas);
+    }
+}
+
+// HORARIOS ACTIVOS (Presenciales y Virtuales mediante clave_grupo o nrc inscrito)
+$sql_horarios = "
+    SELECT h.hora_inicio, h.hora_fin, h.aula, h.modalidad, h.dias_patron, m.nombre, m.nivel, 
+           i.inscripcion_id, g_todos.nrc 
+    FROM inscripciones i
+    JOIN grupos g_inscrito ON i.nrc = g_inscrito.nrc
+    JOIN grupos g_todos ON 
+        (g_inscrito.clave_grupo IS NOT NULL AND g_inscrito.clave_grupo != '' 
+         AND g_todos.clave_grupo = g_inscrito.clave_grupo 
+         AND g_todos.materia_id = g_inscrito.materia_id 
+         AND g_todos.ciclo_id = g_inscrito.ciclo_id)
+        OR (g_todos.nrc = g_inscrito.nrc)
+    JOIN materias m ON g_todos.materia_id = m.materia_id
+    JOIN ciclos c ON g_todos.ciclo_id = c.ciclo_id
+    JOIN horarios h ON g_todos.nrc = h.nrc
+    WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO' AND g_todos.estado = 'ACTIVO' AND c.activo = 1
+    ORDER BY h.hora_inicio ASC
+";
 $stmt_hor = $pdo->prepare($sql_horarios);
 $stmt_hor->execute([$alumno_id]);
 $todos_horarios = $stmt_hor->fetchAll(PDO::FETCH_ASSOC);
 
 $clases_hoy = [];
 foreach ($todos_horarios as $h) {
-    $patron = isset($h['dias_patron']) ? (string)$h['dias_patron'] : '';
-    $solo_letras = preg_replace('/[^A-Za-z]/', '', strtoupper($patron));
-
-    if (!empty($solo_letras) && strlen($solo_letras) > 0) {
-        $dias_clase = str_split($solo_letras);
-        if (in_array($dia_hoy_letra, $dias_clase)) {
-            $clases_hoy[] = $h;
-        }
+    if (empty($h['dias_patron']) || empty($h['hora_inicio']) || empty($h['hora_fin'])) {
+        continue;
+    }
+    $dias_clase = descifrarDiasHoy((string)$h['dias_patron']);
+    if (in_array($columna_hoy, $dias_clase)) {
+        $clases_hoy[] = $h;
     }
 }
 
@@ -117,6 +182,86 @@ usort($avisos_dinamicos, function ($a, $b) {
 });
 $avisos_dinamicos = array_slice($avisos_dinamicos, 0, 9);
 
+// 4. ASISTENCIAS POR MATERIA ACTIVA
+$asistencias_resumen = [];
+if (!empty($materias_inscritas)) {
+    $stmt_asist_materia = $pdo->prepare("
+        SELECT 
+            COUNT(*) as total_registradas,
+            SUM(CASE WHEN a.estatus IN ('ASISTENCIA', 'RETARDO') THEN 1 ELSE 0 END) as asistencias_validas,
+            SUM(CASE WHEN a.estatus = 'FALTA' THEN 1 ELSE 0 END) as faltas,
+            SUM(CASE WHEN a.estatus = 'RETARDO' THEN 1 ELSE 0 END) as retardos
+        FROM asistencias a
+        WHERE a.inscripcion_id = ?
+    ");
+
+    foreach ($materias_inscritas as $mat) {
+        $stmt_asist_materia->execute([$mat['inscripcion_id']]);
+        $row_asist = $stmt_asist_materia->fetch(PDO::FETCH_ASSOC);
+
+        $tot = (int)($row_asist['total_registradas'] ?? 0);
+        $asistidas = (int)($row_asist['asistencias_validas'] ?? 0);
+        $faltas = (int)($row_asist['faltas'] ?? 0);
+        $retardos = (int)($row_asist['retardos'] ?? 0);
+
+        if ($tot > 0) {
+            $porcentaje = round(($asistidas / $tot) * 100);
+            if ($porcentaje > 100) $porcentaje = 100;
+        } else {
+            // Sin registros aún: 100% de inicio
+            $porcentaje = 100;
+        }
+
+        // Colores y estados:
+        // >= 80%: Verde (buena asistencia)
+        // >= 70% y < 80%: Amarillo / Ámbar (en riesgo)
+        // < 70%: Rojo (reprobado por faltas / sin derecho)
+        if ($tot == 0) {
+            $color = '#10b981';
+            $estado_texto = 'Sin faltas';
+            $badge_bg = 'rgba(16, 185, 129, 0.12)';
+            $badge_color = '#059669';
+            $categoria = 'excelente';
+        } elseif ($porcentaje >= 80) {
+            $color = '#10b981';
+            $estado_texto = 'Regular';
+            $badge_bg = 'rgba(16, 185, 129, 0.12)';
+            $badge_color = '#059669';
+            $categoria = 'excelente';
+        } elseif ($porcentaje >= 70) {
+            $color = '#f59e0b';
+            $estado_texto = 'En riesgo';
+            $badge_bg = 'rgba(245, 158, 11, 0.12)';
+            $badge_color = '#d97706';
+            $categoria = 'riesgo';
+        } else {
+            $color = '#ef4444';
+            $estado_texto = 'Reprobado';
+            $badge_bg = 'rgba(239, 68, 68, 0.12)';
+            $badge_color = '#dc2626';
+            $categoria = 'reprobado';
+        }
+
+        $asistencias_resumen[] = [
+            'inscripcion_id' => $mat['inscripcion_id'],
+            'materia_id'     => $mat['materia_id'],
+            'nombre'         => $mat['nombre'],
+            'nivel'          => $mat['nivel'],
+            'nrc'            => $mat['nrc'],
+            'total'          => $tot,
+            'asistidas'      => $asistidas,
+            'faltas'         => $faltas,
+            'retardos'       => $retardos,
+            'porcentaje'     => $porcentaje,
+            'color'          => $color,
+            'estado_texto'   => $estado_texto,
+            'badge_bg'       => $badge_bg,
+            'badge_color'    => $badge_color,
+            'categoria'      => $categoria
+        ];
+    }
+}
+
 if (!function_exists('format_score')) {
     function format_score(mixed $num)
     {
@@ -154,7 +299,7 @@ foreach ($materias_inscritas as $m) {
 }
 $mis_idiomas = array_unique($mis_idiomas);
 
-$sql_avisos = "SELECT * FROM avisos WHERE tipo_audiencia = 'GLOBAL'";
+$sql_avisos = "SELECT * FROM avisos WHERE autor_id IS NULL AND (tipo_audiencia = 'GLOBAL'";
 
 if (count($mis_idiomas) > 0) {
     $in_idiomas = "'" . implode("','", $mis_idiomas) . "'";
@@ -169,7 +314,7 @@ if (count($mis_nrcs) > 0) {
     $sql_avisos .= " OR (tipo_audiencia = 'GRUPO' AND audiencia_ref IN ($in_nrc))";
 }
 
-$sql_avisos .= " ORDER BY fecha_creacion DESC";
+$sql_avisos .= ") ORDER BY fecha_creacion DESC";
 $avisos_admin = $pdo->query($sql_avisos)->fetchAll(PDO::FETCH_ASSOC);
 
 $avisos_prof_dashboard = [];
@@ -178,24 +323,29 @@ $avisos_prof_todas = [];
 if (count($mis_nrcs) > 0) {
     $in_nrc_avisos_prof = implode(",", $mis_nrcs);
     $sql_avisos_prof = "
-        SELECT a.*, m.nombre as materia_nombre, m.nivel as materia_nivel, g.clave_grupo, u.nombre as prof_nombre, u.apellido_paterno as prof_ap
-        FROM avisos_profesor a
-        JOIN grupos g ON a.nrc = g.nrc
+        SELECT a.aviso_id, a.autor_id, a.audiencia_ref AS nrc, a.tipo_comunicado AS tipo, 
+               a.titulo, a.cuerpo AS descripcion, a.fecha_inicio, a.fecha_expiracion AS fecha_fin, 
+               a.fecha_creacion, a.imagen, m.nombre as materia_nombre, m.nivel as materia_nivel, 
+               g.clave_grupo, u.nombre as prof_nombre, u.apellido_paterno as prof_ap
+        FROM avisos a
+        JOIN grupos g ON CAST(a.audiencia_ref AS UNSIGNED) = g.nrc
         JOIN materias m ON g.materia_id = m.materia_id
-        JOIN usuarios u ON a.profesor_id = u.usuario_id
-        WHERE a.nrc IN ($in_nrc_avisos_prof)
-        ORDER BY a.fecha_inicio DESC
+        JOIN usuarios u ON a.autor_id = u.usuario_id
+        WHERE a.tipo_audiencia = 'GRUPO' AND a.audiencia_ref IN ($in_nrc_avisos_prof)
+        ORDER BY COALESCE(a.fecha_inicio, a.fecha_creacion) DESC
     ";
     $avisos_prof_raw = $pdo->query($sql_avisos_prof)->fetchAll(PDO::FETCH_ASSOC);
 
     $hoy = new DateTime();
     foreach ($avisos_prof_raw as $a) {
-        $inicio = new DateTime($a['fecha_inicio']);
-        $fin = new DateTime($a['fecha_fin']);
+        $inicio = new DateTime($a['fecha_inicio'] ?: $a['fecha_creacion']);
+        $fin = $a['fecha_fin'] ? new DateTime($a['fecha_fin']) : null;
 
-        if ($hoy > $fin) {
+        if ($fin && $hoy > $fin) {
             $estatus = 'FINALIZADA';
-        } elseif ($hoy >= $inicio && $hoy <= $fin) {
+        } elseif ($fin && $hoy >= $inicio && $hoy <= $fin) {
+            $estatus = 'ACTIVA';
+        } elseif (!$fin && $hoy >= $inicio) {
             $estatus = 'ACTIVA';
         } else {
             $diff = $hoy->diff($inicio);

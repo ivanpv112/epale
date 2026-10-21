@@ -5,6 +5,10 @@ require_once 'index_logic.php';
  * para evitar falsos positivos de "Undefined variable" en el IDE.
  * 
  * @var string $nombre_completo
+ * @var string $primer_nombre
+ * @var string $saludo_tiempo
+ * @var string $icono_saludo
+ * @var string $color_icono_saludo
  * @var array $materias_inscritas
  * @var string $fecha_texto_es
  * @var array $clases_hoy
@@ -13,6 +17,7 @@ require_once 'index_logic.php';
  * @var array $avisos_dinamicos
  * @var array $avisos_admin
  * @var array $todos_avisos_generales
+ * @var array $asistencias_resumen
  */
 ?>
 <!DOCTYPE html>
@@ -34,7 +39,7 @@ require_once 'index_logic.php';
     <main class="main-content">
 
         <div class="welcome-banner">
-            <h2>Página de inicio</h2>
+            <h2><i class="fas <?php echo $icono_saludo; ?>" style="color: <?php echo $color_icono_saludo; ?>; margin-right: 6px;"></i> <?php echo $saludo_tiempo; ?>!</h2>
             <h1><?php echo htmlspecialchars($nombre_completo); ?></h1>
         </div>
 
@@ -107,9 +112,7 @@ require_once 'index_logic.php';
                             $bg_msg = '#cce5ff';
                             $col_msg = '#004085';
                         }
-                    ?>
-
-                        <div id="eval-<?php echo $insc_id; ?>" class="eval-container" style="display: <?php echo $display; ?>; margin: auto 0;">
+                    ?>                        <div id="eval-<?php echo $insc_id; ?>" class="eval-container" style="display: <?php echo $display; ?>; margin: auto 0;">
                             <div class="chart-wrapper">
 
                                 <?php if ($max_puntos == 0): ?>
@@ -136,190 +139,174 @@ require_once 'index_logic.php';
                                 <?php endif; ?>
 
                             </div>
-
-                            <div style="text-align: center; margin-top: 15px;">
-                                <button onclick="window.location.href='calificaciones?ins=<?php echo $insc_id; ?>'" style="padding: 8px 15px; background: transparent; border: 1px solid var(--udg-blue); color: var(--udg-blue); border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Ver Desglose</button>
-                            </div>
                         </div>
                     <?php endforeach; ?>
+                </div>
+
+                <!-- Footer unificado y alineado con los otros widgets -->
+                <div class="card-footer-action">
+                    <button id="btnVerDesglose" class="btn-dash-action" onclick="irADesgloseActual()">
+                        <i class="fas fa-chart-line"></i> Ver Desglose
+                    </button>
                 </div>
             </div>
 
             <!-- TARJETA: HORARIOS DE HOY -->
-            <div class="card dashboard-card-top">
+            <div class="card dashboard-card-top card-hoy-widget">
                 <div style="flex-shrink: 0;">
-                    <h3 style="margin-bottom: 5px;"><i class="far fa-clock"></i> Clases de Hoy</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 15px;">
+                    <h3 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                        <span><i class="far fa-clock" style="color: #06b6d4;"></i> Clases de Hoy</span>
+                        <?php if (count($clases_hoy) > 0): ?>
+                            <span class="dash-badge-pill"><?php echo count($clases_hoy); ?> sesión(es)</span>
+                        <?php endif; ?>
+                    </h3>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0; margin-bottom: 15px;">
                         <i class="far fa-calendar-alt"></i> <?php echo $fecha_texto_es; ?>
                     </p>
                 </div>
 
-                <div class="card-scrollable-body">
-                    <ul class="next-classes-list" style="margin: 0; padding: 0;">
-                        <?php if (count($clases_hoy) > 0): ?>
-                            <?php foreach ($clases_hoy as $h): ?>
-                                <li style="border-left: 4px solid <?php echo ($h['modalidad'] == 'VIRTUAL') ? '#17a2b8' : '#28a745'; ?>; padding-left: 10px;">
-                                    <div>
-                                        <div style="font-weight: bold; color: var(--text-dark); font-size: 0.95rem;"><?php echo htmlspecialchars($h['nombre'] . ' ' . nivel_a_romano($h['nivel'])); ?></div>
-                                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 3px;">
-                                            <i class="fas <?php echo ($h['modalidad'] == 'VIRTUAL') ? 'fa-laptop-house' : 'fa-building'; ?>"></i>
-                                            <?php echo htmlspecialchars($h['aula']); ?>
+                <div class="card-scrollable-body" style="padding-right: 4px;">
+                    <?php if (count($clases_hoy) > 0): 
+                        $primer_eval_id = !empty($materias_inscritas[0]['inscripcion_id']) ? ('eval-' . $materias_inscritas[0]['inscripcion_id']) : '';
+                    ?>
+                        <div class="hoy-classes-list">
+                            <?php foreach ($clases_hoy as $h): 
+                                $es_virtual = ($h['modalidad'] === 'VIRTUAL');
+                                $mod_color = $es_virtual ? '#06b6d4' : '#10b981';
+                                $mod_icon = $es_virtual ? 'fa-laptop-house' : 'fa-building';
+                                $eval_id_h = !empty($h['inscripcion_id']) ? ('eval-' . $h['inscripcion_id']) : '';
+                                $is_active_h = ($eval_id_h !== '' && $eval_id_h === $primer_eval_id) ? ' hoy-class-active' : '';
+                            ?>
+                                <div class="hoy-class-card<?php echo $is_active_h; ?>" 
+                                     <?php if ($eval_id_h): ?>
+                                         data-eval-id="<?php echo $eval_id_h; ?>"
+                                         onclick="cambiarMateriaDash('<?php echo $eval_id_h; ?>')"
+                                         title="Clic para ver el progreso de esta clase"
+                                         role="button"
+                                         tabindex="0"
+                                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id_h; ?>');}"
+                                     <?php endif; ?>>
+                                    <div class="hoy-class-strip" style="background: <?php echo $mod_color; ?>;"></div>
+                                    <div class="hoy-class-content">
+                                        <div class="hoy-class-main">
+                                            <div class="hoy-class-title">
+                                                <?php echo htmlspecialchars($h['nombre'] . ' ' . nivel_a_romano((int)$h['nivel'])); ?>
+                                            </div>
+                                            <div class="hoy-class-meta">
+                                                <span class="hoy-aula-tag">
+                                                    <i class="fas <?php echo $mod_icon; ?>" style="color: <?php echo $mod_color; ?>;"></i>
+                                                    <?php echo htmlspecialchars($h['aula']); ?>
+                                                </span>
+                                                <span class="hoy-mod-pill" style="color: <?php echo $mod_color; ?>; background: <?php echo $es_virtual ? 'rgba(6, 182, 212, 0.12)' : 'rgba(16, 185, 129, 0.12)'; ?>;">
+                                                    <?php echo htmlspecialchars($h['modalidad']); ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="hoy-time-badge">
+                                            <i class="far fa-clock" style="font-size: 0.75rem; opacity: 0.7;"></i>
+                                            <span><?php echo date('H:i', strtotime($h['hora_inicio'])) . ' - ' . date('H:i', strtotime($h['hora_fin'])); ?></span>
                                         </div>
                                     </div>
-                                    <span class="grade-value" style="background: var(--bg-gray); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; border: 1px solid #eee;">
-                                        <?php echo date('H:i', strtotime($h['hora_inicio'])) . ' - ' . date('H:i', strtotime($h['hora_fin'])); ?>
-                                    </span>
-                                </li>
+                                </div>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <div style="text-align:center; padding: 40px 0; color:var(--text-muted); margin: auto;">
-                                <i class="fas fa-mug-hot" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 10px; display: block; opacity: 0.5;"></i>
-                                ¡Día libre! No tienes clases programadas para hoy.
-                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div style="text-align:center; padding: 40px 20px; color:var(--text-muted); margin: auto;">
+                            <i class="fas fa-mug-hot" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                            ¡Día libre! No tienes clases programadas para hoy.
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Footer unificado y alineado con los otros widgets -->
+                <div class="card-footer-action">
+                    <button class="btn-dash-action" onclick="window.location.href='horario'">
+                        <i class="far fa-calendar-check"></i> Ver Horario Completo
+                    </button>
+                </div>
+            </div>
+
+            <!-- TARJETA: ASISTENCIA DE CLASES ACTIVAS -->
+            <div class="card dashboard-card-top card-asistencias-widget">
+                <div style="flex-shrink: 0;">
+                    <h3 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                        <span><i class="fas fa-user-check" style="color: #10b981;"></i> Asistencia</span>
+                        <?php if (count($asistencias_resumen) > 0): ?>
+                            <span class="dash-badge-pill"><?php echo count($asistencias_resumen); ?> materia(s)</span>
                         <?php endif; ?>
-                    </ul>
+                    </h3>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0; margin-bottom: 15px;">
+                        Porcentaje de asistencia en tus clases activas
+                    </p>
                 </div>
 
-                <div style="margin-top: auto; padding-top: 15px; text-align: center; flex-shrink: 0;">
-                    <button onclick="window.location.href='horario'" style="width: auto; padding: 10px 20px; background-color: transparent; border: 1px solid var(--text-muted); border-radius: 6px; font-weight:bold; cursor:pointer; color: var(--text-dark); transition: 0.2s;" onmouseover="this.style.background='var(--bg-gray)'" onmouseout="this.style.background='transparent'">Ver Horario Completo</button>
-                </div>
-            </div>
-
-            <!-- TARJETA: AVISOS Y ASIGNACIONES DEL PROFESOR -->
-            <div class="card dashboard-card-top">
-                <h3 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-shrink: 0;">
-                    <span><i class="fas fa-tasks"></i> Anuncios de Clase </span>
-                    <?php if (count($avisos_prof_todas) > 0): ?>
-                        <button onclick="abrirModalTodasActividades()" style="background: none; border: 1px solid var(--udg-blue); color: var(--udg-blue); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s;" onmouseover="this.style.background='var(--udg-blue)'; this.style.color='white';" onmouseout="this.style.background='none'; this.style.color='var(--udg-blue)';">Ver todas (<?php echo count($avisos_prof_todas); ?>)</button>
-                    <?php endif; ?>
-                </h3>
-                <div class="card-scrollable-body" style="font-size: 0.9rem; color: var(--text-muted);">
-                    <?php if (count($avisos_prof_dashboard) > 0): ?>
-                        <?php foreach ($avisos_prof_dashboard as $a):
-                            $badgeClass = '';
-                            if ($a['estatus'] === 'PRÓXIMA') $badgeClass = 'background-color: #ffc107; color: #000;';
-                            elseif ($a['estatus'] === 'ACTIVA') $badgeClass = 'background-color: #28a745; color: white;';
-
-                            $icono = $a['tipo'] === 'AVISO' ? '📢' : '📝';
-                            $borde_izq = $a['tipo'] === 'AVISO' ? '#17a2b8' : '#0056b3';
-
-                            $aviso_prof_data = [
-                                'materia' => $a['materia_nombre'],
-                                'estatus_html' => '<span style="' . $badgeClass . ' font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: bold;">' . $a['estatus'] . '</span>',
-                                'titulo' => $icono . ' ' . $a['titulo'],
-                                'descripcion' => nl2br(htmlspecialchars($a['descripcion'])),
-                                'profesor' => $a['prof_nombre'] . ' ' . $a['prof_ap'],
-                                'fecha_inicio' => date('d/m/Y h:i A', strtotime($a['fecha_inicio'])),
-                                'fecha_fin' => date('d/m/Y h:i A', strtotime($a['fecha_fin']))
-                            ];
-                            $json_info = htmlspecialchars(json_encode($aviso_prof_data), ENT_QUOTES, 'UTF-8');
-                        ?>
-                            <div class="aviso-item aviso-clickable texto-seguro" onclick="abrirModalDetalle(this)" data-info="<?php echo $json_info; ?>" style="border-left: 4px solid <?php echo $borde_izq; ?>; padding-left: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--bg-gray); padding-bottom: 10px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                    <span class="tag-aviso" style="background: var(--bg-gray); color: var(--text-muted); border: 1px solid var(--text-muted); font-weight:bold; font-size:0.75rem; padding: 3px 8px; border-radius: 12px;"><?php echo htmlspecialchars($a['materia_nombre'] . ' ' . nivel_a_romano($a['materia_nivel'])); ?></span>
-                                    <span style="<?php echo $badgeClass; ?> font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; font-weight: bold;"><?php echo $a['estatus']; ?></span>
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong style="color: var(--text-dark); font-size:1.05rem;"><?php echo $icono; ?> <?php echo htmlspecialchars($a['titulo']); ?></strong>
-                                </div>
-                                <div style="margin-top: 5px; color: var(--text-muted); font-size: 0.9rem;">
-                                    <?php echo recortar_texto(htmlspecialchars($a['descripcion']), 60); ?>
-                                </div>
-                                <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
-                                    <i class="far fa-user"></i> Prof. <?php echo htmlspecialchars($a['prof_nombre'] . ' ' . $a['prof_ap']); ?> <br>
-                                    <i class="far fa-calendar-alt"></i> Cierre: <strong><?php echo date('d/m/Y h:i A', strtotime($a['fecha_fin'])); ?></strong>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div style="text-align:center; padding: 40px 0; color:var(--text-muted); font-style: italic; margin: auto;">
-                            <i class="fas fa-clipboard-check" style="font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.5;"></i>
-                            No hay avisos ni recordatorios activos en tus clases.
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- TARJETA: AVISOS ADMINISTRATIVOS -->
-            <div class="card card-avisos-generales">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 12px; flex-shrink: 0;">
-                    <h3 style="margin: 0; padding: 0; border-bottom: none;"><i class="far fa-bell"></i> Avisos Generales</h3>
-                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
-                        <?php echo count($todos_avisos_generales); ?> comunicado(s)
-                    </span>
-                </div>
-
-                <div class="card-scrollable-body" style="max-height: 480px; font-size: 0.9rem;">
-                    <?php if (count($todos_avisos_generales) > 0): ?>
-                        <div class="avisos-generales-grid">
-                            <?php foreach ($todos_avisos_generales as $aviso): ?>
-                                <?php if ($aviso['tipo'] === 'SOLICITUD'): ?>
-                                    <div class="aviso-card-tile texto-seguro">
-                                        <div>
-                                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
-                                                <span class="tag-aviso tag-sistema" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">Control Escolar</span>
-                                                <?php if ($aviso['estatus'] == 'APROBADA'): ?>
-                                                    <span class="tag-aprobada">Aprobada</span>
-                                                <?php else: ?>
-                                                    <span class="tag-rechazada">Rechazada</span>
-                                                <?php endif; ?>
-                                            </div>
-                                            <div style="color: var(--text-dark); margin-bottom: 8px;">
-                                                <strong>Solicitud de <?php echo $aviso['tipo_solicitud']; ?>:</strong>
-                                                Tu petición para <?php echo $aviso['tipo_solicitud'] === 'BAJA' ? 'abandonar' : 'ingresar a'; ?>
-                                                <strong style="color:var(--udg-blue);"><?php echo htmlspecialchars($aviso['nombre'] . ' ' . nivel_a_romano($aviso['nivel'])); ?></strong>
-                                                fue <?php echo strtolower($aviso['estatus']); ?>.
-                                                <?php if ($aviso['estatus'] !== 'APROBADA'): ?> Revisa el Kárdex.<?php endif; ?>
-                                            </div>
+                <div class="card-scrollable-body" style="padding-right: 4px;">
+                    <?php if (count($asistencias_resumen) > 0): ?>
+                        <div class="asistencias-list">
+                            <?php foreach ($asistencias_resumen as $idx => $asist): 
+                                $eval_id = 'eval-' . $asist['inscripcion_id'];
+                                $is_first = ($idx === 0) ? ' asist-item-active' : '';
+                            ?>
+                                <div class="asist-item<?php echo $is_first; ?>" 
+                                     data-eval-id="<?php echo $eval_id; ?>"
+                                     onclick="cambiarMateriaDash('<?php echo $eval_id; ?>')"
+                                     title="Clic para ver el progreso general de esta materia"
+                                     role="button"
+                                     tabindex="0"
+                                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id; ?>');}">
+                                    <div class="asist-header-row">
+                                        <div class="asist-title-col">
+                                            <span class="asist-materia-nombre">
+                                                <?php echo htmlspecialchars($asist['nombre'] . ' ' . nivel_a_romano((int)$asist['nivel'])); ?>
+                                            </span>
+                                            <span class="asist-nrc-text">NRC: <?php echo htmlspecialchars($asist['nrc']); ?></span>
                                         </div>
-                                        <div style="font-size: 0.75rem; color: var(--text-muted); border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 8px; margin-top: 6px;">
-                                            <i class="far fa-calendar-alt"></i> <?php echo date('d/m/Y h:i A', $aviso['timestamp']); ?>
+                                        <div class="asist-meta-col">
+                                            <span class="asist-status-pill asist-pill-<?php echo $asist['categoria']; ?>">
+                                                <?php echo $asist['estado_texto']; ?>
+                                            </span>
+                                            <span class="asist-percentage-val" style="color: <?php echo $asist['color']; ?>;">
+                                                <?php echo $asist['porcentaje']; ?>%
+                                            </span>
                                         </div>
                                     </div>
-                                <?php else: ?>
-                                    <?php
-                                    $aviso_admin_data = [
-                                        'titulo' => $aviso['titulo'],
-                                        'etiqueta' => $aviso['etiqueta'],
-                                        'tag_color' => $aviso['tag_color'],
-                                        'tag_text' => $aviso['tag_text'],
-                                        'cuerpo' => nl2br(htmlspecialchars($aviso['cuerpo'])),
-                                        'imagen' => $aviso['imagen'],
-                                        'fecha' => date('d/m/Y h:i A', $aviso['timestamp'])
-                                    ];
-                                    $json_info = htmlspecialchars(json_encode($aviso_admin_data), ENT_QUOTES, 'UTF-8');
-                                    ?>
-                                    <div class="aviso-card-tile aviso-clickable texto-seguro" onclick="abrirModalAvisoAdmin(this)" data-info="<?php echo $json_info; ?>">
-                                        <div>
-                                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
-                                                <span class="tag-aviso tag-sistema" style="background: <?php echo $aviso['tag_color']; ?>; color: <?php echo $aviso['tag_text']; ?>; border: 1px solid <?php echo $aviso['tag_text']; ?>;"><?php echo $aviso['etiqueta']; ?></span>
-                                                <?php if (!empty($aviso['imagen'])): ?>
-                                                    <span style="font-size: 0.75rem; color: var(--udg-blue); font-weight: bold;"><i class="fas fa-image"></i> Cartel</span>
-                                                <?php endif; ?>
-                                            </div>
-                                            <div style="margin-bottom: 6px;">
-                                                <strong style="color: var(--text-dark); font-size: 0.95rem;"><?php echo htmlspecialchars($aviso['titulo']); ?></strong>
-                                            </div>
-                                            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">
-                                                <?php echo recortar_texto($aviso['cuerpo'], 85); ?>
-                                            </div>
-                                        </div>
-                                        <div style="font-size: 0.75rem; color: var(--text-muted); border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 8px; margin-top: 6px; display:flex; justify-content:space-between; align-items:center;">
-                                            <span><i class="far fa-calendar-alt"></i> <?php echo date('d/m/Y h:i A', $aviso['timestamp']); ?></span>
-                                            <?php if ($aviso['fecha_expiracion']): ?>
-                                                <span title="Desaparecerá pronto" style="color: #f59e0b;"><i class="fas fa-stopwatch"></i></span>
-                                            <?php endif; ?>
+
+                                    <!-- Barra de Progreso Horizontal -->
+                                    <div class="asist-progress-track" title="<?php echo $asist['asistidas']; ?> de <?php echo $asist['total']; ?> sesiones">
+                                        <div class="asist-progress-fill asist-fill-<?php echo $asist['categoria']; ?>" 
+                                             style="width: <?php echo $asist['porcentaje']; ?>%; background-color: <?php echo $asist['color']; ?>;">
                                         </div>
                                     </div>
-                                <?php endif; ?>
+
+                                    <div class="asist-footer-info">
+                                        <?php if ($asist['total'] > 0): ?>
+                                             <span><i class="far fa-check-circle" style="color:#10b981;"></i> <?php echo $asist['asistidas']; ?> asistencias</span>
+                                             <?php if ($asist['retardos'] > 0): ?>
+                                                 <span><i class="far fa-clock" style="color:#f59e0b;"></i> <?php echo $asist['retardos']; ?> retardos</span>
+                                             <?php endif; ?>
+                                             <span><i class="far fa-times-circle" style="color:#ef4444;"></i> <?php echo $asist['faltas']; ?> faltas</span>
+                                        <?php else: ?>
+                                             <span style="font-style: italic; color: var(--text-muted);"><i class="fas fa-info-circle"></i> Sin sesiones pasadas de lista</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <div style="text-align:center; padding: 40px 0; color:var(--text-muted); font-style: italic;">
-                            <i class="far fa-check-circle" style="font-size: 2.2rem; margin-bottom: 10px; display: block; opacity: 0.5;"></i>
-                            No tienes notificaciones administrativas nuevas.
+                        <div style="text-align:center; padding: 40px 0; color:var(--text-muted); margin: auto;">
+                            <i class="fas fa-calendar-times" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 10px; display: block; opacity: 0.5;"></i>
+                            No tienes materias inscritas actualmente.
                         </div>
                     <?php endif; ?>
+                </div>
+
+                <!-- Footer de la tarjeta con leyenda de umbrales estilizada y alineada con los botones -->
+                <div class="card-footer-action card-footer-legend">
+                    <div class="asist-legend-bar">
+                        <span class="asist-legend-item"><span class="asist-legend-dot" style="background:#10b981;"></span> ≥80% Regular</span>
+                        <span class="asist-legend-item"><span class="asist-legend-dot" style="background:#f59e0b;"></span> 70-79% Riesgo</span>
+                        <span class="asist-legend-item"><span class="asist-legend-dot" style="background:#ef4444;"></span> &lt;70% Reprobado</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -332,6 +319,29 @@ require_once 'index_logic.php';
     <script src="../js/index_estudiante.js?v=<?php echo time(); ?>"></script>
 
     <script>
+        // Función para cambiar de pestaña en el Centro de Avisos Unificado
+        function cambiarTabAvisos(tab) {
+            const btnProf = document.getElementById('btnTabProfesores');
+            const btnGen = document.getElementById('btnTabGenerales');
+            const contProf = document.getElementById('tabContenidoProfesores');
+            const contGen = document.getElementById('tabContenidoGenerales');
+            const btnHist = document.getElementById('btnVerTodasActividades');
+
+            if (tab === 'profesores') {
+                btnProf.classList.add('active');
+                btnGen.classList.remove('active');
+                contProf.style.display = 'block';
+                contGen.style.display = 'none';
+                if (btnHist) btnHist.style.display = 'inline-block';
+            } else {
+                btnGen.classList.add('active');
+                btnProf.classList.remove('active');
+                contGen.style.display = 'block';
+                contProf.style.display = 'none';
+                if (btnHist) btnHist.style.display = 'none';
+            }
+        }
+
         // Funciones para el Modal de Historial Completo
         function abrirModalTodasActividades() {
             document.getElementById('modalTodasActividades').style.display = 'flex';
@@ -381,6 +391,22 @@ require_once 'index_logic.php';
                 document.getElementById('modAdminTitulo').innerHTML = info.titulo;
                 document.getElementById('modAdminDesc').innerHTML = info.cuerpo;
                 document.getElementById('modAdminFecha').innerHTML = info.fecha;
+
+                const autorElem = document.getElementById('modAdminAutor');
+                if (autorElem) {
+                    autorElem.innerHTML = info.profesor ? ('Prof. ' + info.profesor) : 'Administración E-Pale';
+                }
+
+                const expRow = document.getElementById('modAdminExpiraRow');
+                const expSpan = document.getElementById('modAdminExpira');
+                if (expRow && expSpan) {
+                    if (info.fecha_expiracion) {
+                        expSpan.innerHTML = info.fecha_expiracion;
+                        expRow.style.display = 'inline';
+                    } else {
+                        expRow.style.display = 'none';
+                    }
+                }
 
                 const imgContainer = document.getElementById('modAdminImgContainer');
                 const img = document.getElementById('modAdminImg');

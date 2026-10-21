@@ -1,177 +1,24 @@
 <?php
-session_start();
-require '../db.php';
-require_once '../security.php';
+require_once 'oferta_academica_logic.php';
 
-// Validar que sea alumno
-requerir_rol('ALUMNO');
-
-$alumno_id_usuario = $_SESSION['user_id'];
-$stmt_al = $pdo->prepare("SELECT alumno_id FROM alumnos WHERE usuario_id = ?");
-$stmt_al->execute([$alumno_id_usuario]);
-$alumno = $stmt_al->fetch(PDO::FETCH_ASSOC);
-$alumno_id = $alumno['alumno_id'];
-
-// Obtener nombre del ciclo activo
-$stmt_ciclo = $pdo->query("SELECT nombre FROM ciclos WHERE activo = 1 LIMIT 1");
-$nombre_ciclo = $stmt_ciclo->fetchColumn() ?: 'Actual';
-
-$altas_habilitadas = config_get('altas_habilitadas', false);
-
-// Obtener los grupos activos (Agrupados por clave_grupo)
-$sql_grupos = "
-    SELECT 
-        g.clave_grupo, g.nrc, g.cupo, 
-        m.materia_id, m.clave as clave_materia, m.nombre as idioma, m.nivel, 
-        u.nombre as prof_nombre, u.apellido_paterno as prof_ap,
-        (SELECT COUNT(*) FROM inscripciones i WHERE i.nrc = g.nrc AND (i.estatus = 'INSCRITO' OR i.estatus = 'BAJA')) as inscritos,
-        (SELECT COUNT(*) FROM solicitudes_altas sa JOIN inscripciones i ON sa.inscripcion_id = i.inscripcion_id WHERE i.nrc = g.nrc AND sa.estatus = 'PENDIENTE') as demanda,
-        h.hora_inicio, h.hora_fin, h.dias_patron, h.aula, h.modalidad
-    FROM grupos g
-    JOIN materias m ON g.materia_id = m.materia_id
-    JOIN usuarios u ON g.profesor_id = u.usuario_id
-    JOIN ciclos c ON g.ciclo_id = c.ciclo_id
-    LEFT JOIN horarios h ON g.nrc = h.nrc
-    WHERE c.activo = 1 AND g.estado = 'ACTIVO'
-    ORDER BY m.nombre ASC, m.nivel ASC, g.clave_grupo ASC
-";
-$raw_grupos = $pdo->query($sql_grupos)->fetchAll(PDO::FETCH_ASSOC);
-
-// Obtener materias en las que el alumno ya está inscrito
-$stmt_inscritos = $pdo->prepare("
-    SELECT m.materia_id, i.nrc 
-    FROM inscripciones i 
-    JOIN grupos g ON i.nrc = g.nrc 
-    JOIN materias m ON g.materia_id = m.materia_id 
-    WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO'
-");
-$stmt_inscritos->execute([$alumno_id]);
-$inscritos_data = $stmt_inscritos->fetchAll(PDO::FETCH_ASSOC);
-$mis_nrcs = array_column($inscritos_data, 'nrc');
-$mis_materias_inscritas = array_column($inscritos_data, 'materia_id');
-
-$stmt_solicitados = $pdo->prepare("
-    SELECT m.materia_id, i.nrc 
-    FROM inscripciones i 
-    JOIN grupos g ON i.nrc = g.nrc 
-    JOIN materias m ON g.materia_id = m.materia_id 
-    WHERE i.alumno_id = ? AND i.estatus = 'SOLICITUD_ALTA'
-");
-$stmt_solicitados->execute([$alumno_id]);
-$solicitados_data = $stmt_solicitados->fetchAll(PDO::FETCH_ASSOC);
-$mis_solicitudes = array_column($solicitados_data, 'nrc');
-$mis_materias_solicitadas = array_column($solicitados_data, 'materia_id');
-
-// Obtener materias que el alumno ya acreditó (calificación final >= 80)
-$stmt_acreditadas = $pdo->prepare("
-    SELECT CONCAT(UPPER(TRIM(m.nombre)), '_', m.nivel) as materia_key
-    FROM inscripciones i
-    JOIN grupos g ON i.nrc = g.nrc
-    JOIN materias m ON g.materia_id = m.materia_id
-    LEFT JOIN calificaciones c ON c.inscripcion_id = i.inscripcion_id
-    WHERE i.alumno_id = ? AND i.estatus = 'INSCRITO'
-    GROUP BY m.nombre, m.nivel, i.inscripcion_id
-    HAVING SUM(COALESCE(c.puntaje, 0)) >= 80
-");
-$stmt_acreditadas->execute([$alumno_id]);
-$mis_materias_acreditadas = $stmt_acreditadas->fetchAll(PDO::FETCH_COLUMN);
-
-$grupos_agrupados = [];
-foreach ($raw_grupos as $row) {
-    $clave = $row['clave_grupo'] ?: $row['nrc']; // Usar nrc como clave si clave_grupo es nulo
-    if (!isset($grupos_agrupados[$clave])) {
-        $grupos_agrupados[$clave] = [
-            'clave_grupo' => $row['clave_grupo'],
-            'materia_id' => $row['materia_id'],
-            'clave_materia' => $row['clave_materia'],
-            'idioma' => $row['idioma'],
-            'nivel' => $row['nivel'],
-            'prof_nombre' => $row['prof_nombre'],
-            'prof_ap' => $row['prof_ap'],
-            'cupo' => $row['cupo'],
-            'inscritos' => $row['inscritos'],
-            'demanda' => $row['demanda'],
-            'nrc_presencial' => 'NA',
-            'nrc_virtual' => 'NA',
-            'horario_presencial' => null,
-            'horario_virtual' => null
-        ];
-    }
-
-    // Maximizar inscritos y demanda
-    $grupos_agrupados[$clave]['inscritos'] = max($grupos_agrupados[$clave]['inscritos'], $row['inscritos']);
-    $grupos_agrupados[$clave]['demanda'] = max($grupos_agrupados[$clave]['demanda'], $row['demanda']);
-
-    if ($row['modalidad'] == 'PRESENCIAL') {
-        $grupos_agrupados[$clave]['nrc_presencial'] = $row['nrc'];
-        $grupos_agrupados[$clave]['horario_presencial'] = [
-            'inicio' => substr($row['hora_inicio'], 0, 5),
-            'fin' => substr($row['hora_fin'], 0, 5),
-            'dias' => getDiasCompletos($row['dias_patron']),
-            'aula' => $row['aula']
-        ];
-    } elseif ($row['modalidad'] == 'VIRTUAL') {
-        $grupos_agrupados[$clave]['nrc_virtual'] = $row['nrc'];
-        $grupos_agrupados[$clave]['horario_virtual'] = [
-            'inicio' => substr($row['hora_inicio'], 0, 5),
-            'fin' => substr($row['hora_fin'], 0, 5),
-            'dias' => getDiasCompletos($row['dias_patron']),
-            'aula' => $row['aula']
-        ];
-    } else {
-        // Sin modalidad asignada, se pone como presencial por defecto
-        if ($grupos_agrupados[$clave]['nrc_presencial'] == 'NA') {
-            $grupos_agrupados[$clave]['nrc_presencial'] = $row['nrc'];
-        }
-    }
-}
-$grupos = array_values($grupos_agrupados);
-
-// Obtener historial de solicitudes de alta
-$stmt_hist_altas = $pdo->prepare("
-    SELECT sa.*, m.nombre AS materia, m.nivel, m.clave AS clave_materia, g.clave_grupo 
-    FROM solicitudes_altas sa
-    JOIN inscripciones i ON sa.inscripcion_id = i.inscripcion_id
-    JOIN grupos g ON i.nrc = g.nrc
-    JOIN materias m ON g.materia_id = m.materia_id
-    WHERE i.alumno_id = ?
-    ORDER BY sa.fecha_solicitud DESC
-");
-$stmt_hist_altas->execute([$alumno_id]);
-$historial_altas = $stmt_hist_altas->fetchAll(PDO::FETCH_ASSOC);
-
-$hay_actualizacion_reciente_alta = false;
-if (count($historial_altas) > 0) {
-    $ultima_alta = $historial_altas[0];
-    if ($ultima_alta['estatus'] === 'RECHAZADA' || $ultima_alta['estatus'] === 'APROBADA') {
-        $hay_actualizacion_reciente_alta = true;
-    }
-}
-
-// Convertir nivel entero a romano
-function getRomanNumeral(int $num): string
-{
-    $map = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
-    return (string)($map[$num] ?? $num);
-}
-
-// Convertir días a nombre completo
-function getDiasCompletos(string $dias_patron): string
-{
-    if (empty($dias_patron)) return 'Sin asignar';
-    $map = ['L' => 'Lunes', 'M' => 'Martes', 'I' => 'Miércoles', 'J' => 'Jueves', 'V' => 'Viernes', 'S' => 'Sábado', 'D' => 'Domingo'];
-    $letras = explode('-', $dias_patron);
-    $nombres = [];
-    foreach ($letras as $l) {
-        $l = trim($l);
-        if (isset($map[$l])) $nombres[] = $map[$l];
-    }
-    return !empty($nombres) ? implode('-', $nombres) : $dias_patron;
-}
-
-// Generar token para modal
-$csrf_token = $_SESSION['csrf_token'] ?? '';
+/**
+ * Declaración de variables importadas desde oferta_academica_logic.php
+ * para evitar falsos positivos de "Undefined variable" en el IDE.
+ * 
+ * @var string $nombre_ciclo
+ * @var bool $altas_habilitadas
+ * @var array $grupos
+ * @var array $mis_nrcs
+ * @var array $mis_solicitudes
+ * @var array $mis_materias_inscritas
+ * @var array $mis_materias_solicitadas
+ * @var array $mis_materias_acreditadas
+ * @var array $historial_altas
+ * @var bool $hay_actualizacion_reciente_alta
+ * @var string $csrf_token
+ */
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -324,13 +171,13 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
                         <?php
                         $ya_inscrito_nrc = in_array($g['nrc_presencial'], $mis_nrcs) || in_array($g['nrc_virtual'], $mis_nrcs);
                         $ya_solicitado_nrc = in_array($g['nrc_presencial'], $mis_solicitudes) || in_array($g['nrc_virtual'], $mis_solicitudes);
-                        
+
                         $ya_cursando_materia = in_array($g['materia_id'], $mis_materias_inscritas);
                         $ya_solicitada_materia = in_array($g['materia_id'], $mis_materias_solicitadas);
-                        
+
                         $materia_key = mb_strtoupper(trim($g['idioma']), 'UTF-8') . '_' . $g['nivel'];
                         $ya_acreditada_materia = in_array($materia_key, $mis_materias_acreditadas);
-                        
+
                         if ($ya_inscrito_nrc): ?>
                             <button class="btn-solicitar" style="background:#28a745; cursor:not-allowed;" disabled>
                                 Inscrito <i class="fas fa-check-circle"></i>
@@ -387,6 +234,8 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
 
     </main>
 
+    <?php include '../main_footer.php'; ?>
+
     <!-- Modal para Solicitar -->
     <div class="modal" id="modalSolicitar">
         <div class="modal-content">
@@ -433,54 +282,77 @@ $csrf_token = $_SESSION['csrf_token'] ?? '';
                     <p style="font-size:0.9rem; color:var(--text-muted); margin-top:0;">Historial de peticiones de alta para el semestre actual.</p>
 
                     <?php foreach ($historial_altas as $h):
-                        $class_card = strtolower($h['estatus']);
-                        $icono_estatus = '';
-                        $color_estatus = '';
+                        $estatus_raw = strtoupper($h['estatus']);
+                        $class_card = strtolower($estatus_raw);
+                        $icono_estatus = 'fa-clock';
+                        $neon_badge_class = 'neon-badge-pendiente';
 
-                        switch ($h['estatus']) {
-                            case 'PENDIENTE':
-                                $icono_estatus = 'fa-clock';
-                                $color_estatus = '#856404';
+                        switch ($estatus_raw) {
+                            case 'APROBADA':
+                                $icono_estatus = 'fa-check-circle';
+                                $neon_badge_class = 'neon-badge-aprobada';
                                 break;
                             case 'RECHAZADA':
                                 $icono_estatus = 'fa-times-circle';
-                                $color_estatus = '#dc3545';
+                                $neon_badge_class = 'neon-badge-rechazada';
                                 break;
                             case 'CANCELADA':
                                 $icono_estatus = 'fa-ban';
-                                $color_estatus = '#6c757d';
+                                $neon_badge_class = 'neon-badge-cancelada';
                                 break;
-                            case 'APROBADA':
-                                $icono_estatus = 'fa-check-circle';
-                                $color_estatus = '#28a745';
+                            case 'PENDIENTE':
+                            default:
+                                $icono_estatus = 'fa-clock';
+                                $neon_badge_class = 'neon-badge-pendiente';
                                 break;
                         }
                     ?>
                         <div class="history-card <?php echo $class_card; ?>">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <div style="font-weight: bold; color: var(--text-dark); font-size: 0.95rem;">
-                                    <?php echo htmlspecialchars($h['materia'] . ' ' . getRomanNumeral((int)$h['nivel'])); ?>
-                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">Grupo <?php echo htmlspecialchars($h['clave_grupo']); ?> | Clave: <?php echo htmlspecialchars($h['clave_materia']); ?></div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                        <span class="notif-sub-badge neon-sub-tramite">
+                                            <i class="fas fa-file-signature"></i> Solicitud de Alta
+                                        </span>
+                                    </div>
+                                    <div style="font-weight: 700; color: var(--text-dark); font-size: 0.98rem;">
+                                        <?php echo htmlspecialchars($h['materia'] . ' ' . getRomanNumeral((int)$h['nivel'])); ?>
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                                        Grupo <?php echo htmlspecialchars($h['clave_grupo']); ?> • Clave: <?php echo htmlspecialchars($h['clave_materia']); ?>
+                                    </div>
                                 </div>
-                                <div style="font-size: 0.8rem; font-weight: bold; color: <?php echo $color_estatus; ?>; padding: 3px 8px; border-radius: 12px; border: 1px solid <?php echo $color_estatus; ?>;">
-                                    <i class="fas <?php echo $icono_estatus; ?>"></i> <?php echo $h['estatus']; ?>
-                                </div>
+                                <span class="neon-badge <?php echo $neon_badge_class; ?>">
+                                    <i class="fas <?php echo $icono_estatus; ?>"></i> <?php echo $estatus_raw; ?>
+                                </span>
                             </div>
-                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;"><i class="far fa-calendar-alt"></i> Solicitada el: <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?></div>
 
-                            <div style="font-size: 0.85rem; color: var(--text-dark); margin-bottom: 10px;">
-                                <strong>Motivo:</strong> <?php echo htmlspecialchars($h['motivo']); ?>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="far fa-calendar-alt"></i> Solicitada el <?php echo date('d/m/Y', strtotime($h['fecha_solicitud'])); ?>
                             </div>
 
-                            <?php if ($h['estatus'] !== 'PENDIENTE' && $h['estatus'] !== 'CANCELADA'): ?>
-                                <div style="border-top: 1px dashed var(--text-muted); padding-top: 10px; margin-top: 10px;">
-                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;"><i class="fas fa-reply"></i> Respuesta de Administración (<?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>):</div>
-                                    <div style="font-size: 0.9rem; color: var(--text-dark); font-weight: 500;"><?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?></div>
+                            <div style="font-size: 0.86rem; color: var(--text-dark); line-height: 1.45; background: rgba(128, 128, 128, 0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(128, 128, 128, 0.1);">
+                                <strong style="color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 2px;">Motivo expuesto:</strong>
+                                <?php echo htmlspecialchars($h['motivo']); ?>
+                            </div>
+
+                            <?php if ($estatus_raw !== 'PENDIENTE' && $estatus_raw !== 'CANCELADA'): ?>
+                                <div class="history-resp-callout <?php echo $estatus_raw === 'APROBADA' ? 'history-resp-aprobada' : 'history-resp-rechazada'; ?>">
+                                    <div class="history-resp-header">
+                                        <i class="fas fa-reply"></i> Respuesta de Administración • <?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>
+                                    </div>
+                                    <div class="history-resp-text">
+                                        <?php echo htmlspecialchars($h['respuesta_admin']) ?: 'Sin comentarios adicionales.'; ?>
+                                    </div>
                                 </div>
-                            <?php elseif ($h['estatus'] === 'CANCELADA'): ?>
-                                <div style="border-top: 1px dashed var(--text-muted); padding-top: 10px; margin-top: 10px;">
-                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;"><i class="fas fa-reply"></i> Resolución del Estudiante (<?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>):</div>
-                                    <div style="font-size: 0.9rem; color: var(--text-dark); font-weight: 500;">El estudiante canceló la solicitud.</div>
+                            <?php elseif ($estatus_raw === 'CANCELADA'): ?>
+                                <div class="history-resp-callout history-resp-cancelada">
+                                    <div class="history-resp-header">
+                                        <i class="fas fa-ban"></i> Resolución del Estudiante • <?php echo date('d/m/Y', strtotime($h['fecha_respuesta'])); ?>
+                                    </div>
+                                    <div class="history-resp-text">
+                                        El estudiante canceló la solicitud.
+                                    </div>
                                 </div>
                             <?php endif; ?>
                         </div>

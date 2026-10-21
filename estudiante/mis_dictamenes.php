@@ -1,36 +1,15 @@
 <?php
-session_start();
-require '../db.php';
-require_once '../security.php';
+require_once 'mis_dictamenes_logic.php';
 
-validar_csrf_estricto('POST');
-
-// Validar seguridad: Solo Alumnos
-requerir_rol('ALUMNO');
-
-$usuario_id = $_SESSION['user_id'];
-
-// 1. Obtener el código del alumno desde la tabla usuarios
-$stmt_codigo = $pdo->prepare("SELECT codigo FROM usuarios WHERE usuario_id = ?");
-$stmt_codigo->execute([$usuario_id]);
-$codigo_alumno = $stmt_codigo->fetchColumn();
-
-// 2. Buscar sus acreditaciones en la base de datos
-$stmt_dictamenes = $pdo->prepare("
-    SELECT * FROM dictamenes_estudiantes 
-    WHERE codigo_alumno = ? 
-    ORDER BY ciclo_acreditacion DESC, nombre_materia ASC
-");
-$stmt_dictamenes->execute([$codigo_alumno]);
-$dictamenes = $stmt_dictamenes->fetchAll(PDO::FETCH_ASSOC);
-
-// 3. Leer los archivos físicos de la carpeta local
-$upload_dir = '../uploads/dictamenes/';
-$archivos_fisicos = [];
-if (is_dir($upload_dir)) {
-    $archivos_fisicos = array_diff(scandir($upload_dir), array('.', '..'));
-}
+/**
+ * Declaración de variables importadas desde mis_dictamenes_logic.php
+ * para evitar falsos positivos de "Undefined variable" en el IDE.
+ * 
+ * @var string $codigo_alumno
+ * @var array $dictamenes
+ */
 ?>
+
 
 <!DOCTYPE html>
 <html lang="es">
@@ -60,17 +39,7 @@ if (is_dir($upload_dir)) {
             </div>
         <?php else: ?>
             <div class="dictamen-grid">
-                <?php foreach ($dictamenes as $d): 
-                    $pdf_url = null;
-                    $llave_busqueda = str_replace('/', '.', $d['num_dictamen']);
-
-                    foreach ($archivos_fisicos as $archivo) {
-                        if (stripos($archivo, $llave_busqueda) !== false) {
-                            $pdf_url = '../uploads/dictamenes/' . rawurlencode($archivo);
-                            break;
-                        }
-                    }
-                ?>
+                <?php foreach ($dictamenes as $d): ?>
                     <div class="dictamen-card">
                         <div class="dictamen-header">
                             <h3><i class="fas fa-award"></i> <?php echo htmlspecialchars($d['nombre_materia']); ?></h3>
@@ -94,8 +63,8 @@ if (is_dir($upload_dir)) {
                             
                             <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0; width: 100%;">
                             
-                            <?php if ($pdf_url): ?>
-                                <a href="<?php echo $pdf_url; ?>" target="_blank" class="btn-download" title="Abre el PDF en una nueva pestaña">
+                            <?php if (!empty($d['pdf_url'])): ?>
+                                <a href="<?php echo htmlspecialchars($d['pdf_url']); ?>" target="_blank" class="btn-download" title="Abre el PDF en una nueva pestaña">
                                     <i class="fas fa-file-pdf"></i> Ver / Descargar Documento
                                 </a>
                             <?php else: ?>

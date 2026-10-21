@@ -59,6 +59,10 @@ if ($est_menu['foto_perfil'] && file_exists("../img/perfiles/" . $est_menu['foto
         <button class="theme-toggle-btn" onclick="toggleDarkMode()" title="Cambiar Tema">
             <i id="theme-icon" class="fas fa-sun theme-icon-container" style="color: #ffc107;"></i>
         </button>
+
+        <!-- Centro de Notificaciones (Campanita) -->
+        <?php include_once __DIR__ . '/centro_notificaciones.php'; ?>
+
         <button onclick="toggleMobileMenu()" style="background: transparent; border: none; color: white; font-size: 1.8rem; cursor: pointer; padding: 0;">
             <i class="fas fa-bars"></i>
         </button>

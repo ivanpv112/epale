@@ -94,7 +94,7 @@
 
                 <h2 id="modAdminTitulo" style="color:var(--udg-blue); margin-top:0; margin-bottom:15px; font-size:1.4rem; padding-right: 15px;"></h2>
 
-                <div id="modAdminDesc" class="texto-seguro" style="color:var(--text-dark); font-size:1.05rem; line-height:1.6; margin-bottom:25px;"></div>
+                <div id="modAdminDesc" class="texto-seguro" style="color:var(--text-dark); font-size:1.05rem; line-height:1.6; margin-bottom:25px; text-align: justify; text-justify: inter-word;"></div>
                 
                 <div id="modAdminImgContainer" style="display: none; text-align: center; margin-bottom: 25px;">
                     <div style="position: relative; display: inline-block; cursor: pointer;" onclick="ampliarImagenAviso(document.getElementById('modAdminImg').src)">
@@ -106,8 +106,11 @@
                 </div>
 
                 <div style="background:rgba(0, 26, 87, 0.05); padding:15px; border-radius:8px; border-left: 4px solid var(--udg-blue); font-size:0.9rem; color:var(--text-muted);">
-                    <i class="fas fa-user-shield"></i> <strong>Publicado por:</strong> Administración E-Pale<br>
-                    <i class="far fa-calendar-alt" style="margin-top: 8px;"></i> <strong>Fecha de Publicación:</strong> <span id="modAdminFecha"></span>
+                    <i class="fas fa-user-shield"></i> <strong>Publicado por:</strong> <span id="modAdminAutor">Administración E-Pale</span><br>
+                    <i class="far fa-calendar-alt" style="margin-top: 8px;"></i> <strong>Fecha de Publicación:</strong> <span id="modAdminFecha"></span><br>
+                    <span id="modAdminExpiraRow" style="display: none;">
+                        <i class="fas fa-stopwatch" style="margin-top: 8px; color: #dc3545;"></i> <strong>Fecha Límite:</strong> <span id="modAdminExpira"></span>
+                    </span>
                 </div>
             </div>
         </div>
