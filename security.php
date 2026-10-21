@@ -185,28 +185,67 @@ function secure_image_upload($file, $target_dir, $quality = 80) {
     $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!in_array($mime_type, $allowed_mimes)) return false;
 
+    // Verificar dimensiones para evitar bombas de descompresión (decompression bomb / memory exhaustion)
+    $image_info = @getimagesize($file['tmp_name']);
+    if (!$image_info) return false;
+    list($orig_w, $orig_h) = $image_info;
+
+    // Si la resolución es astronómica (ej. más de 6000x6000px), rechazarla de forma segura
+    if ($orig_w > 6000 || $orig_h > 6000) return false;
+
+    // Ampliar temporalmente el límite de memoria para GD si es necesario
+    $current_limit = ini_get('memory_limit');
+    if ($current_limit && $current_limit !== '-1') {
+        @ini_set('memory_limit', '256M');
+    }
+
     $target_dir = rtrim($target_dir, '/') . '/';
     if (!file_exists($target_dir)) { @mkdir($target_dir, 0755, true); }
 
     $new_file_name = bin2hex(random_bytes(10)) . '.webp';
     $target_file = $target_dir . $new_file_name;
 
-    if ($mime_type == 'image/jpeg') $img_source = @imagecreatefromjpeg($file['tmp_name']);
-    elseif ($mime_type == 'image/png') {
-        $img_source = @imagecreatefrompng($file['tmp_name']);
-        if ($img_source !== false) {
-            imagepalettetotruecolor($img_source);
-            imagealphablending($img_source, false);
-            imagesavealpha($img_source, true);
+    try {
+        if ($mime_type == 'image/jpeg') $img_source = @imagecreatefromjpeg($file['tmp_name']);
+        elseif ($mime_type == 'image/png') {
+            $img_source = @imagecreatefrompng($file['tmp_name']);
+            if ($img_source !== false) {
+                imagepalettetotruecolor($img_source);
+                imagealphablending($img_source, false);
+                imagesavealpha($img_source, true);
+            }
+        } elseif ($mime_type == 'image/webp') {
+            $img_source = @imagecreatefromwebp($file['tmp_name']);
+        } else {
+            $img_source = false;
         }
-    } elseif ($mime_type == 'image/webp') {
-        $img_source = @imagecreatefromwebp($file['tmp_name']);
-    } else $img_source = false;
 
-    if ($img_source) {
-        imagewebp($img_source, $target_file, $quality); 
+        if (!$img_source) {
+            return false;
+        }
+
+        // Redimensionar automáticamente si la imagen supera los 1920px de ancho o alto (Full HD estándar para banners/avisos)
+        $max_dimension = 1920;
+        if ($orig_w > $max_dimension || $orig_h > $max_dimension) {
+            $ratio = min($max_dimension / $orig_w, $max_dimension / $orig_h);
+            $new_w = max(1, (int)round($orig_w * $ratio));
+            $new_h = max(1, (int)round($orig_h * $ratio));
+
+            $resized_img = imagecreatetruecolor($new_w, $new_h);
+            if ($resized_img !== false) {
+                imagealphablending($resized_img, false);
+                imagesavealpha($resized_img, true);
+                imagecopyresampled($resized_img, $img_source, 0, 0, 0, 0, $new_w, $new_h, $orig_w, $orig_h);
+                imagedestroy($img_source);
+                $img_source = $resized_img;
+            }
+        }
+
+        $guardado = @imagewebp($img_source, $target_file, $quality); 
         imagedestroy($img_source); 
-        return $new_file_name;
+        return $guardado ? $new_file_name : false;
+    } catch (\Throwable $e) {
+        error_log("Error al procesar imagen: " . $e->getMessage());
+        return false;
     }
-    return false;
 }
