@@ -142,7 +142,9 @@ if (count($mis_nrcs) > 0) {
 
 $sql_admin = "SELECT aviso_id, titulo, cuerpo, tipo_audiencia, audiencia_ref, imagen, fecha_creacion, fecha_expiracion 
               FROM avisos 
-              WHERE autor_id IS NULL AND (" . implode(" OR ", $where_clauses) . ") 
+              WHERE autor_id IS NULL 
+                AND rol_destinatario IN ('TODOS', 'ALUMNO')
+                AND (" . implode(" OR ", $where_clauses) . ") 
               ORDER BY fecha_creacion DESC LIMIT 15";
 $stmt_admin = $pdo->prepare($sql_admin);
 $stmt_admin->execute($admin_params);

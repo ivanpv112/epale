@@ -299,7 +299,7 @@ foreach ($materias_inscritas as $m) {
 }
 $mis_idiomas = array_unique($mis_idiomas);
 
-$sql_avisos = "SELECT * FROM avisos WHERE autor_id IS NULL AND (tipo_audiencia = 'GLOBAL'";
+$sql_avisos = "SELECT * FROM avisos WHERE autor_id IS NULL AND rol_destinatario IN ('TODOS', 'ALUMNO') AND (tipo_audiencia = 'GLOBAL'";
 
 if (count($mis_idiomas) > 0) {
     $in_idiomas = "'" . implode("','", $mis_idiomas) . "'";

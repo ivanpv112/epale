@@ -26,7 +26,15 @@ $user_id_notif = (int)$_SESSION['user_id'];
         <div class="notif-panel-header">
             <div class="notif-title-row">
                 <span class="notif-header-title"><i class="fas fa-bell" style="color: var(--udg-blue);"></i> Notificaciones</span>
-                <span class="notif-total-badge" id="notifTotalBadge"><span id="notifTotalNum">0</span> activa(s)</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="notif-total-badge" id="notifTotalBadge"><span id="notifTotalNum">0</span> activa(s)</span>
+                    <button type="button" class="notif-header-action-btn" onclick="abrirHistorialAvisosModalEst()" title="Historial de avisos por ciclo escolar">
+                        <i class="fas fa-folder"></i>
+                    </button>
+                    <button type="button" class="notif-header-action-btn" onclick="marcarTodasNotificacionesLeidas()" title="Marcar todas como leídas">
+                        <i class="fas fa-check-double"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Switch Tabs con Glider Líquido Conectado -->
@@ -59,6 +67,39 @@ $user_id_notif = (int)$_SESSION['user_id'];
 
         <div class="notif-panel-footer">
             <span>E-PALE • Centro de Notificaciones</span>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ESPEJO DE HISTORIAL DE AVISOS (ESTUDIANTE) -->
+<div id="modalHistorialAvisosEstudiante" class="modal-overlay" style="display: none; z-index: 9999;" onclick="cerrarHistorialAvisosModalEst(event)">
+    <div class="modal-historial-avisos-content" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,0.15);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-folder-open" style="color: var(--udg-blue); font-size: 1.15rem;"></i>
+                <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-dark);">Historial de Comunicados</h3>
+            </div>
+            <span id="historialTotalNumEst" class="notif-total-badge">0 aviso(s)</span>
+        </div>
+
+        <!-- Barra de selección de ciclo escolar (Cajitas / Chips) -->
+        <div class="hist-ciclos-bar" id="histCiclosBarEst">
+            <!-- Chips inyectados por JS -->
+        </div>
+
+        <!-- Listado espejo de avisos del ciclo seleccionado -->
+        <div class="notif-panel-body custom-scroll-mask" id="histBodyEstudiante" style="max-height: 52vh; border: 1px solid rgba(128,128,128,0.12); border-radius: 10px; padding: 12px; background: rgba(0,0,0,0.01);">
+            <div class="notif-empty-state">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <p>Cargando historial...</p>
+            </div>
+        </div>
+
+        <!-- Footer con botón rojo neón estandarizado -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,0.15);">
+            <button type="button" class="btn-neon-close" onclick="cerrarHistorialAvisosModalEst()">
+                Cerrar
+            </button>
         </div>
     </div>
 </div>
@@ -109,6 +150,24 @@ function marcarNotificacionLeida(key, tab) {
         actualizarContadoresNotificaciones();
     } catch (e) {
         console.error('Error al guardar notificación leída:', e);
+    }
+}
+
+function marcarTodasNotificacionesLeidas() {
+    try {
+        const cards = document.querySelectorAll('#panelNotificacionesDropdown .notif-item-card');
+        let leidas = getNotificacionesLeidas();
+        cards.forEach(card => {
+            const k = card.getAttribute('data-notif-key');
+            if (k && !leidas.includes(k)) {
+                leidas.push(k);
+            }
+            card.classList.add('is-read');
+        });
+        localStorage.setItem(USER_NOTIF_STORAGE_KEY, JSON.stringify(leidas));
+        actualizarContadoresNotificaciones();
+    } catch (e) {
+        console.error('Error al marcar todas como leídas:', e);
     }
 }
 
@@ -526,6 +585,196 @@ function abrirModalDesdeNotif(elem) {
         } catch (err) {
             console.error('Error abriendo modal de aviso:', err);
         }
+    }
+}
+
+// Cerrar modales con tecla Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modalHist = document.getElementById('modalHistorialAvisosEstudiante');
+        if (modalHist && modalHist.style.display === 'flex') {
+            modalHist.style.display = 'none';
+        }
+    }
+});
+
+// ==========================================
+// MÓDULO DE HISTORIAL DE AVISOS POR CICLO
+// ==========================================
+let histCiclosCargadosEst = false;
+let histCiclosDataEst = [];
+let histCicloActivoIdEst = null;
+
+async function abrirHistorialAvisosModalEst() {
+    // Cerrar el dropdown de la campanita
+    const panel = document.getElementById('panelNotificacionesDropdown');
+    if (panel) panel.classList.remove('active');
+
+    const modal = document.getElementById('modalHistorialAvisosEstudiante');
+    if (modal) modal.style.display = 'flex';
+
+    if (!histCiclosCargadosEst) {
+        await cargarCiclosHistorialEst();
+    }
+}
+
+function cerrarHistorialAvisosModalEst(e) {
+    if (e && e.target && e.target !== document.getElementById('modalHistorialAvisosEstudiante')) {
+        return;
+    }
+    const modal = document.getElementById('modalHistorialAvisosEstudiante');
+    if (modal) modal.style.display = 'none';
+}
+
+async function cargarCiclosHistorialEst() {
+    const bar = document.getElementById('histCiclosBarEst');
+    const body = document.getElementById('histBodyEstudiante');
+    if (!bar || !body) return;
+
+    bar.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fas fa-circle-notch fa-spin"></i> Cargando ciclos...</span>';
+
+    try {
+        const res = await fetch('../api_historial_avisos.php?action=ciclos');
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data.ciclos) {
+            histCiclosDataEst = json.data.ciclos;
+            histCiclosCargadosEst = true;
+
+            if (histCiclosDataEst.length === 0) {
+                bar.innerHTML = '';
+                body.innerHTML = `
+                    <div class="notif-empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <p>No hay ningún historial para mostrar.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Renderizar chips de ciclos
+            let chipsHtml = '';
+            histCiclosDataEst.forEach((c, idx) => {
+                const esActivoSemestre = (parseInt(c.activo) === 1);
+                const tagActual = esActivoSemestre ? ' <span style="font-size:0.68rem; opacity:0.85;">(Actual)</span>' : '';
+                chipsHtml += `
+                    <button type="button" class="hist-ciclo-chip ${idx === 0 ? 'active' : ''}" 
+                            data-ciclo-id="${c.ciclo_id}" 
+                            onclick="seleccionarCicloHistorialEst(${c.ciclo_id}, this)">
+                        <i class="fas fa-calendar-alt"></i> ${escapeHtmlNotif(c.nombre)}${tagActual}
+                    </button>
+                `;
+            });
+            bar.innerHTML = chipsHtml;
+
+            // Seleccionar automáticamente el primer ciclo de la lista
+            seleccionarCicloHistorialEst(histCiclosDataEst[0].ciclo_id);
+        } else {
+            throw new Error('Respuesta inválida');
+        }
+    } catch (err) {
+        console.error('Error cargando ciclos del historial:', err);
+        bar.innerHTML = '';
+        body.innerHTML = `
+            <div class="notif-empty-state">
+                <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                <p>No fue posible conectar con el historial.</p>
+            </div>
+        `;
+    }
+}
+
+async function seleccionarCicloHistorialEst(cicloId, btnElem = null) {
+    histCicloActivoIdEst = cicloId;
+
+    if (btnElem) {
+        document.querySelectorAll('#histCiclosBarEst .hist-ciclo-chip').forEach(b => b.classList.remove('active'));
+        btnElem.classList.add('active');
+    }
+
+    const body = document.getElementById('histBodyEstudiante');
+    const totalNum = document.getElementById('historialTotalNumEst');
+    if (!body) return;
+
+    body.innerHTML = `
+        <div class="notif-empty-state">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Cargando comunicados del ciclo...</p>
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`../api_historial_avisos.php?action=avisos&ciclo_id=${cicloId}`);
+        if (!res.ok) {
+            const errTxt = await res.text();
+            throw new Error(`Servidor respondió con código ${res.status}: ${errTxt}`);
+        }
+        const json = await res.json();
+
+        if (json.status === 'success') {
+            const avisos = json.data.avisos || [];
+            if (totalNum) totalNum.innerText = `${avisos.length} aviso(s)`;
+
+            if (avisos.length === 0) {
+                body.innerHTML = `
+                    <div class="notif-empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No se encontraron comunicados registrados en este ciclo.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            avisos.forEach(n => {
+                const cartelBadge = n.imagen ? '<span style="font-size: 0.7rem; color: var(--udg-blue); font-weight: bold;"><i class="fas fa-image"></i> Cartel</span>' : '';
+                html += `
+                    <div class="notif-item-card ${n.borde_card}" 
+                         data-notif-key="${escapeHtmlNotif(n.key)}"
+                         onclick="abrirModalDesdeNotif(this)">
+                        <div class="notif-item-top">
+                            <span class="notif-sub-badge ${n.tipo_badge}">
+                                <i class="${n.icono}"></i> ${escapeHtmlNotif(n.categoria)}
+                            </span>
+                            ${cartelBadge}
+                        </div>
+                        <div class="notif-item-title">${escapeHtmlNotif(n.titulo)}</div>
+                        <div class="notif-item-desc">${escapeHtmlNotif(n.cuerpo_corto)}</div>
+                        <div class="notif-item-footer">
+                            <span><i class="fas fa-chalkboard-teacher"></i> ${escapeHtmlNotif(n.autor)}</span>
+                            <span><i class="far fa-clock"></i> ${escapeHtmlNotif(n.fecha_formateada)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            body.innerHTML = html;
+
+            // Inyectar data-info
+            const cards = body.querySelectorAll('.notif-item-card');
+            avisos.forEach((n, idx) => {
+                if (cards[idx]) {
+                    cards[idx].setAttribute('data-info', JSON.stringify({
+                        titulo: n.titulo,
+                        etiqueta: n.materia || n.categoria,
+                        cuerpo: escapeHtmlNotif(n.cuerpo).replace(/\n/g, '<br>'),
+                        imagen: n.imagen,
+                        fecha: n.fecha_inicio,
+                        fecha_expiracion: n.fecha_fin
+                    }));
+                }
+            });
+        } else {
+            throw new Error(json.message || 'Error desconocido');
+        }
+    } catch (err) {
+        console.error('Error cargando avisos del ciclo:', err);
+        body.innerHTML = `
+            <div class="notif-empty-state">
+                <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                <p>Error al cargar comunicados de este ciclo.</p>
+                <span style="font-size: 0.72rem; color: #94a3b8; display: block; margin-top: 4px;">${escapeHtmlNotif(err.message)}</span>
+            </div>
+        `;
     }
 }
 

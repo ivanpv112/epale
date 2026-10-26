@@ -63,9 +63,8 @@
     <?php /*  MODAL 2: DETALLE FLOTANTE DEL AVISO INDIVIDUAL (Superpuesto)  */ ?>
     <div id="modalDetalleActividad" class="modal-overlay" style="z-index: 3100;">
         <div class="modal-card">
-            <button class="close-btn" onclick="cerrarModalDetalle()">&times;</button>
             <div class="modal-card-body">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; margin-right: 25px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                     <span id="modMateria" class="tag-aviso" style="background:var(--bg-gray); color:var(--text-muted); border:1px solid var(--text-muted); font-weight:bold; font-size:0.8rem; padding:4px 10px; border-radius:12px;"></span>
                     <span id="modBadge"></span>
                 </div>
@@ -80,15 +79,21 @@
                     <i class="far fa-calendar-check" style="margin-top: 8px;"></i> <strong>Fecha Límite:</strong> <span id="modFin"></span>
                 </div>
             </div>
+
+            <!-- Footer con botón rojo neón de cierre -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,0.15);">
+                <button type="button" class="btn-neon-close" onclick="cerrarModalDetalle()">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 
     <?php /*  MODAL 3: DETALLE DEL AVISO ADMINISTRATIVO (CON IMAGEN)  */ ?>
     <div id="modalDetalleAvisoAdmin" class="modal-overlay" style="z-index: 3100;">
         <div class="modal-card">
-            <button class="close-btn" onclick="cerrarModalAvisoAdmin()">&times;</button>
             <div class="modal-card-body">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; margin-right: 25px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                     <span id="modAdminTag" class="tag-aviso" style="font-weight:bold; font-size:0.8rem; padding:4px 10px; border-radius:12px;"></span>
                 </div>
 
@@ -112,6 +117,13 @@
                         <i class="fas fa-stopwatch" style="margin-top: 8px; color: #dc3545;"></i> <strong>Fecha Límite:</strong> <span id="modAdminExpira"></span>
                     </span>
                 </div>
+            </div>
+
+            <!-- Footer con botón rojo neón de cierre -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(128,128,128,0.15);">
+                <button type="button" class="btn-neon-close" onclick="cerrarModalAvisoAdmin()">
+                    Cerrar
+                </button>
             </div>
         </div>
     </div>

@@ -81,11 +81,6 @@ require_once 'mis_dictamenes_logic.php';
 
     <?php include '../main_footer.php'; ?>
     
-    <script>
-        function toggleMobileMenu() { 
-            document.getElementById('navWrapper').classList.toggle('active'); 
-            document.getElementById('menuOverlay').classList.toggle('active'); 
-        }
-    </script>
+
 </body>
 </html>
