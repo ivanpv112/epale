@@ -100,15 +100,15 @@ $badge_altas_html = ($notif_altas > 0) ? '<span class="badge-red-circle">' . $no
     function toggleMobileMenu() {
         const sidebar = document.getElementById('navWrapper');
         const overlay = document.getElementById('menuOverlay');
+        if (!sidebar || !overlay) return;
 
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
+        const isOpen = sidebar.classList.toggle('active');
+        overlay.classList.toggle('active', isOpen);
 
-        // Imitamos el comportamiento de SweetAlert para el Scroll Lock
-        if (sidebar.classList.contains('active')) {
-            document.body.style.overflow = 'hidden';
+        if (isOpen) {
+            document.body.classList.add('menu-open');
         } else {
-            document.body.style.overflow = '';
+            document.body.classList.remove('menu-open');
         }
     }
 
