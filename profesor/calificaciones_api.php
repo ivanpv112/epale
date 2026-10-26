@@ -25,11 +25,12 @@ if ($input['action'] === 'save_single') {
     $puntaje = $input['puntaje']; 
     $profesor_id = $_SESSION['user_id'];
 
-    // Validar que el alumno pertenece al profesor
+    // Validar que el alumno pertenece al profesor y que el ciclo y grupo estén activos
     $stmt_val = $pdo->prepare("
-        SELECT g.estado, g.edicion_total
+        SELECT g.estado, g.edicion_total, c.activo AS ciclo_activo
         FROM inscripciones i 
         JOIN grupos g ON i.nrc = g.nrc 
+        JOIN ciclos c ON g.ciclo_id = c.ciclo_id
         WHERE i.inscripcion_id = ? AND g.profesor_id = ?
     ");
     $stmt_val->execute([$insc_id, $profesor_id]);
@@ -40,6 +41,9 @@ if ($input['action'] === 'save_single') {
     }
     if ($grupo['estado'] === 'CERRADO') {
         echo json_encode(['success' => false, 'error' => 'Operación rechazada: Grupo cerrado.']); exit;
+    }
+    if (isset($grupo['ciclo_activo']) && (int)$grupo['ciclo_activo'] === 0) {
+        echo json_encode(['success' => false, 'error' => 'Operación rechazada: Ciclo escolar finalizado (solo lectura).']); exit;
     }
 
     // Validar permisos de Control Escolar

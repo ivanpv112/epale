@@ -1,76 +1,29 @@
 <?php
-session_start();
-require '../db.php';
-require_once '../security.php';
+require_once 'asistencia_logic.php';
 
-requerir_rol('PROFESOR');
-
-// Token CSRF
-validar_csrf_estricto('POST');
-
-$clave = $_GET['clave'] ?? '';
-$profesor_id = $_SESSION['user_id'];
-
-// 1. Obtener información del grupo
-$stmt = $pdo->prepare("SELECT m.nombre as materia, m.nivel, c.nombre as ciclo 
-                       FROM grupos g 
-                       JOIN materias m ON g.materia_id = m.materia_id 
-                       JOIN ciclos c ON g.ciclo_id = c.ciclo_id 
-                       WHERE g.clave_grupo = ? AND g.profesor_id = ?
-                       LIMIT 1");
-$stmt->execute([$clave, $profesor_id]);
-$grupo = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$grupo) { header("Location: mis_grupos"); exit; }
-
-// 2. Obtener lista de alumnos inscritos
-$stmt_al = $pdo->prepare("SELECT i.inscripcion_id, u.nombre, u.apellido_paterno, u.apellido_materno, u.codigo, u.foto_perfil 
-                          FROM inscripciones i 
-                          JOIN alumnos a ON i.alumno_id = a.alumno_id 
-                          JOIN usuarios u ON a.usuario_id = u.usuario_id 
-                          WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) 
-                          AND i.estatus = 'INSCRITO' 
-                          ORDER BY u.apellido_paterno ASC, u.apellido_materno ASC");
-$stmt_al->execute([$clave, $profesor_id]);
-$alumnos_brutos = $stmt_al->fetchAll(PDO::FETCH_ASSOC);
-
-$alumnos = [];
-foreach($alumnos_brutos as $alum) {
-    $foto_url = "../img/avatar-default.png";
-    if (!empty($alum['foto_perfil']) && file_exists("../img/perfiles/" . $alum['foto_perfil'])) {
-        $foto_url = "../img/perfiles/" . $alum['foto_perfil'];
-    }
-    $alum['foto_url'] = $foto_url;
-    $alumnos[] = $alum;
-}
-
-// 3. Obtener fechas de clases
-$stmt_fechas = $pdo->prepare("SELECT DISTINCT fecha FROM asistencias a 
-                              JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
-                              WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) 
-                              ORDER BY fecha ASC");
-$stmt_fechas->execute([$clave, $profesor_id]);
-$fechas_clase = $stmt_fechas->fetchAll(PDO::FETCH_COLUMN);
-$total_sesiones = count($fechas_clase);
-
-// 4. Mapear asistencias
-$asistencias_log = [];
-$stmt_log = $pdo->prepare("SELECT a.inscripcion_id, a.fecha, a.estatus FROM asistencias a 
-                           JOIN inscripciones i ON a.inscripcion_id = i.inscripcion_id 
-                           WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?)");
-$stmt_log->execute([$clave, $profesor_id]);
-while($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
-    $asistencias_log[$row['inscripcion_id']][$row['fecha']] = $row['estatus'];
-}
-
-$hoy = date('Y-m-d');
-$asistencia_hoy_completada = in_array($hoy, $fechas_clase);
+/**
+ * Declaración de variables importadas desde asistencia_logic.php
+ * para evitar falsos positivos de "Undefined variable" en el IDE.
+ * 
+ * @var string $clave
+ * @var array $grupo
+ * @var array $alumnos
+ * @var array $fechas_clase
+ * @var int $total_sesiones
+ * @var array $asistencias_log
+ * @var string $hoy
+ * @var bool $asistencia_hoy_completada
+ * @var bool $es_ciclo_pasado
+ * @var bool $modo_solo_lectura
+ * @var array $detalles_grupo
+ */
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Asistencia | e-PALE</title>
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
@@ -82,33 +35,162 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
     <?php include 'menu_profesor.php'; ?>
 
     <main class="main-content">
-        <div class="header-asistencia">
-            <div>
-                <h1 class="title-asistencia"><?php echo htmlspecialchars($grupo['materia'] . " " . $grupo['nivel']); ?></h1>
-                <p class="subtitle-asistencia">
-                    <i class="fas fa-calendar-day"></i> Registro de Asistencia &nbsp;|&nbsp; 
-                    <i class="fas fa-users"></i> <?php echo count($alumnos); ?> Alumnos &nbsp;|&nbsp; 
-                    <i class="fas fa-chalkboard"></i> Clases impartidas: <strong><?php echo $total_sesiones; ?></strong>
-                </p>
-            </div>
-            
-            <button id="btnTomarAsist" class="btn-save btn-tomar-asist" 
-                    <?php echo $asistencia_hoy_completada ? 'disabled' : ''; ?>
-                    onclick="iniciarTomaAsistencia()">
-                <i class="fas fa-user-check"></i> <?php echo $asistencia_hoy_completada ? 'Asistencia de Hoy Completada' : 'Pasar Lista de Asistencia'; ?>
-            </button>
+        <div style="margin-bottom: 15px;">
+            <a href="detalle_grupo?clave=<?php echo urlencode($clave) . ($modo_solo_lectura ? '&pasado=1' : ''); ?>" class="btn-volver" style="margin-bottom: 0;">
+                <i class="fas fa-arrow-left"></i> Volver a Detalles del Grupo
+            </a>
         </div>
 
-        <div class="content-card table-card-asist">
-            <table style="width: 100%; border-collapse: collapse; min-width: 1100px;">
+        <?php if ($es_ciclo_pasado): ?>
+            <div class="alert-closed" style="background: rgba(100, 116, 139, 0.12); border-color: rgba(100, 116, 139, 0.35); color: #475569; margin-bottom: 20px;">
+                <i class="fas fa-history" style="font-size: 1.8rem; color: #64748b;"></i>
+                <div>
+                    <strong>Historial de Asistencias (Solo Lectura)</strong><br>
+                    <span style="font-size: 0.9rem;">Este grupo pertenece a un ciclo escolar finalizado. La lista de asistencia se encuentra en modo de solo lectura para consulta histórica.</span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Fila de Cabecera: Tarjeta de Grupo a la Izquierda y Botón de Acción a la Derecha -->
+        <div class="dg-top-row-flex" style="margin-bottom: 25px;">
+            <!-- Tarjeta Acordeón: Resumen Esencial y Detalles Desplegables -->
+            <div class="content-card dg-accordion-card" id="cardDetalleGrupo" style="padding: 0; overflow: hidden; border-top: 3px solid var(--udg-blue);">
+                <!-- Cabecera Esencial del Acordeón -->
+                <div class="dg-accordion-header" onclick="toggleDetallesGrupo()">
+                    <!-- Bloque Izquierdo: Materia, Código, Nivel y Ciclo -->
+                    <div class="dg-accordion-left">
+                        <span class="g-badge" title="Código de Materia">
+                            <?php echo htmlspecialchars($grupo['clave_materia'] ?? 'PROFE'); ?>
+                        </span>
+                        <h1 class="dg-materia-title">
+                            <?php echo htmlspecialchars($grupo['materia']); ?>
+                        </h1>
+                        <span class="level-badge">
+                            Nivel <?php echo htmlspecialchars(nivel_a_romano($grupo['nivel'])); ?>
+                        </span>
+                        <span class="dg-cycle-badge">
+                            <i class="far fa-calendar-alt"></i> Ciclo <?php echo htmlspecialchars($grupo['ciclo']); ?>
+                        </span>
+                    </div>
+
+                    <!-- Bloque Derecho: Botón Toggle Desplegable -->
+                    <div class="dg-accordion-right" onclick="event.stopPropagation();">
+                        <span class="dg-toggle-label">Detalles de horarios</span>
+                        <button type="button" class="g-toggle-btn" id="btnToggleDetallesGrupo" onclick="event.stopPropagation(); toggleDetallesGrupo();" title="Desplegar detalles y horarios">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cuerpo Desplegable del Acordeón: Sesiones, Modalidades y Aulas -->
+                <div id="drawerDetallesGrupo" class="dg-accordion-drawer" style="display: none;">
+                    <div class="dg-drawer-title">
+                        <i class="fas fa-info-circle"></i> Sesiones, Horarios y Modalidades del Grupo
+                    </div>
+
+                    <div class="g-expanded-sessions-list">
+                        <!-- LÍNEA PRESENCIAL -->
+                        <div class="g-inline-session session-presencial">
+                            <span class="session-modality-badge presencial">
+                                <i class="fas fa-building"></i> Presencial
+                            </span>
+                            <span class="g-session-pill col-nrc">
+                                <i class="fas fa-building" style="color: #ffc107;" title="NRC Presencial"></i>
+                                <span><?php echo !empty($detalles_grupo['nrc_p']) ? htmlspecialchars($detalles_grupo['nrc_p']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-aula">
+                                <i class="fas fa-map-marker-alt" style="color: #ffc107;" title="Aula Presencial"></i>
+                                <span><?php echo !empty($detalles_grupo['aula_p']) ? htmlspecialchars($detalles_grupo['aula_p']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-dias">
+                                <i class="far fa-calendar-alt" style="color: #ffc107;" title="Días Presenciales"></i>
+                                <span><?php echo !empty($detalles_grupo['dias_p']) ? htmlspecialchars(formatear_dias_es($detalles_grupo['dias_p'])) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-hora">
+                                <i class="far fa-clock" style="color: #ffc107;" title="Horario Presencial"></i>
+                                <span>
+                                    <?php echo (!empty($detalles_grupo['inicio_p']) && !empty($detalles_grupo['fin_p'])) ? date('H:i', strtotime($detalles_grupo['inicio_p'])) . ' - ' . date('H:i', strtotime($detalles_grupo['fin_p'])) : 'NA'; ?>
+                                </span>
+                            </span>
+                        </div>
+
+                        <!-- LÍNEA VIRTUAL -->
+                        <div class="g-inline-session session-virtual">
+                            <span class="session-modality-badge virtual">
+                                <i class="fas fa-laptop"></i> Virtual
+                            </span>
+                            <span class="g-session-pill col-nrc">
+                                <i class="fas fa-laptop" style="color: #00bcd4;" title="NRC Virtual"></i>
+                                <span><?php echo !empty($detalles_grupo['nrc_v']) ? htmlspecialchars($detalles_grupo['nrc_v']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-aula">
+                                <i class="fas fa-video" style="color: #00bcd4;" title="Aula Virtual"></i>
+                                <span><?php echo !empty($detalles_grupo['aula_v']) ? htmlspecialchars($detalles_grupo['aula_v']) : (!empty($detalles_grupo['nrc_v']) ? 'Zoom' : 'NA'); ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-dias">
+                                <i class="far fa-calendar-alt" style="color: #00bcd4;" title="Días Virtuales"></i>
+                                <span><?php echo !empty($detalles_grupo['dias_v']) ? htmlspecialchars(formatear_dias_es($detalles_grupo['dias_v'])) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-hora">
+                                <i class="far fa-clock" style="color: #00bcd4;" title="Horario Virtual"></i>
+                                <span>
+                                    <?php echo (!empty($detalles_grupo['inicio_v']) && !empty($detalles_grupo['fin_v'])) ? date('H:i', strtotime($detalles_grupo['inicio_v'])) . ' - ' . date('H:i', strtotime($detalles_grupo['fin_v'])) : 'NA'; ?>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción / Estadísticas a la Derecha -->
+            <div class="dg-top-actions">
+                <?php if (!$modo_solo_lectura): ?>
+                    <button id="btnTomarAsist" class="dg-btn-action dg-btn-asistencia" 
+                            <?php echo $asistencia_hoy_completada ? 'disabled style="opacity: 0.65; cursor: not-allowed;"' : ''; ?>
+                            onclick="iniciarTomaAsistencia()">
+                        <i class="fas fa-user-check"></i> <?php echo $asistencia_hoy_completada ? 'Asistencia de Hoy Completada' : 'Pasar Lista de Asistencia'; ?>
+                    </button>
+                <?php else: ?>
+                    <div class="dg-btn-action" style="opacity: 0.8; background: #e2e8f0; color: #475569; border-color: #cbd5e1; cursor: default;">
+                        <i class="fas fa-eye"></i> Modo Solo Lectura
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="excel-header-bar" style="margin-bottom: 0;">
+            <div class="excel-header-title">
+                <i class="fas fa-calendar-check"></i> Registro de Asistencia 
+                <?php if ($modo_solo_lectura) echo "(Solo Lectura)"; else echo "En Vivo"; ?>
+            </div>
+            <div class="excel-save-status">
+                <i class="fas fa-users"></i> <?php echo count($alumnos); ?> Alumnos &nbsp;|&nbsp; 
+                <i class="fas fa-chalkboard"></i> Clases impartidas: <strong><?php echo $total_sesiones; ?></strong>
+            </div>
+        </div>
+
+        <div class="excel-table-wrapper-profe table-card-asist" style="border-top-left-radius: 0; border-top-right-radius: 0; border-top: none; margin-bottom: 30px;">
+            <table class="table-asist-responsive">
                 <thead>
                     <tr>
-                        <th class="th-alumno">Alumno</th>
+                        <th class="th-alumno">Estudiante</th>
                         <?php foreach($fechas_clase as $f): ?>
                             <th class="th-fecha"><?php echo date('d/m', strtotime($f)); ?></th>
                         <?php endforeach; ?>
-                        <th class="th-total th-total-num">Total Asist.</th>
-                        <th class="th-total th-porcentaje">% Asistencia</th>
+                        <th class="th-total th-total-num" title="Total de Asistencias">
+                            <span class="crit-title-desktop">Total Asist.</span>
+                            <span class="crit-title-mobile">=</span>
+                        </th>
+                        <th class="th-total th-porcentaje" title="Porcentaje de Asistencia">
+                            <span class="crit-title-desktop">% Asistencia</span>
+                            <span class="crit-title-mobile">%</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -135,19 +217,26 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                             }
                         }
                     ?>
+                    <?php 
+                        $apellidos = trim(($a['apellido_paterno'] ?? '') . ' ' . ($a['apellido_materno'] ?? ''));
+                        $nombres = trim($a['nombre'] ?? '');
+                    ?>
                     <tr class="<?php echo $row_class; ?>">
                         <td class="td-alumno">
                             <img src="<?php echo $a['foto_url']; ?>" class="td-foto">
                             <div>
-                                <div class="td-nombre"><?php echo htmlspecialchars($a['apellido_paterno'] . " " . $a['apellido_materno'] . " " . $a['nombre']); ?></div>
+                                <div class="td-nombre">
+                                    <?php echo htmlspecialchars($apellidos); ?><br><?php echo htmlspecialchars($nombres); ?>
+                                </div>
                                 <div class="td-codigo">Código: <?php echo htmlspecialchars($a['codigo']); ?></div>
                             </div>
                         </td>
                         <?php foreach($fechas_clase as $f): 
                             $st = $asistencias_log[$id_ins][$f] ?? 'DEFAULT';
+                            $disabled_select = $modo_solo_lectura ? 'disabled style="cursor: default; opacity: 0.9;"' : '';
                         ?>
                             <td class="td-center">
-                                <select class="select-asist sel-<?php echo $st; ?>" onchange="cambiarAsistencia(this, <?php echo $id_ins; ?>, '<?php echo $f; ?>')" title="Cambiar estado">
+                                <select class="select-asist sel-<?php echo $st; ?>" <?php echo $disabled_select; ?> onchange="cambiarAsistencia(this, <?php echo $id_ins; ?>, '<?php echo $f; ?>')" title="<?php echo $modo_solo_lectura ? 'Solo lectura' : 'Cambiar estado'; ?>">
                                     <option value="DEFAULT" style="display:none;" <?php echo ($st == 'DEFAULT' || $st == '') ? 'selected' : ''; ?>>---</option>
                                     <option value="ASISTENCIA" class="opt-asist" <?php echo ($st == 'ASISTENCIA') ? 'selected' : ''; ?>>Asistencia</option>
                                     <option value="RETARDO" class="opt-retar" <?php echo ($st == 'RETARDO') ? 'selected' : ''; ?>>Retardo</option>
@@ -203,7 +292,12 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
         // VARIABLE GLOBAL DEL CSRF TOKEN GENERADA EN PHP
         const csrfToken = "<?php echo $_SESSION['csrf_token']; ?>";
 
+        const modoSoloLectura = <?php echo $modo_solo_lectura ? 'true' : 'false'; ?>;
+
         function cambiarAsistencia(selectObj, ins_id, fecha) {
+            if (modoSoloLectura) {
+                return;
+            }
             const nuevoEstatus = selectObj.value;
             selectObj.className = 'select-asist sel-' + nuevoEstatus;
             
@@ -266,6 +360,20 @@ $asistencia_hoy_completada = in_array($hoy, $fechas_clase);
                 if(res.success) { Swal.fire('¡Lista Guardada!', 'La asistencia de hoy ha sido registrada exitosamente.', 'success').then(() => location.reload()); } 
                 else { Swal.fire('Error', res.error || 'Hubo un problema al guardar la asistencia.', 'error'); }
             });
+        }
+
+        function toggleDetallesGrupo() {
+            const drawer = document.getElementById('drawerDetallesGrupo');
+            const btn = document.getElementById('btnToggleDetallesGrupo');
+            if (!drawer || !btn) return;
+
+            if (drawer.style.display === 'none' || drawer.style.display === '') {
+                drawer.style.display = 'block';
+                btn.classList.add('rotated');
+            } else {
+                drawer.style.display = 'none';
+                btn.classList.remove('rotated');
+            }
         }
 
         function toggleMobileMenu() { document.getElementById('navWrapper').classList.toggle('active'); document.getElementById('menuOverlay').classList.toggle('active'); }

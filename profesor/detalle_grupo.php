@@ -1,122 +1,24 @@
 <?php
-session_start();
-require '../db.php';
-require_once '../security.php';
+require_once 'detalle_grupo_logic.php';
 
-validar_csrf_estricto('POST');
+/**
+ * Declaración de variables importadas desde detalle_grupo_logic.php
+ * para evitar falsos positivos de "Undefined variable" en el IDE.
+ * 
+ * @var array $info_grupo
+ * @var array $detalles_grupo
+ * @var string $clave_grupo
+ * @var int $edicion_total
+ * @var bool $grupo_cerrado
+ * @var bool $es_ciclo_pasado
+ * @var bool $modo_solo_lectura
+ * @var array $criterios
+ * @var float|int $puntos_maximos_totales
+ * @var array $alumnos
+ * @var array $calificaciones_actuales
+ */
 
-requerir_rol('PROFESOR');
-
-$profesor_id = $_SESSION['user_id'];
-$clave_grupo = $_GET['clave'] ?? '';
-
-if (!$clave_grupo) {
-    header("Location: mis_grupos");
-    exit;
-}
-
-$stmt_info = $pdo->prepare("SELECT m.materia_id, m.clave AS clave_materia, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.edicion_total, g.estado FROM grupos g JOIN materias m ON g.materia_id = m.materia_id JOIN ciclos c ON c.ciclo_id = g.ciclo_id WHERE g.clave_grupo = ? AND g.profesor_id = ? LIMIT 1");
-$stmt_info->execute([$clave_grupo, $profesor_id]);
-$info_grupo = $stmt_info->fetch(PDO::FETCH_ASSOC);
-if (!$info_grupo) {
-    header("Location: mis_grupos");
-    exit;
-}
-
-$edicion_total = (int)$info_grupo['edicion_total'];
-$grupo_cerrado = ($info_grupo['estado'] === 'CERRADO');
-$materia_id = $info_grupo['materia_id'];
-
-$stmt_hor = $pdo->prepare("SELECT g.nrc, h.modalidad, h.aula FROM grupos g LEFT JOIN horarios h ON g.nrc = h.nrc WHERE g.clave_grupo = ? AND g.profesor_id = ?");
-$stmt_hor->execute([$clave_grupo, $profesor_id]);
-$horarios = $stmt_hor->fetchAll(PDO::FETCH_ASSOC);
-$horarios_html = "NRC:<br>";
-foreach ($horarios as $h) {
-    $nrc_safe = htmlspecialchars($h['nrc']);
-    $aula_safe = !empty($h['aula']) ? htmlspecialchars($h['aula']) : 'Sin asignar';
-    if ($h['modalidad'] === 'PRESENCIAL') {
-        $horarios_html .= "Presencial: $nrc_safe - Aula: $aula_safe<br>";
-    } elseif ($h['modalidad'] === 'VIRTUAL') {
-        if (empty($h['aula'])) {
-            $aula_safe = 'Virtual';
-        }
-        $horarios_html .= "Virtual: $nrc_safe - Plataforma: $aula_safe<br>";
-    }
-}
-
-$stmt_crit = $pdo->prepare("SELECT codigo_examen, nombre_examen, puntos_maximos, color, icono, categoria FROM criterios_evaluacion WHERE materia_id = ?");
-$stmt_crit->execute([$materia_id]);
-$criterios = $stmt_crit->fetchAll(PDO::FETCH_ASSOC);
-
-usort($criterios, function ($a, $b) {
-    $cod_a = strtoupper($a['codigo_examen']);
-    $cod_b = strtoupper($b['codigo_examen']);
-    $get_peso = function ($cod) {
-        if (strpos($cod, 'Q1') !== false || strpos($cod, 'Q2') !== false || strpos($cod, 'Q3') !== false) return 1;
-        if (strpos($cod, 'QO') !== false) return 2;
-        if (strpos($cod, 'WRITING') !== false) return 3;
-        if (strpos($cod, 'PARTICIPACION') !== false) return 4;
-        if (strpos($cod, 'PLATAFORMA') !== false) return 5;
-        if (strpos($cod, 'CERTIFICACION') !== false || strpos($cod, 'FINAL') !== false) return 6;
-        return 7;
-    };
-    $peso_a = $get_peso($cod_a);
-    $peso_b = $get_peso($cod_b);
-    if ($peso_a == $peso_b) {
-        return strnatcasecmp($a['nombre_examen'], $b['nombre_examen']);
-    }
-    return $peso_a - $peso_b;
-});
-
-// Asignamos iconos fijos del sistema para el frontend
-foreach ($criterios as &$c) {
-    $nombre = $c['nombre_examen'];
-    if (stripos($nombre, 'Oral') !== false) {
-        $c['icono_fijo'] = 'fas fa-comments';
-        $c['color_fijo'] = 'class-green';
-    } elseif (stripos($nombre, 'Proyecto') !== false) {
-        $c['icono_fijo'] = 'fas fa-file-signature';
-        $c['color_fijo'] = 'class-yellow';
-    } elseif (stripos($nombre, 'Participaci') !== false) {
-        $c['icono_fijo'] = 'fas fa-hand-paper';
-        $c['color_fijo'] = 'class-cyan';
-    } else {
-        $c['icono_fijo'] = 'fas fa-book-open';
-        $c['color_fijo'] = 'class-muted';
-    }
-}
-
-$permitidos_profesor = ['QO', 'WRITING', 'PARTICIPACION'];
-$puntos_maximos_totales = 0;
-foreach ($criterios as &$c) {
-    $puntos_maximos_totales += floatval($c['puntos_maximos']);
-    $es_esencial = false;
-    $cod_upper = strtoupper($c['codigo_examen']);
-    foreach ($permitidos_profesor as $palabra) {
-        if (strpos($cod_upper, $palabra) !== false) {
-            $es_esencial = true;
-            break;
-        }
-    }
-    $c['bloqueado'] = ($grupo_cerrado || ($edicion_total === 0 && !$es_esencial)) ? true : false;
-}
-unset($c);
-
-$sql_alum = "SELECT i.inscripcion_id, u.codigo, u.nombre, u.apellido_paterno, u.apellido_materno, u.foto_perfil FROM inscripciones i JOIN alumnos a ON i.alumno_id = a.alumno_id JOIN usuarios u ON a.usuario_id = u.usuario_id WHERE i.nrc IN (SELECT nrc FROM grupos WHERE clave_grupo = ? AND profesor_id = ?) AND i.estatus = 'INSCRITO' ORDER BY u.apellido_paterno ASC, u.apellido_materno ASC, u.nombre ASC";
-$stmt_alum = $pdo->prepare($sql_alum);
-$stmt_alum->execute([$clave_grupo, $profesor_id]);
-$alumnos = $stmt_alum->fetchAll(PDO::FETCH_ASSOC);
-
-$calificaciones_actuales = [];
-if (count($alumnos) > 0) {
-    $inscripciones_ids = array_column($alumnos, 'inscripcion_id');
-    $in_clause = implode(',', array_fill(0, count($inscripciones_ids), '?'));
-    $stmt_cal = $pdo->prepare("SELECT inscripcion_id, tipo_examen, puntaje FROM calificaciones WHERE inscripcion_id IN ($in_clause)");
-    $stmt_cal->execute($inscripciones_ids);
-    while ($row = $stmt_cal->fetch(PDO::FETCH_ASSOC)) {
-        $calificaciones_actuales[$row['inscripcion_id']][$row['tipo_examen']] = $row['puntaje'];
-    }
-}
+$romano_nivel = nivel_a_romano($info_grupo['nivel']);
 ?>
 
 <!DOCTYPE html>
@@ -137,26 +39,140 @@ if (count($alumnos) > 0) {
     <?php include 'menu_profesor.php'; ?>
 
     <main class="main-content">
-        <div class="header-asistencia">
-            <div>
-                <h1 class="title-asistencia"><?php echo htmlspecialchars($info_grupo['clave_materia'] . ' - ' . $info_grupo['materia'] . ' ' . $info_grupo['nivel']); ?></h1>
-                <p class="dg-subtitle">
-                    <span class="dg-nrc"><?php echo $horarios_html; ?></span><br>
-                    <i class="far fa-calendar-alt" style="margin-top:5px;"></i> Semestre <?php echo htmlspecialchars($info_grupo['ciclo']); ?> &nbsp;|&nbsp;
-                    <i class="fas fa-users"></i> <?php echo count($alumnos); ?> Alumnos
-                </p>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="trabajo_equipo?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:#5D5FEF; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
-                    <i class="fas fa-users"></i> Trabajo en Equipo
+        <!-- Barra Superior: Navegación de Retorno -->
+        <div class="dg-top-toolbar">
+            <div class="dg-top-nav-left">
+                <a href="mis_grupos" class="btn-volver" style="margin-bottom: 0;">
+                    <i class="fas fa-arrow-left"></i> Volver a Mis Grupos
                 </a>
-                <a href="asistencia?clave=<?php echo urlencode($clave_grupo); ?>" class="btn-save" style="background:var(--udg-light); color:white; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+            </div>
+        </div>
+
+        <!-- Fila de Cabecera: Tarjeta de Grupo a la Izquierda y Botones de Acción a la Derecha -->
+        <div class="dg-top-row-flex">
+            <!-- Tarjeta Acordeón: Resumen Esencial y Detalles Desplegables -->
+            <div class="content-card dg-accordion-card" id="cardDetalleGrupo" style="padding: 0; overflow: hidden; border-top: 3px solid var(--udg-blue);">
+
+                <!-- Cabecera Esencial del Acordeón -->
+                <div class="dg-accordion-header" onclick="toggleDetallesGrupo()">
+                    <!-- Bloque Izquierdo: Materia, Código, Nivel y Ciclo -->
+                    <div class="dg-accordion-left">
+                        <span class="g-badge" title="Código de Materia">
+                            <?php echo htmlspecialchars($info_grupo['clave_materia']); ?>
+                        </span>
+                        <h1 class="dg-materia-title">
+                            <?php echo htmlspecialchars($info_grupo['materia']); ?>
+                        </h1>
+                        <span class="level-badge">
+                            Nivel <?php echo htmlspecialchars($romano_nivel); ?>
+                        </span>
+                        <span class="dg-cycle-badge">
+                            <i class="far fa-calendar-alt"></i> Ciclo <?php echo htmlspecialchars($info_grupo['ciclo']); ?>
+                        </span>
+                    </div>
+
+                    <!-- Bloque Derecho: Botón Toggle Desplegable -->
+                    <div class="dg-accordion-right" onclick="event.stopPropagation();">
+                        <span class="dg-toggle-label">Detalles de horarios</span>
+                        <button type="button" class="g-toggle-btn" id="btnToggleDetallesGrupo" onclick="event.stopPropagation(); toggleDetallesGrupo();" title="Desplegar detalles y horarios">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cuerpo Desplegable del Acordeón: Sesiones, Modalidades y Aulas -->
+                <div id="drawerDetallesGrupo" class="dg-accordion-drawer" style="display: none;">
+                    <div class="dg-drawer-title">
+                        <i class="fas fa-info-circle"></i> Sesiones, Horarios y Modalidades del Grupo
+                    </div>
+
+                    <div class="g-expanded-sessions-list">
+                        <!-- LÍNEA PRESENCIAL -->
+                        <div class="g-inline-session session-presencial">
+                            <span class="session-modality-badge presencial">
+                                <i class="fas fa-building"></i> Presencial
+                            </span>
+                            <span class="g-session-pill col-nrc">
+                                <i class="fas fa-building" style="color: #ffc107;" title="NRC Presencial"></i>
+                                <span><?php echo !empty($detalles_grupo['nrc_p']) ? htmlspecialchars($detalles_grupo['nrc_p']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-aula">
+                                <i class="fas fa-map-marker-alt" style="color: #ffc107;" title="Aula Presencial"></i>
+                                <span><?php echo !empty($detalles_grupo['aula_p']) ? htmlspecialchars($detalles_grupo['aula_p']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-dias">
+                                <i class="far fa-calendar-alt" style="color: #ffc107;" title="Días Presenciales"></i>
+                                <span><?php echo !empty($detalles_grupo['dias_p']) ? htmlspecialchars(formatear_dias_es($detalles_grupo['dias_p'])) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-hora">
+                                <i class="far fa-clock" style="color: #ffc107;" title="Horario Presencial"></i>
+                                <span>
+                                    <?php echo (!empty($detalles_grupo['inicio_p']) && !empty($detalles_grupo['fin_p'])) ? date('H:i', strtotime($detalles_grupo['inicio_p'])) . ' - ' . date('H:i', strtotime($detalles_grupo['fin_p'])) : 'NA'; ?>
+                                </span>
+                            </span>
+                        </div>
+
+                        <!-- LÍNEA VIRTUAL -->
+                        <div class="g-inline-session session-virtual">
+                            <span class="session-modality-badge virtual">
+                                <i class="fas fa-laptop"></i> Virtual
+                            </span>
+                            <span class="g-session-pill col-nrc">
+                                <i class="fas fa-laptop" style="color: #00bcd4;" title="NRC Virtual"></i>
+                                <span><?php echo !empty($detalles_grupo['nrc_v']) ? htmlspecialchars($detalles_grupo['nrc_v']) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-aula">
+                                <i class="fas fa-video" style="color: #00bcd4;" title="Aula Virtual"></i>
+                                <span><?php echo !empty($detalles_grupo['aula_v']) ? htmlspecialchars($detalles_grupo['aula_v']) : (!empty($detalles_grupo['nrc_v']) ? 'Zoom' : 'NA'); ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-dias">
+                                <i class="far fa-calendar-alt" style="color: #00bcd4;" title="Días Virtuales"></i>
+                                <span><?php echo !empty($detalles_grupo['dias_v']) ? htmlspecialchars(formatear_dias_es($detalles_grupo['dias_v'])) : 'NA'; ?></span>
+                            </span>
+                            <span class="g-meta-sep">|</span>
+                            <span class="g-session-pill col-hora">
+                                <i class="far fa-clock" style="color: #00bcd4;" title="Horario Virtual"></i>
+                                <span>
+                                    <?php echo (!empty($detalles_grupo['inicio_v']) && !empty($detalles_grupo['fin_v'])) ? date('H:i', strtotime($detalles_grupo['inicio_v'])) . ' - ' . date('H:i', strtotime($detalles_grupo['fin_v'])) : 'NA'; ?>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de Acción a la Derecha -->
+            <div class="dg-top-actions">
+                <?php if ($modo_solo_lectura): ?>
+                    <button type="button" class="dg-btn-action dg-btn-equipo" style="opacity: 0.55; cursor: not-allowed; pointer-events: none;" title="No disponible en historial de ciclos pasados">
+                        <i class="fas fa-users-slash"></i> Trabajo en Equipo
+                    </button>
+                <?php else: ?>
+                    <a href="trabajo_equipo?clave=<?php echo urlencode($clave_grupo); ?>" class="dg-btn-action dg-btn-equipo">
+                        <i class="fas fa-users"></i> Trabajo en Equipo
+                    </a>
+                <?php endif; ?>
+
+                <a href="asistencia?clave=<?php echo urlencode($clave_grupo) . ($modo_solo_lectura ? '&pasado=1' : ''); ?>" class="dg-btn-action dg-btn-asistencia">
                     <i class="fas fa-calendar-check"></i> Lista de Asistencia
                 </a>
             </div>
         </div>
 
-        <?php if ($grupo_cerrado): ?>
+        <?php if ($es_ciclo_pasado): ?>
+            <div class="alert-closed" style="background: rgba(100, 116, 139, 0.12); border-color: rgba(100, 116, 139, 0.35); color: #475569;">
+                <i class="fas fa-history" style="font-size: 1.8rem; color: #64748b;"></i>
+                <div>
+                    <strong>Historial de Ciclo Pasado (Solo Lectura)</strong><br>
+                    <span style="font-size: 0.9rem;">Este grupo pertenece a un ciclo anterior finalizado. Puedes consultar toda la información y calificaciones de los alumnos, pero no se permiten modificaciones.</span>
+                </div>
+            </div>
+        <?php elseif ($grupo_cerrado): ?>
             <div class="alert-closed">
                 <i class="fas fa-archive" style="font-size: 1.8rem;"></i>
                 <div><strong>Clase Finalizada</strong><br><span style="font-size: 0.9rem;">Esta clase ha sido cerrada por la administración. Las calificaciones son de solo lectura.</span></div>
@@ -190,12 +206,13 @@ if (count($alumnos) > 0) {
                 <table class="excel-table">
                     <thead>
                         <tr>
-                            <th>Alumno</th>
+                            <th>Estudiante</th>
                             <?php foreach ($criterios as $c): ?>
                                 <th title="<?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?>">
                                     <i class="excel-crit-icon <?php echo htmlspecialchars($c['icono_fijo']); ?> <?php echo ($c['bloqueado'] || $grupo_cerrado) ? 'class-locked' : $c['color_fijo']; ?>"></i>
                                     <div class="excel-crit-title">
-                                        <?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?>
+                                        <span class="crit-title-desktop"><?php echo htmlspecialchars($c['nombre_examen'] ?? ''); ?></span>
+                                        <span class="crit-title-mobile"><?php echo htmlspecialchars(abreviar_criterio_movil($c['nombre_examen'] ?? '', $c['codigo_examen'] ?? '')); ?></span>
                                         <?php if ($c['bloqueado'] || $grupo_cerrado) echo ' <i class="fas fa-lock lock-icon" title="Manejado por Control Escolar"></i>'; ?>
                                     </div>
                                     <span class="excel-crit-max">Máx: <?php echo floatval($c['puntos_maximos'] ?? 0); ?></span>
@@ -212,7 +229,8 @@ if (count($alumnos) > 0) {
                         <?php foreach ($alumnos as $a):
                             $insc_id = $a['inscripcion_id'];
                             $suma_alumno = 0;
-                            $nombre_seguro = trim(($a['apellido_paterno'] ?? '') . ' ' . ($a['apellido_materno'] ?? '') . ' ' . ($a['nombre'] ?? ''));
+                            $apellidos = trim(($a['apellido_paterno'] ?? '') . ' ' . ($a['apellido_materno'] ?? ''));
+                            $nombres = trim($a['nombre'] ?? '');
                             $foto_url = "../img/avatar-default.png";
                             if (!empty($a['foto_perfil']) && file_exists("../img/perfiles/" . $a['foto_perfil'])) {
                                 $foto_url = "../img/perfiles/" . $a['foto_perfil'];
@@ -222,7 +240,9 @@ if (count($alumnos) > 0) {
                                 <td class="excel-student-cell">
                                     <img src="<?php echo htmlspecialchars($foto_url); ?>" class="excel-student-img">
                                     <div>
-                                        <div class="excel-student-name"><?php echo htmlspecialchars($nombre_seguro); ?></div>
+                                        <div class="excel-student-name">
+                                            <?php echo htmlspecialchars($apellidos); ?><br><?php echo htmlspecialchars($nombres); ?>
+                                        </div>
                                         <div class="excel-student-code">Código: <?php echo htmlspecialchars($a['codigo'] ?? 'N/A'); ?></div>
                                     </div>
                                 </td>
@@ -332,6 +352,40 @@ if (count($alumnos) > 0) {
                 }
                 recalcularTotal(input.getAttribute('data-insc'));
             });
+        });
+
+        // CONTROL DEL ACORDEÓN DE DETALLES DEL GRUPO
+        function toggleDetallesGrupo() {
+            const drawer = document.getElementById('drawerDetallesGrupo');
+            const btn = document.getElementById('btnToggleDetallesGrupo');
+            if (!drawer || !btn) return;
+
+            const isHidden = (drawer.style.display === 'none' || drawer.style.display === '');
+            if (isHidden) {
+                drawer.style.display = 'block';
+                btn.classList.add('g-toggle-btn-active');
+                btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                localStorage.setItem('epale_detalle_grupo_drawer', 'open');
+            } else {
+                drawer.style.display = 'none';
+                btn.classList.remove('g-toggle-btn-active');
+                btn.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                localStorage.setItem('epale_detalle_grupo_drawer', 'closed');
+            }
+        }
+
+        // Restaurar estado preferido del docente
+        document.addEventListener('DOMContentLoaded', function() {
+            const estadoGuardado = localStorage.getItem('epale_detalle_grupo_drawer');
+            if (estadoGuardado === 'open') {
+                const drawer = document.getElementById('drawerDetallesGrupo');
+                const btn = document.getElementById('btnToggleDetallesGrupo');
+                if (drawer && btn) {
+                    drawer.style.display = 'block';
+                    btn.classList.add('g-toggle-btn-active');
+                    btn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                }
+            }
         });
     </script>
 </body>

@@ -24,15 +24,20 @@ if ($input['action'] === 'batch') {
     $fecha = date('Y-m-d');
     $pdo->beginTransaction();
     try {
-        $stmt_val = $pdo->prepare("SELECT g.estado FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc WHERE i.inscripcion_id = ? AND g.profesor_id = ?");
+        $stmt_val = $pdo->prepare("SELECT g.estado, c.activo AS ciclo_activo 
+                                   FROM inscripciones i 
+                                   JOIN grupos g ON i.nrc = g.nrc 
+                                   JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                                   WHERE i.inscripcion_id = ? AND g.profesor_id = ?");
         $stmt_ins = $pdo->prepare("INSERT INTO asistencias (inscripcion_id, fecha, estatus) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE estatus = VALUES(estatus)");
                                    
         foreach($input['data'] as $row) {
             $stmt_val->execute([$row['inscripcion_id'], $profesor_id]);
-            $estado_grupo = $stmt_val->fetchColumn();
+            $info_g = $stmt_val->fetch(PDO::FETCH_ASSOC);
             
-            if ($estado_grupo === false) { throw new Exception("Vulnerabilidad detectada: Intento de modificar alumno ajeno."); }
-            if ($estado_grupo === 'CERRADO') { throw new Exception("Operación rechazada: No se puede tomar asistencia en un grupo finalizado."); }
+            if (!$info_g) { throw new Exception("Vulnerabilidad detectada: Intento de modificar alumno ajeno."); }
+            if ($info_g['estado'] === 'CERRADO') { throw new Exception("Operación rechazada: No se puede tomar asistencia en un grupo finalizado."); }
+            if ((int)($info_g['ciclo_activo'] ?? 1) === 0) { throw new Exception("Operación rechazada: Ciclo escolar finalizado (solo lectura)."); }
             
             $stmt_ins->execute([$row['inscripcion_id'], $fecha, $row['estatus']]);
         }
@@ -51,12 +56,17 @@ if ($input['action'] === 'batch') {
 
 if ($input['action'] === 'single') {
     try {
-        $stmt_val = $pdo->prepare("SELECT g.estado FROM inscripciones i JOIN grupos g ON i.nrc = g.nrc WHERE i.inscripcion_id = ? AND g.profesor_id = ?");
+        $stmt_val = $pdo->prepare("SELECT g.estado, c.activo AS ciclo_activo 
+                                   FROM inscripciones i 
+                                   JOIN grupos g ON i.nrc = g.nrc 
+                                   JOIN ciclos c ON g.ciclo_id = c.ciclo_id
+                                   WHERE i.inscripcion_id = ? AND g.profesor_id = ?");
         $stmt_val->execute([$input['ins_id'], $profesor_id]);
-        $estado_grupo = $stmt_val->fetchColumn();
+        $info_g = $stmt_val->fetch(PDO::FETCH_ASSOC);
         
-        if ($estado_grupo === false) { echo json_encode(['success' => false, 'error' => 'Acceso denegado: El alumno no pertenece a tus grupos.']); exit; }
-        if ($estado_grupo === 'CERRADO') { echo json_encode(['success' => false, 'error' => 'Operación rechazada: Grupo finalizado (CERRADO).']); exit; }
+        if (!$info_g) { echo json_encode(['success' => false, 'error' => 'Acceso denegado: El alumno no pertenece a tus grupos.']); exit; }
+        if ($info_g['estado'] === 'CERRADO') { echo json_encode(['success' => false, 'error' => 'Operación rechazada: Grupo finalizado (CERRADO).']); exit; }
+        if ((int)($info_g['ciclo_activo'] ?? 1) === 0) { echo json_encode(['success' => false, 'error' => 'Operación rechazada: Ciclo escolar finalizado (solo lectura).']); exit; }
 
         $stmt = $pdo->prepare("UPDATE asistencias SET estatus = ? WHERE inscripcion_id = ? AND fecha = ?");
         $success = $stmt->execute([$input['estatus'], $input['ins_id'], $input['fecha']]);
