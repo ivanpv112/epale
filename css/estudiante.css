@@ -472,17 +472,17 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--white);
-    border: 1px solid rgba(128, 128, 128, 0.18);
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 0.82rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.88rem;
     font-weight: 700;
-    color: var(--text-dark);
+    color: var(--text-dark, #1e293b);
     white-space: nowrap;
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
 }
 
 /* ========================================= */
@@ -687,9 +687,9 @@
     color: #f1f5f9;
 }
 [data-theme="dark"] .hoy-time-badge {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
+    background: transparent !important;
+    border: none !important;
+    color: #f8fafc !important;
 }
 [data-theme="dark"] .dashboard-grid .card.card-hoy-widget {
     border-top-color: #06b6d4;
