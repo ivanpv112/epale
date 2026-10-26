@@ -1,8 +1,18 @@
 // js/index_estudiante.js
 
 function toggleMobileMenu() {
-    document.getElementById('navWrapper').classList.toggle('active');
-    document.getElementById('menuOverlay').classList.toggle('active');
+    const sidebar = document.getElementById('navWrapper');
+    const overlay = document.getElementById('menuOverlay');
+    if (!sidebar || !overlay) return;
+
+    const isOpen = sidebar.classList.toggle('active');
+    overlay.classList.toggle('active', isOpen);
+
+    if (isOpen) {
+        document.body.classList.add('menu-open');
+    } else {
+        document.body.classList.remove('menu-open');
+    }
 }
 
 function cambiarMateriaDash(idContenedor) {
