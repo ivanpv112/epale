@@ -266,9 +266,11 @@ async function eliminarDispositivoBio(id, nombreDispositivo) {
     }
 
     try {
-        const res = await fetch('../api_webauthn_credentials.php', {
+        const credUrl = (typeof WebAuthnClient !== 'undefined' ? WebAuthnClient.getBaseUrl() : '../') + 'api_webauthn_credentials.php';
+        const res = await fetch(credUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ action: 'delete', id: id })
         });
         const data = await res.json();

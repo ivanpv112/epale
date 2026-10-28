@@ -1,10 +1,35 @@
 <?php
 // api_webauthn_login_verify.php
-session_start();
 header('Content-Type: application/json; charset=utf-8');
 
+if (session_status() === PHP_SESSION_NONE) {
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $is_https,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
+
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/lib/WebAuthn/WebAuthnHelper.php';
+
+$helperPath = __DIR__ . '/lib/WebAuthn/WebAuthnHelper.php';
+if (!file_exists($helperPath)) {
+    $helperPath = __DIR__ . '/lib/webauthn/WebAuthnHelper.php';
+}
+if (!file_exists($helperPath)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'No se encontró lib/WebAuthn/WebAuthnHelper.php en el servidor.']);
+    exit;
+}
+require_once $helperPath;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

@@ -1,16 +1,41 @@
 <?php
 // api_webauthn_register_challenge.php
-session_start();
 header('Content-Type: application/json; charset=utf-8');
+
+if (session_status() === PHP_SESSION_NONE) {
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $is_https,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'No has iniciado sesión.']);
+    echo json_encode(['success' => false, 'error' => 'No has iniciado sesión o tu sesión ha expirado. Por favor, recarga la página.']);
     exit;
 }
 
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/lib/WebAuthn/WebAuthnHelper.php';
+
+$helperPath = __DIR__ . '/lib/WebAuthn/WebAuthnHelper.php';
+if (!file_exists($helperPath)) {
+    $helperPath = __DIR__ . '/lib/webauthn/WebAuthnHelper.php';
+}
+if (!file_exists($helperPath)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'No se encontró lib/WebAuthn/WebAuthnHelper.php en el servidor. Verifica haber subido la carpeta lib/WebAuthn/.']);
+    exit;
+}
+require_once $helperPath;
 
 try {
     $userId = (int)$_SESSION['user_id'];
@@ -20,7 +45,7 @@ try {
 
     if (!$user) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Usuario no encontrado.']);
+        echo json_encode(['success' => false, 'error' => 'Usuario no encontrado en la base de datos.']);
         exit;
     }
 
@@ -29,16 +54,23 @@ try {
     $_SESSION['webauthn_reg_user_id'] = $userId;
 
     // Obtener credenciales ya registradas para excluirlas
-    $stmtCreds = $pdo->prepare("SELECT credential_id FROM usuarios_credenciales_biometricas WHERE usuario_id = ?");
-    $stmtCreds->execute([$userId]);
-    $existing = $stmtCreds->fetchAll(PDO::FETCH_COLUMN);
-
     $excludeCredentials = [];
-    foreach ($existing as $credId) {
-        $excludeCredentials[] = [
-            'type' => 'public-key',
-            'id'   => $credId
-        ];
+    try {
+        $stmtCreds = $pdo->prepare("SELECT credential_id FROM usuarios_credenciales_biometricas WHERE usuario_id = ?");
+        $stmtCreds->execute([$userId]);
+        $existing = $stmtCreds->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($existing as $credId) {
+            $excludeCredentials[] = [
+                'type' => 'public-key',
+                'id'   => $credId
+            ];
+        }
+    } catch (PDOException $e) {
+        // Si la tabla no existe o falla la consulta
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Error al consultar usuarios_credenciales_biometricas: ' . $e->getMessage()]);
+        exit;
     }
 
     $options = [
@@ -57,7 +89,7 @@ try {
             ['type' => 'public-key', 'alg' => -257], // RS256
         ],
         'authenticatorSelection' => [
-            'authenticatorAttachment' => 'platform', // Obliga al uso de sensor biométrico del dispositivo (Touch ID, Windows Hello, Huella Android)
+            'authenticatorAttachment' => 'platform',
             'userVerification'        => 'preferred',
             'residentKey'             => 'preferred',
         ],
@@ -69,5 +101,5 @@ try {
     echo json_encode(['success' => true, 'options' => $options]);
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Error inesperado: ' . $e->getMessage()]);
 }
