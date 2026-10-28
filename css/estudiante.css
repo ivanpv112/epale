@@ -745,3 +745,736 @@
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.1), inset 0 4px 15px rgba(16, 185, 129, 0.05);
 }
 
+/* =========================================================
+   ESTILOS PREMIUM - PERFIL DE ESTUDIANTE
+   ========================================================= */
+.card-examen-diag {
+    border-top: 4px solid #00bfff !important;
+    margin-bottom: 25px;
+}
+.card-certificaciones-oficiales {
+    border-top: 4px solid var(--udg-blue) !important;
+    margin-bottom: 25px;
+}
+.profile-info-card {
+    border-radius: 14px;
+    padding: 22px 24px;
+    border: 1px solid #e2e8f0;
+    border-top: 4px solid #00bfff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+.profile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #edf2f7;
+}
+.profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.profile-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(0, 191, 255, 0.12);
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.profile-title-icon.academic-icon {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+.profile-title-icon.kardex-icon {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+}
+.profile-card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1.25;
+}
+.profile-card-subtitle {
+    margin: 3px 0 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+.btn-edit-profile-card {
+    background: #f0f9ff;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.btn-edit-profile-card:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
+}
+.profile-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.profile-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    gap: 14px;
+    transition: all 0.2s ease;
+}
+.profile-info-row:hover {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.profile-info-lead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    flex-shrink: 0;
+}
+.profile-info-lead i {
+    width: 16px;
+    text-align: center;
+    color: #00bfff;
+    font-size: 0.95rem;
+}
+.academic-icon ~ div i,
+.profile-info-card:nth-child(2) .profile-info-lead i {
+    color: #10b981;
+}
+.profile-info-row .info-label {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+}
+.profile-info-row .info-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    text-align: right;
+    word-break: break-word;
+}
+.profile-info-row .font-mono {
+    font-family: monospace;
+    letter-spacing: 0.5px;
+    background: rgba(0,0,0,0.04);
+    padding: 2px 8px;
+    border-radius: 5px;
+}
+.text-muted-italic {
+    color: #94a3b8;
+    font-style: italic;
+    font-weight: normal;
+}
+.status-badge-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.status-dot {
+    font-size: 0.45rem;
+    animation: statusPulse 2s infinite ease-in-out;
+}
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+.pass-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+.pass-status-pill.pass-updated {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.pass-status-pill.pass-default {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* KÁRDEX / HISTORIAL ACADÉMICO */
+.profile-kardex-card {
+    border-radius: 14px;
+    padding: 22px 24px;
+    border: 1px solid #e2e8f0;
+    border-top: 4px solid #00bfff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+    margin-top: 25px;
+    transition: all 0.3s ease;
+}
+.kardex-header {
+    border-bottom: none;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+}
+.kardex-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eef2ff;
+    color: #4f46e5;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid #e0e7ff;
+    flex-shrink: 0;
+}
+.kardex-table-container {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+.kardex-premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+}
+.kardex-premium-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.kardex-premium-table th.th-center,
+.kardex-premium-table td.th-center {
+    text-align: center;
+}
+.show-mobile {
+    display: none;
+}
+.hide-mobile {
+    display: inline;
+}
+.kardex-row {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.kardex-row:hover {
+    background: #f0f9ff !important;
+}
+.kardex-row td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+.kardex-materia-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.kardex-materia-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #16a34a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.kardex-materia-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+.kardex-codigo-materia {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    font-family: monospace;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #0284c7;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    padding: 1px 6px;
+    border-radius: 4px;
+    line-height: 1.25;
+}
+.kardex-materia-name {
+    display: block;
+    color: var(--text-dark);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.kardex-ciclo-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+.kardex-score-badge {
+    display: inline-block;
+    min-width: 44px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.kardex-score-badge.score-high {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+.kardex-score-badge.score-low {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+.kardex-status-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.kardex-pill-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.kardex-pill-final {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+.kardex-pill-pass {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.kardex-pill-fail {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.kardex-empty-cell {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+}
+.kardex-empty-icon {
+    font-size: 2.2rem;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* MODAL EDITAR PERFIL PREMIUM */
+.profile-edit-modal {
+    max-width: 460px;
+    width: 92%;
+    border-radius: 14px;
+    border-top: 4px solid #00bfff;
+}
+
+/* MODAL FOTO Y CERTIFICACIÓN EN PERFIL ESTUDIANTE */
+#modalFoto .modal-content,
+#modalCertDetalle .modal-content {
+    border-top: 4px solid #00bfff;
+}
+.profile-edit-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #edf2f7;
+}
+.profile-edit-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.profile-edit-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(0, 191, 255, 0.12);
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+.profile-edit-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+.profile-edit-subtitle {
+    margin: 2px 0 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+.profile-edit-body {
+    padding: 20px;
+}
+.profile-edit-body .form-group {
+    margin-bottom: 16px;
+}
+.profile-edit-body .form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-dark);
+}
+.profile-edit-body .form-group label i {
+    color: #00bfff;
+    width: 14px;
+}
+.profile-edit-body .form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    font-size: 0.92rem;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+.profile-edit-body .form-control:focus {
+    border-color: #00bfff;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.15);
+    outline: none;
+}
+.profile-modal-hint {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+.profile-edit-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #edf2f7;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* =========================================================
+   ADAPTACIÓN RESPONSIVA (<= 640px)
+   ========================================================= */
+@media (max-width: 640px) {
+    .profile-info-card,
+    .profile-kardex-card {
+        padding: 16px 14px;
+        border-radius: 12px;
+    }
+    .profile-info-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 10px 12px;
+    }
+    .profile-info-row .info-value {
+        text-align: left;
+        width: 100%;
+    }
+    /* En móvil, Información Académica se mantiene en una sola línea */
+    .profile-academic-card .profile-info-row {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
+    }
+    .profile-academic-card .profile-info-lead {
+        flex-shrink: 0;
+    }
+    .profile-academic-card .profile-info-row .info-value {
+        text-align: right !important;
+        width: auto !important;
+        max-width: 60%;
+        word-break: break-word;
+    }
+    .btn-edit-profile-card span {
+        display: none;
+    }
+    .btn-edit-profile-card {
+        padding: 7px 10px;
+    }
+    .kardex-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .kardex-count-badge {
+        align-self: flex-start;
+    }
+    .kardex-premium-table th,
+    .kardex-premium-table td {
+        padding: 10px 8px;
+        font-size: 0.8rem;
+    }
+    .kardex-premium-table .hide-mobile {
+        display: none !important;
+    }
+    .kardex-premium-table .show-mobile {
+        display: inline !important;
+        white-space: nowrap;
+    }
+    .kardex-materia-icon {
+        display: none;
+    }
+    .kardex-materia-name {
+        font-size: 0.86rem;
+    }
+    .kardex-codigo-materia {
+        font-size: 0.65rem;
+        padding: 1px 5px;
+    }
+    .kardex-ciclo-pill {
+        font-size: 0.72rem;
+        padding: 3px 6px;
+    }
+    .kardex-score-badge {
+        font-size: 0.92rem;
+        padding: 3px 7px;
+        min-width: 36px;
+    }
+    .kardex-pill-status {
+        font-size: 0.68rem;
+        padding: 2px 6px;
+    }
+    .profile-edit-modal {
+        width: 95%;
+        margin: 10px;
+    }
+    .profile-edit-footer {
+        flex-direction: row;
+    }
+    .profile-edit-footer .btn-cancel,
+    .profile-edit-footer .btn-save {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* =========================================================
+   MODO OSCURO - PERFIL ESTUDIANTE
+   ========================================================= */
+[data-theme="dark"] .card-examen-diag {
+    border-top: 4px solid #00bfff !important;
+}
+[data-theme="dark"] .card-certificaciones-oficiales {
+    border-top: 4px solid var(--udg-blue) !important;
+}
+[data-theme="dark"] .profile-info-card,
+[data-theme="dark"] .profile-kardex-card {
+    background: #151e32 !important;
+    border: 1px solid #1e293b !important;
+    border-top: 4px solid var(--udg-blue) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .profile-card-header {
+    border-bottom-color: #1e293b !important;
+}
+[data-theme="dark"] .profile-card-header h3 {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .profile-card-subtitle {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .btn-edit-profile-card {
+    background: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.25) !important;
+}
+[data-theme="dark"] .btn-edit-profile-card:hover {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+}
+[data-theme="dark"] .profile-info-row {
+    background: #0f172a !important;
+    border-color: #1e293b !important;
+}
+[data-theme="dark"] .profile-info-row:hover {
+    border-color: #334155 !important;
+}
+[data-theme="dark"] .profile-info-row .info-label {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .profile-info-row .info-value {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .profile-info-row .font-mono {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #38bdf8 !important;
+}
+[data-theme="dark"] .pass-status-pill.pass-updated {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+[data-theme="dark"] .pass-status-pill.pass-default {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+}
+[data-theme="dark"] .kardex-count-badge {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: #a5b4fc !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+}
+[data-theme="dark"] .kardex-table-container {
+    border-color: #1e293b !important;
+}
+[data-theme="dark"] .kardex-premium-table th {
+    background: #0f172a !important;
+    color: #cbd5e1 !important;
+    border-bottom-color: #1e293b !important;
+}
+[data-theme="dark"] .kardex-row:hover {
+    background: rgba(56, 189, 248, 0.08) !important;
+}
+[data-theme="dark"] .kardex-row td {
+    border-bottom-color: #1e293b !important;
+}
+[data-theme="dark"] .kardex-materia-icon {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+}
+[data-theme="dark"] .kardex-materia-name {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .kardex-codigo-materia {
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: #7dd3fc !important;
+    border-color: rgba(56, 189, 248, 0.3) !important;
+}
+[data-theme="dark"] .kardex-ciclo-pill {
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+[data-theme="dark"] .kardex-score-badge.score-high {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+[data-theme="dark"] .kardex-score-badge.score-low {
+    background: rgba(239, 68, 68, 0.18) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+}
+[data-theme="dark"] .kardex-pill-final {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+}
+[data-theme="dark"] .kardex-empty-cell {
+    color: #64748b !important;
+}
+[data-theme="dark"] .kardex-empty-icon {
+    color: #334155 !important;
+}
+
+[data-theme="dark"] .profile-edit-modal,
+[data-theme="dark"] #modalFoto .modal-content,
+[data-theme="dark"] #modalCertDetalle .modal-content {
+    background: #151e32 !important;
+    border: 1px solid #1e293b !important;
+    border-top: 4px solid var(--udg-blue) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+[data-theme="dark"] .profile-edit-header {
+    background: #151e32 !important;
+    border-bottom-color: #1e293b !important;
+}
+[data-theme="dark"] .profile-edit-header h2 {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .profile-edit-subtitle {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .profile-edit-body .form-group label {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .profile-edit-body .form-control {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .profile-edit-body .form-control:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+[data-theme="dark"] .profile-modal-hint {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .profile-edit-footer {
+    background: #151e32 !important;
+    border-top-color: #1e293b !important;
+}
+

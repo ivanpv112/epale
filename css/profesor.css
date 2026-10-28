@@ -1654,22 +1654,18 @@
 
 /* ========================================= 9. HORARIO DOCENTE (GRID Y TEMAS DE COLOR) ========================================= */
 .schedule-wrapper { background: var(--white); border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 20px; overflow-x: auto; }
-.schedule-grid { display: grid; grid-template-columns: 70px repeat(5, minmax(180px, 1fr)); grid-template-rows: 50px repeat(13, 65px); min-width: 900px; position: relative; }
+.schedule-grid { display: grid; grid-template-columns: 70px repeat(6, minmax(180px, 1fr)); grid-template-rows: 50px repeat(13, 65px); min-width: 1080px; position: relative; }
 .grid-header { background-color: var(--udg-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.1); }
 .grid-header:first-child { border-top-left-radius: 8px; }
 .grid-header:last-child { border-top-right-radius: 8px; border-right: none; }
 .time-label { grid-column: 1; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; font-size: 0.85rem; color: var(--text-muted); border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
 .grid-line { grid-column: 2 / -1; border-bottom: 1px solid #f1f3f5; border-right: 1px solid #f1f3f5; }
-.class-block { margin: 4px; padding: 10px 12px; border-radius: 8px; border-left: 5px solid; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; text-decoration: none; }
+.class-block { margin: 4px; padding: 10px 12px; border-radius: 8px; border-left: 5px solid; font-size: 0.85rem; display: flex; flex-direction: column; justify-content: center; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; text-decoration: none; position: relative; }
 .class-block:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 6px 15px rgba(0,0,0,0.1); z-index: 20; }
+.class-modality-badge { align-self: flex-start; margin-bottom: 4px; font-size: 0.55rem; font-weight: bold; background: rgba(0,0,0,0.08); padding: 2px 5px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+[data-theme="dark"] .class-modality-badge { background: rgba(255,255,255,0.15); color: inherit; }
 .class-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
 .class-details { opacity: 0.8; font-family: monospace; display: flex; align-items: center; gap: 5px; margin-top: 3px; }
-.class-block.theme-blue { background-color: #e7f3ff; border-left-color: #8bb9ff; color: #0056b3; }
-.class-block.theme-green { background-color: #e6f8ec; border-left-color: #89dfa9; color: #0f5132; }
-.class-block.theme-yellow { background-color: #fff3cd; border-left-color: #ffe69c; color: #664d03; }
-.class-block.theme-red { background-color: #f8d7da; border-left-color: #f1aeb5; color: #842029; }
-.class-block.theme-purple { background-color: #f3e8ff; border-left-color: #c29ffa; color: #432874; }
-.class-block.theme-cyan { background-color: #cff4fc; border-left-color: #9eeaf9; color: #055160; }
 
 
 /* ========================================= 10. MODO OSCURO (DARK MODE) ========================================= */

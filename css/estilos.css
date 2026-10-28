@@ -73,6 +73,569 @@
 .btn-google:hover { background-color: #e2ecf8; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .btn-google i { color: var(--bg-blue); font-size: 1.1rem; }
 
+/* BOTÓN DE ACCESO CON HUELLA / PASSKEY */
+.btn-biometric {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 12px; background: linear-gradient(135deg, #0d3b66 0%, #001a57 100%);
+    color: #ffffff; border: 1px solid rgba(0, 191, 255, 0.3); border-radius: 6px; font-size: 1rem;
+    font-weight: 600; cursor: pointer; box-sizing: border-box; margin-bottom: 12px;
+    transition: all 0.25s ease; position: relative; min-height: 46px;
+    box-shadow: 0 4px 12px rgba(0, 26, 87, 0.2);
+}
+.btn-biometric:hover {
+    background: linear-gradient(135deg, #144d82 0%, #002677 100%);
+    box-shadow: 0 6px 16px rgba(0, 191, 255, 0.25);
+    border-color: #00bfff;
+    transform: translateY(-1px);
+}
+.btn-biometric i {
+    font-size: 1.25rem;
+    color: #00e5ff;
+    transition: transform 0.2s ease;
+}
+.btn-biometric:hover i {
+    transform: scale(1.15);
+}
+.btn-biometric.is-loading {
+    color: transparent;
+    pointer-events: none;
+}
+.btn-biometric.is-loading i {
+    display: none;
+}
+.btn-biometric.is-loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #00e5ff;
+    border-radius: 50%;
+    animation: btn-spin 0.8s linear infinite;
+}
+
+/* TARJETA DE ACCESO BIOMÉTRICO (PERFILES) */
+.bio-card-wrapper {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    border-top: 4px solid #00bfff;
+    margin-top: 25px;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.bio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.bio-header-text {
+    flex: 1;
+    min-width: 0;
+}
+.bio-header h3 {
+    margin: 0;
+    color: var(--bg-blue);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.bio-title-icon {
+    color: #00bfff;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+.bio-subtitle {
+    margin: 4px 0 0 0;
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+.bio-notice-warning {
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    color: #92400e;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.3;
+}
+.bio-empty-msg {
+    text-align: center;
+    padding: 24px 14px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+    list-style: none;
+    line-height: 1.35;
+}
+.bio-empty-icon {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+    display: block;
+    color: #cbd5e1;
+}
+.bio-device-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.bio-device-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+.bio-device-item:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.bio-device-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+.bio-device-icon {
+    width: 38px;
+    height: 38px;
+    background: rgba(0, 191, 255, 0.12);
+    color: #0088cc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.bio-device-meta {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.bio-device-name {
+    color: #1e293b;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bio-device-dates {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.bio-date-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: #edf2f7;
+    color: #64748b;
+    font-weight: 500;
+    line-height: 1.2;
+}
+.bio-date-last {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+.bio-date-unused {
+    background: #f1f5f9;
+    color: #94a3b8;
+}
+.btn-delete-bio {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.btn-delete-bio:hover {
+    background: #fecaca;
+    color: #dc2626;
+}
+.btn-add-bio {
+    background: var(--bg-blue);
+    color: #ffffff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 7px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s;
+}
+.btn-add-bio:hover {
+    background: var(--primary);
+}
+.btn-add-bio:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* MODAL REGISTRO DE DISPOSITIVO BIOMÉTRICO */
+.bio-modal-content {
+    max-width: 440px;
+    width: 92%;
+    border-radius: 14px;
+}
+.bio-modal-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+}
+.bio-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+.bio-modal-header-icon {
+    color: #00bfff;
+    font-size: 1.25rem;
+}
+.bio-modal-body {
+    padding: 18px 20px;
+}
+.bio-modal-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+.bio-modal-fingerprint-anim {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 191, 255, 0.15);
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    animation: bioPulse 2s infinite ease-in-out;
+}
+@keyframes bioPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(0, 191, 255, 0); }
+}
+.bio-modal-intro p {
+    margin: 0;
+    color: #0369a1;
+    font-size: 0.83rem;
+    line-height: 1.35;
+}
+.bio-modal-field {
+    margin-top: 10px;
+}
+.bio-modal-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+.bio-modal-field input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.92rem;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.bio-modal-field input:focus {
+    border-color: #00bfff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 191, 255, 0.15);
+}
+.bio-modal-hint {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 0.77rem;
+    line-height: 1.3;
+}
+.bio-modal-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    color: #0e7490;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+.bio-modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.bio-modal-footer .btn-cancel,
+.bio-modal-footer .btn-save {
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    border-radius: 6px;
+}
+
+/* =========================================================
+   ADAPTACIÓN RESPONSIVA PARA DISPOSITIVOS MÓVILES (<= 640px)
+   ========================================================= */
+@media (max-width: 640px) {
+    .bio-card-wrapper {
+        padding: 16px 14px;
+        margin-top: 18px;
+        border-radius: 10px;
+    }
+    .bio-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .bio-header h3 {
+        font-size: 1.02rem;
+    }
+    .bio-subtitle {
+        font-size: 0.82rem;
+    }
+    .btn-add-bio {
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+        border-radius: 8px;
+    }
+    .bio-device-item {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+    .bio-device-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 1rem;
+    }
+    .bio-device-name {
+        font-size: 0.88rem;
+    }
+    .bio-date-pill {
+        font-size: 0.68rem;
+        padding: 2px 6px;
+    }
+    .btn-delete-bio {
+        padding: 6px 10px;
+        font-size: 0.76rem;
+    }
+    .btn-delete-bio span.btn-text {
+        display: none;
+    }
+    
+    /* Modal en móvil */
+    .bio-modal-content {
+        width: 95%;
+        max-width: 95%;
+        margin: 10px;
+    }
+    .bio-modal-header {
+        padding: 14px 16px;
+    }
+    .bio-modal-body {
+        padding: 14px 16px;
+    }
+    .bio-modal-footer {
+        padding: 12px 16px;
+        flex-direction: row;
+    }
+    .bio-modal-footer .btn-cancel,
+    .bio-modal-footer .btn-save {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* =========================================================
+   MODO OSCURO - TARJETA Y MODAL BIOMÉTRICO
+   ========================================================= */
+[data-theme="dark"] .bio-card-wrapper {
+    background: #151e32 !important;
+    border: 1px solid #1e293b !important;
+    border-top: 4px solid #00bfff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .bio-header h3 {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .bio-title-icon {
+    color: #38bdf8 !important;
+}
+[data-theme="dark"] .bio-subtitle {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .bio-notice-warning {
+    background: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+    color: #fcd34d !important;
+}
+[data-theme="dark"] .bio-empty-msg {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .bio-empty-icon {
+    color: #475569 !important;
+}
+[data-theme="dark"] .bio-device-item {
+    background: #0f172a !important;
+    border-color: #1e293b !important;
+}
+[data-theme="dark"] .bio-device-item:hover {
+    border-color: #334155 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] .bio-device-icon {
+    background: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+}
+[data-theme="dark"] .bio-device-name {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .bio-date-pill {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .bio-date-last {
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: #7dd3fc !important;
+}
+[data-theme="dark"] .bio-date-unused {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #64748b !important;
+}
+[data-theme="dark"] .btn-delete-bio {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+[data-theme="dark"] .btn-delete-bio:hover {
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: #fca5a5 !important;
+}
+[data-theme="dark"] .btn-add-bio {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+}
+[data-theme="dark"] .btn-add-bio:hover {
+    background: #0369a1 !important;
+}
+
+[data-theme="dark"] .bio-modal-content {
+    background: #151e32 !important;
+    border: 1px solid #1e293b;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+[data-theme="dark"] .bio-modal-header {
+    background: #151e32 !important;
+    border-bottom: 1px solid #1e293b !important;
+}
+[data-theme="dark"] .bio-modal-title {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .bio-modal-header-icon {
+    color: #38bdf8 !important;
+}
+[data-theme="dark"] .bio-modal-intro {
+    background: rgba(56, 189, 248, 0.08) !important;
+    border-color: rgba(56, 189, 248, 0.25) !important;
+}
+[data-theme="dark"] .bio-modal-intro p {
+    color: #bae6fd !important;
+}
+[data-theme="dark"] .bio-modal-fingerprint-anim {
+    background: rgba(56, 189, 248, 0.18) !important;
+    color: #38bdf8 !important;
+}
+[data-theme="dark"] .bio-modal-field label {
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .bio-modal-field input {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+[data-theme="dark"] .bio-modal-field input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+[data-theme="dark"] .bio-modal-hint {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .bio-modal-status {
+    background: rgba(6, 182, 212, 0.12) !important;
+    border-color: rgba(6, 182, 212, 0.3) !important;
+    color: #67e8f9 !important;
+}
+[data-theme="dark"] .bio-modal-footer {
+    background: #151e32 !important;
+    border-top: 1px solid #1e293b !important;
+}
+
 /* CAJA DE DEMO */
 .demo-box { background-color: var(--light-blue); border-radius: 8px; padding: 15px; margin-top: 25px; font-size: 0.85rem; color: #444; }
 .demo-title { color: var(--primary); font-weight: bold; margin-bottom: 5px; display: block; }
