@@ -58,8 +58,8 @@ require_once 'perfil_logic.php';
         <?php endif; ?>
 
         <?php if(count($examenes_diagnosticos) > 0): ?>
-            <div class="card" style="border-top: 4px solid #17a2b8; margin-bottom: 25px;">
-                <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-clipboard-check" style="color: #17a2b8;"></i> Examen Diagnóstico</h3>
+            <div class="card card-examen-diag">
+                <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-clipboard-check" style="color: #00bfff;"></i> Examen Diagnóstico</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Resultados de tu evaluación inicial para la asignación de nivel.</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
@@ -67,7 +67,7 @@ require_once 'perfil_logic.php';
                         <div class="diag-card-profile">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                                 <h4 style="margin: 0; color: var(--text-dark); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
-                                <span style="background: rgba(23, 162, 184, 0.1); color: #17a2b8; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(23, 162, 184, 0.2);"><?php echo htmlspecialchars($diag['periodo']); ?></span>
+                                <span style="background: rgba(0, 191, 255, 0.1); color: #0284c7; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(0, 191, 255, 0.25);"><?php echo htmlspecialchars($diag['periodo']); ?></span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.9rem; color: var(--text-muted);">
                                 <div><i class="fas fa-layer-group"></i> Nivel asignado: <strong style="color: var(--udg-blue); font-size: 1.05rem;"><?php echo htmlspecialchars($diag['nivel_asignado']); ?></strong></div>
@@ -81,7 +81,7 @@ require_once 'perfil_logic.php';
         <?php endif; ?>
 
         <?php if(count($idiomas_nivel_4) > 0): ?>
-            <div class="card" style="border-top: 4px solid var(--udg-blue); margin-bottom: 25px;">
+            <div class="card card-certificaciones-oficiales">
                 <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-award" style="color: var(--udg-blue);"></i> Mis Certificaciones Oficiales</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Niveles obtenidos en los idiomas en los que has cursado el Nivel 4 o superior.</p>
                 
@@ -113,67 +113,140 @@ require_once 'perfil_logic.php';
         <?php endif; ?>
 
         <div class="profile-grid">
-            <div class="card">
-                <h3 style="color: var(--text-dark);">
-                    <i class="far fa-user" style="color: var(--udg-blue);"></i> Información Personal 
-                    <button onclick="abrirModalEditar()" style="margin-left:auto; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--udg-blue);" title="Editar Información">
-                        <i class="fas fa-pen"></i>
+            <div class="card profile-info-card">
+                <div class="profile-card-header">
+                    <div class="profile-card-title">
+                        <div class="profile-title-icon"><i class="far fa-user"></i></div>
+                        <div>
+                            <h3>Información Personal</h3>
+                            <p class="profile-card-subtitle">Datos de contacto y acceso a tu cuenta</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-edit-profile-card" onclick="abrirModalEditar()" title="Editar Información">
+                        <i class="fas fa-pen"></i> <span>Editar</span>
                     </button>
-                </h3>
-                <div class="info-section">
-                    <span class="info-label">Nombre Completo</span>
-                    <span class="info-value" style="color: var(--text-dark);"><?php echo htmlspecialchars($nombre_completo); ?></span>
                 </div>
-                <div class="info-section">
-                    <span class="info-label">Correo Electrónico</span>
-                    <span class="info-value" style="color: var(--text-dark);"><?php echo htmlspecialchars($user['correo']); ?></span>
-                </div>
-                <div class="info-section">
-                    <span class="info-label">Teléfono</span>
-                    <span class="info-value" style="color: var(--text-dark);"><?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span style="color:var(--text-muted); font-style:italic;">No registrado</span>'; ?></span>
-                </div>
-                <div class="info-section">
-                    <span class="info-label">Contraseña</span>
-                    <span class="info-value" style="color: var(--text-dark);">
-                        <?php 
-                            if (!empty($user['fecha_cambio_password'])) {
-                                echo '<i class="fas fa-key" style="color:var(--text-muted); font-size:0.9rem;"></i> Modificada el ' . date('d/m/Y', strtotime($user['fecha_cambio_password']));
-                            } else {
-                                echo '<span style="color:var(--text-muted); font-style:italic;"><i class="fas fa-key"></i> Original (No modificada)</span>';
-                            }
-                        ?>
-                    </span>
+
+                <div class="profile-info-list">
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="far fa-id-badge"></i>
+                            <span class="info-label">Nombre Completo</span>
+                        </div>
+                        <span class="info-value"><?php echo htmlspecialchars($nombre_completo); ?></span>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="far fa-envelope"></i>
+                            <span class="info-label">Correo Electrónico</span>
+                        </div>
+                        <span class="info-value"><?php echo htmlspecialchars($user['correo']); ?></span>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="fas fa-phone-alt"></i>
+                            <span class="info-label">Teléfono</span>
+                        </div>
+                        <span class="info-value">
+                            <?php echo $user['telefono'] ? htmlspecialchars($user['telefono']) : '<span class="text-muted-italic">No registrado</span>'; ?>
+                        </span>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="fas fa-key"></i>
+                            <span class="info-label">Contraseña</span>
+                        </div>
+                        <span class="info-value">
+                            <?php 
+                                if (!empty($user['fecha_cambio_password'])) {
+                                    echo '<span class="pass-status-pill pass-updated"><i class="fas fa-shield-alt"></i> Modificada el ' . date('d/m/Y', strtotime($user['fecha_cambio_password'])) . '</span>';
+                                } else {
+                                    echo '<span class="pass-status-pill pass-default"><i class="fas fa-info-circle"></i> Original de acceso</span>';
+                                }
+                            ?>
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
-                <h3 style="color: var(--text-dark);"><i class="fas fa-graduation-cap" style="color: var(--udg-blue);"></i> Información Académica</h3>
-                <div class="info-section">
-                    <span class="info-label">Código de Estudiante</span>
-                    <span class="info-value" style="color: var(--text-dark);"><?php echo isset($user['codigo']) && $user['codigo'] ? htmlspecialchars($user['codigo']) : '---'; ?></span>
+            <div class="card profile-info-card profile-academic-card">
+                <div class="profile-card-header">
+                    <div class="profile-card-title">
+                        <div class="profile-title-icon academic-icon"><i class="fas fa-graduation-cap"></i></div>
+                        <div>
+                            <h3>Información Académica</h3>
+                            <p class="profile-card-subtitle">Programa vigente y estatus escolar</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-section">
-                    <span class="info-label">Carrera / Programa</span>
-                    <span class="info-value" style="color: var(--text-dark);"><?php echo isset($user['carrera']) && $user['carrera'] ? htmlspecialchars($user['carrera']) : 'Sin asignar'; ?></span>
-                </div>
-                <div class="info-section">
-                    <span class="info-label">Estatus en el Sistema</span>
-                    <span class="info-value" style="color: #28a745; font-weight: bold;">Estudiante Activo</span>
+
+                <div class="profile-info-list">
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="fas fa-hashtag"></i>
+                            <span class="info-label hide-mobile">Código de Estudiante</span>
+                            <span class="info-label show-mobile">Código:</span>
+                        </div>
+                        <span class="info-value font-mono">
+                            <?php echo isset($user['codigo']) && $user['codigo'] ? htmlspecialchars($user['codigo']) : '---'; ?>
+                        </span>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="fas fa-book-reader"></i>
+                            <span class="info-label hide-mobile">Carrera / Programa</span>
+                            <span class="info-label show-mobile">Carrera:</span>
+                        </div>
+                        <span class="info-value">
+                            <?php echo isset($user['carrera']) && $user['carrera'] ? htmlspecialchars($user['carrera']) : '<span class="text-muted-italic">Sin asignar</span>'; ?>
+                        </span>
+                    </div>
+
+                    <div class="profile-info-row">
+                        <div class="profile-info-lead">
+                            <i class="fas fa-user-check"></i>
+                            <span class="info-label hide-mobile">Estatus en el Sistema</span>
+                            <span class="info-label show-mobile">Estatus:</span>
+                        </div>
+                        <span class="info-value">
+                            <span class="status-badge-active"><i class="fas fa-circle status-dot"></i> Estudiante Activo</span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h3 style="color: var(--text-dark);"><i class="fas fa-history" style="color: var(--udg-blue);"></i> Historial Académico (Kárdex)</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Haz clic en cualquier materia para ver el desglose de tu calificación final.</p>
-            <div style="overflow-x:auto;">
-                <table class="history-table">
+        <div class="card profile-kardex-card">
+            <div class="profile-card-header kardex-header">
+                <div class="profile-card-title">
+                    <div class="profile-title-icon kardex-icon"><i class="fas fa-history"></i></div>
+                    <div>
+                        <h3>Historial Académico (Kárdex)</h3>
+                        <p class="profile-card-subtitle">Haz clic en cualquier materia para inspeccionar el desglose de tu evaluación final.</p>
+                    </div>
+                </div>
+                <?php if(count($historial) > 0): ?>
+                    <span class="kardex-count-badge">
+                        <i class="fas fa-book"></i> <?php echo count($historial); ?> <?php echo count($historial) === 1 ? 'materia' : 'materias'; ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+
+            <div class="kardex-table-container">
+                <table class="history-table kardex-premium-table">
                     <thead>
                         <tr>
                             <th>Materia</th>
                             <th>Ciclo</th>
-                            <th style="text-align: center;">Calificación Final</th>
-                            <th style="text-align: center;">Estado</th>
+                            <th class="th-center">
+                                <span class="hide-mobile">Calificación Final</span>
+                                <span class="show-mobile">Calif. Final</span>
+                            </th>
+                            <th class="th-center">Estado</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -181,56 +254,92 @@ require_once 'perfil_logic.php';
                             <?php foreach($historial as $h): 
                                 $calif = floatval($h['calificacion_final']);
                             ?>
-                                <tr class="clickable-row" onclick="window.location.href='calificaciones?ins=<?php echo $h['inscripcion_id']; ?>'">
-                                    <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['materia'] . ' ' . $h['nivel']); ?></td>
-                                    <td style="color: var(--text-dark);"><?php echo htmlspecialchars($h['ciclo']); ?></td>
-                                    <td style="text-align: center; font-size: 1.1rem; color: var(--udg-blue);"><strong><?php echo $calif; ?></strong></td>
-                                    <td style="text-align: center;">
-                                        <div style="margin-bottom: 5px;"><span style="background: rgba(108,117,125,0.1); color: #6c757d; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; border: 1px solid rgba(108,117,125,0.2);"><i class="fas fa-archive" style="font-size:0.6rem;"></i> Finalizada</span></div>
-                                        <?php if($calif >= 80): ?>
-                                            <span class="tag-aprobado" style="background: rgba(40,167,69,0.1); color: #28a745; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(40,167,69,0.2);">Aprobado</span>
-                                        <?php else: ?>
-                                            <span class="tag-rechazada" style="background: rgba(220,53,69,0.1); color: #dc3545; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(220,53,69,0.2);">Reprobado</span>
-                                        <?php endif; ?>
+                                <tr class="clickable-row kardex-row" onclick="window.location.href='calificaciones?ins=<?php echo $h['inscripcion_id']; ?>'">
+                                    <td class="kardex-cell-materia">
+                                        <div class="kardex-materia-wrap">
+                                            <div class="kardex-materia-icon"><i class="fas fa-award"></i></div>
+                                            <div class="kardex-materia-info">
+                                                <?php if(!empty($h['materia_codigo'])): ?>
+                                                    <span class="kardex-codigo-materia"><?php echo htmlspecialchars($h['materia_codigo']); ?></span>
+                                                <?php endif; ?>
+                                                <?php
+                                                    $romanos = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+                                                    $nivel_num = (int)$h['nivel'];
+                                                    $nivel_romano = $romanos[$nivel_num] ?? $h['nivel'];
+                                                ?>
+                                                <strong class="kardex-materia-name"><?php echo htmlspecialchars($h['materia'] . ' ' . $nivel_romano); ?></strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="kardex-cell-ciclo">
+                                        <span class="kardex-ciclo-pill"><?php echo htmlspecialchars($h['ciclo']); ?></span>
+                                    </td>
+                                    <td class="th-center">
+                                        <span class="kardex-score-badge <?php echo $calif >= 80 ? 'score-high' : 'score-low'; ?>">
+                                            <?php echo $calif; ?>
+                                        </span>
+                                    </td>
+                                    <td class="th-center">
+                                        <div class="kardex-status-wrap">
+                                            <span class="kardex-pill-status kardex-pill-final"><i class="fas fa-archive"></i> Finalizada</span>
+                                            <?php if($calif >= 80): ?>
+                                                <span class="kardex-pill-status kardex-pill-pass"><i class="fas fa-check-circle"></i> Aprobado</span>
+                                            <?php else: ?>
+                                                <span class="kardex-pill-status kardex-pill-fail"><i class="fas fa-times-circle"></i> Reprobado</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="4" style="text-align:center; padding: 30px; color:var(--text-muted);">Aún no tienes materias finalizadas.</td></tr>
+                            <tr>
+                                <td colspan="4" class="kardex-empty-cell">
+                                    <i class="fas fa-folder-open kardex-empty-icon"></i>
+                                    <p>Aún no tienes materias finalizadas en tu kárdex.</p>
+                                </td>
+                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <?php include '../componente_biometrico.php'; ?>
+
     </main>
 
     <?php include '../main_footer.php'; ?>
 
     <div id="modalEditar" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Editar Información</h2>
-                <button class="close-btn" onclick="cerrarModalEditar()">&times;</button>
+        <div class="modal-content profile-edit-modal">
+            <div class="modal-header profile-edit-header">
+                <div class="profile-edit-header-title">
+                    <div class="profile-edit-icon"><i class="fas fa-user-edit"></i></div>
+                    <div>
+                        <h2>Editar Información</h2>
+                        <p class="profile-edit-subtitle">Actualiza tus medios de contacto o tu contraseña</p>
+                    </div>
+                </div>
             </div>
             <form method="POST" action="perfil">
                 <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                 <input type="hidden" name="actualizar_perfil" value="1">
-                <div class="modal-body" style="padding-top: 0; overflow-y: visible;">
+                <div class="modal-body profile-edit-body">
                     <div class="form-group">
-                        <label>Correo Electrónico</label>
-                        <input type="email" name="correo" value="<?php echo htmlspecialchars($user['correo']); ?>" required>
+                        <label><i class="far fa-envelope"></i> Correo Electrónico</label>
+                        <input type="email" name="correo" class="form-control" value="<?php echo htmlspecialchars($user['correo']); ?>" required placeholder="nombre@correo.com">
                     </div>
                     <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" name="telefono" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 3312345678" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        <label><i class="fas fa-phone-alt"></i> Teléfono</label>
+                        <input type="text" name="telefono" class="form-control" value="<?php echo htmlspecialchars($user['telefono']); ?>" placeholder="Ej. 3312345678" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     </div>
                     <div class="form-group">
-                        <label>Nueva Contraseña</label>
-                        <input type="password" name="password" placeholder="(Opcional) Deja en blanco para no cambiar">
+                        <label><i class="fas fa-lock"></i> Nueva Contraseña</label>
+                        <input type="password" name="password" class="form-control" placeholder="(Opcional) Deja en blanco para no cambiar">
+                        <small class="profile-modal-hint"><i class="fas fa-info-circle"></i> Solo escribe una contraseña si deseas reemplazar la actual.</small>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer profile-edit-footer">
                     <button type="button" class="btn-cancel" onclick="cerrarModalEditar()">Cancelar</button>
                     <button type="submit" class="btn-save"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </div>

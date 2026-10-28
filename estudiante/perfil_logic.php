@@ -102,7 +102,7 @@ if (!empty($user['foto_perfil']) && file_exists("../img/perfiles/" . $user['foto
 // =========================================================================
 // 4. HISTORIAL ACADÉMICO (KÁRDEX - Clases Cerradas)
 // =========================================================================
-$sql_historial = "SELECT i.inscripcion_id, m.nombre as materia, m.nivel, c.nombre as ciclo, 
+$sql_historial = "SELECT i.inscripcion_id, m.nombre as materia, m.nivel, m.clave as materia_codigo, c.nombre as ciclo, 
                          (SELECT SUM(puntaje) FROM calificaciones WHERE inscripcion_id = i.inscripcion_id) as calificacion_final
                   FROM inscripciones i
                   JOIN grupos g ON i.nrc = g.nrc
