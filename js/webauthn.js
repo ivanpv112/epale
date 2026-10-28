@@ -5,6 +5,59 @@
 
 const WebAuthnClient = {
     /**
+     * Resuelve la URL raíz del proyecto para asegurar que las llamadas AJAX
+     * funcionen sin importar si estamos en la raíz o en una subcarpeta (profesor/, estudiante/, admin/).
+     */
+    getBaseUrl: function() {
+        if (window.E_PALE_BASE_URL) {
+            return window.E_PALE_BASE_URL.endsWith('/') ? window.E_PALE_BASE_URL : window.E_PALE_BASE_URL + '/';
+        }
+
+        const scripts = document.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
+            const src = scripts[i].src || '';
+            if (src.includes('webauthn.js')) {
+                try {
+                    const url = new URL(src);
+                    const path = url.pathname;
+                    const idx = path.lastIndexOf('/js/');
+                    if (idx !== -1) {
+                        return url.origin + path.substring(0, idx + 1);
+                    }
+                } catch (e) {}
+            }
+        }
+        return '../';
+    },
+
+    /**
+     * Parsea respuestas HTTP con errores detallados (404, 500, HTML o JSON)
+     */
+    parseServerError: async function(response, defaultMsg, url) {
+        let msg = `${defaultMsg} (HTTP ${response.status} ${response.statusText || ''})`;
+        try {
+            const raw = await response.text();
+            try {
+                const data = JSON.parse(raw);
+                if (data && (data.error || data.message)) {
+                    return data.error || data.message;
+                }
+            } catch (_) {
+                if (response.status === 404) {
+                    return `Archivo no encontrado en el servidor (HTTP 404): ${url}. Asegúrate de haber subido los archivos del módulo al hosting.`;
+                } else if (response.status === 500) {
+                    return `Error interno del servidor (HTTP 500) al consultar ${url}. Revisa el log de errores de PHP en tu cPanel.`;
+                } else if (response.status === 403) {
+                    return `Acceso bloqueado por el servidor o firewall (HTTP 403 Forbidden).`;
+                } else if (raw && raw.length < 160) {
+                    return `${defaultMsg}: ${raw.trim()}`;
+                }
+            }
+        } catch (_) {}
+        return msg;
+    },
+
+    /**
      * Verifica si el navegador y el dispositivo soportan WebAuthn
      */
     isSupported: async function() {
@@ -56,15 +109,19 @@ const WebAuthnClient = {
      * Inicia el registro de una nueva huella / dispositivo para el usuario en sesión
      */
     registerDevice: async function(nombreDispositivo = 'Este dispositivo') {
+        const baseUrl = this.getBaseUrl();
+        const challengeUrl = baseUrl + 'api_webauthn_register_challenge.php';
+
         // 1. Solicitar el reto al servidor
-        const challengeRes = await fetch('../api_webauthn_register_challenge.php', {
+        const challengeRes = await fetch(challengeUrl, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
         });
 
         if (!challengeRes.ok) {
-            const err = await challengeRes.json().catch(() => ({}));
-            throw new Error(err.error || 'Error al obtener reto de registro.');
+            const errMsg = await this.parseServerError(challengeRes, 'Error al obtener reto de registro', challengeUrl);
+            throw new Error(errMsg);
         }
 
         const data = await challengeRes.json();
@@ -107,15 +164,22 @@ const WebAuthnClient = {
             nombre_dispositivo: nombreDispositivo
         };
 
-        const verifyRes = await fetch('../api_webauthn_register_verify.php', {
+        const verifyUrl = baseUrl + 'api_webauthn_register_verify.php';
+        const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(verifyPayload)
         });
 
+        if (!verifyRes.ok) {
+            const errMsg = await this.parseServerError(verifyRes, 'Error al verificar la credencial', verifyUrl);
+            throw new Error(errMsg);
+        }
+
         const result = await verifyRes.json();
-        if (!verifyRes.ok || !result.success) {
-            throw new Error(result.error || 'Error al verificar y guardar la credencial.');
+        if (!result.success) {
+            throw new Error(result.error || 'Error al guardar la credencial.');
         }
 
         return result;
@@ -125,15 +189,20 @@ const WebAuthnClient = {
      * Inicia sesión utilizando la huella dactilar o passkey
      */
     login: async function(usuarioOpcional = '') {
+        const baseUrl = this.getBaseUrl();
+        const challengeUrl = baseUrl + 'api_webauthn_login_challenge.php';
+
         // 1. Solicitar el reto de inicio de sesión
-        const challengeRes = await fetch('api_webauthn_login_challenge.php', {
+        const challengeRes = await fetch(challengeUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ usuario: usuarioOpcional })
         });
 
         if (!challengeRes.ok) {
-            throw new Error('Error al conectar con el servidor.');
+            const errMsg = await this.parseServerError(challengeRes, 'Error al conectar con el servidor', challengeUrl);
+            throw new Error(errMsg);
         }
 
         const data = await challengeRes.json();
@@ -175,11 +244,18 @@ const WebAuthnClient = {
             userHandle: assertion.response.userHandle ? this.bufferToBase64url(assertion.response.userHandle) : null
         };
 
-        const verifyRes = await fetch('api_webauthn_login_verify.php', {
+        const verifyUrl = baseUrl + 'api_webauthn_login_verify.php';
+        const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(verifyPayload)
         });
+
+        if (!verifyRes.ok) {
+            const errMsg = await this.parseServerError(verifyRes, 'Error al validar huella dactilar', verifyUrl);
+            throw new Error(errMsg);
+        }
 
         const result = await verifyRes.json();
         return result;
