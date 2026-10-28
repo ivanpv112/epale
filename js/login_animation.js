@@ -91,6 +91,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // =========================================
+    // INTEGRACIÓN BIOMÉTRICA (HUELLA / PASSKEY)
+    // =========================================
+    const btnBiometric = document.getElementById('btnBiometricLogin');
+
+    if (btnBiometric && typeof WebAuthnClient !== 'undefined') {
+        WebAuthnClient.isSupported().then(supported => {
+            if (supported) {
+                btnBiometric.classList.remove('hidden');
+            }
+        }).catch(() => {});
+
+        btnBiometric.addEventListener('click', async () => {
+            errorMessage.classList.add('hidden');
+            btnBiometric.classList.add('is-loading');
+
+            const usuarioInput = loginForm.usuario ? loginForm.usuario.value.trim() : '';
+
+            try {
+                const result = await WebAuthnClient.login(usuarioInput);
+
+                if (result.success) {
+                    btnBiometric.classList.remove('is-loading');
+                    btnBiometric.style.background = '#28a745';
+                    btnBiometric.style.borderColor = '#28a745';
+                    btnBiometric.innerHTML = '<i class="fas fa-check-circle"></i> ¡Identidad Verificada!';
+
+                    setTimeout(() => {
+                        document.body.classList.add('blur-fade-out');
+                        setTimeout(() => {
+                            window.location.href = result.redirect;
+                        }, 600);
+                    }, 600);
+                } else {
+                    btnBiometric.classList.remove('is-loading');
+                    showError(result.message || 'No se pudo verificar tu huella dactilar.');
+                }
+            } catch (err) {
+                btnBiometric.classList.remove('is-loading');
+                showError(err.message || 'Error al autenticar con huella dactilar.');
+            }
+        });
+    }
+
     // Función auxiliar para desplegar los errores en pantalla
     function showError(message) {
         if (errorText && errorMessage) {
