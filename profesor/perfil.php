@@ -105,6 +105,8 @@ require_once 'perfil_logic.php';
 
         </form>
 
+        <?php include '../componente_biometrico.php'; ?>
+
     </main>
 
     <?php include '../main_footer.php'; ?>

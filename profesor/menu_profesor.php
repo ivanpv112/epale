@@ -105,7 +105,7 @@ try {
     <ul class="yt-sidebar-menu">
         <li><a href="index" class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>"><i class="fas fa-home"></i> Inicio</a></li>
         <li><a href="mis_grupos" class="<?php echo ($pagina_actual == 'mis_grupos.php' || $pagina_actual == 'detalle_grupo.php' || $pagina_actual == 'asistencia.php') ? 'active' : ''; ?>"><i class="fas fa-chalkboard-teacher"></i> Mis Grupos</a></li>
-        <li><a href="horario" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Mi Horario</a></li>
+        <li><a href="horario" class="<?php echo ($pagina_actual == 'horario.php') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Horario</a></li>
         <li><a href="#" onclick="toggleMobileMenu(); abrirPanelAvisosGlobal();"><i class="fas fa-bullhorn"></i> Mis Avisos y Tareas</a></li>
     </ul>
 
