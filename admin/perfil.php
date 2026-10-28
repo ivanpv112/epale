@@ -161,6 +161,8 @@ if(isset($user['foto_perfil']) && $user['foto_perfil'] && file_exists("../img/pe
             </div>
         </div>
 
+        <?php include '../componente_biometrico.php'; ?>
+
     </main>
 
     <?php include '../main_footer.php'; ?>
