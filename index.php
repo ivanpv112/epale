@@ -61,6 +61,10 @@ if (!empty($_SESSION['login_error'])) {
             <button type="submit" class="btn-login">Ingresar</button>
         </form>
         <div class="login-divider"><span>o</span></div>
+        <button type="button" id="btnBiometricLogin" class="btn-biometric hidden">
+            <i class="fas fa-fingerprint"></i>
+            Ingresar con Huella / Passkey
+        </button>
         <a href="google_auth.php" class="btn-google">
             <i class="fab fa-google"></i>
             Continuar con Google
@@ -80,6 +84,7 @@ if (!empty($_SESSION['login_error'])) {
             }
         }
     </script>
+    <script src="js/webauthn.js"></script>
     <script src="js/login_animation.js"></script>
 </body>
 
