@@ -49,12 +49,12 @@ $badge_altas_html = ($notif_altas > 0) ? '<span class="badge-red-circle">' . $no
         </a>
     </div>
 
-    <div class="header-actions">
+    <div class="user-actions header-actions">
         <a href="<?php echo $base_url ?? ''; ?>perfil" class="profile-btn">
-            <img src="<?php echo $foto_menu; ?>" class="profile-img">
+            <img src="<?php echo $foto_menu; ?>" class="profile-avatar-img profile-img">
             <span class="profile-name"><?php echo strtok($admin_menu['nombre'], " "); ?></span>
         </a>
-        <button onclick="toggleMobileMenu()" class="menu-toggle-btn">
+        <button onclick="toggleMobileMenu()" class="menu-toggle-btn" title="Menú Principal" aria-label="Abrir Menú">
             <i class="fas fa-bars"></i>
         </button>
     </div>
