@@ -13,14 +13,18 @@ require_once 'mis_dictamenes_logic.php';
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Dictámenes | Portal Estudiantil</title>
+    <link rel="icon" type="image/png" href="../img/isotipo-pale.png">
+    <link rel="apple-touch-icon" href="../img/isotipo-pale.png">
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
     <?php include 'menu_estudiante.php'; ?>
@@ -60,9 +64,9 @@ require_once 'mis_dictamenes_logic.php';
                                     <?php echo htmlspecialchars($d['ciclo_acreditacion']); ?>
                                 </div>
                             </div>
-                            
+
                             <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0; width: 100%;">
-                            
+
                             <?php if (!empty($d['pdf_url'])): ?>
                                 <a href="<?php echo htmlspecialchars($d['pdf_url']); ?>" target="_blank" class="btn-download" title="Abre el PDF en una nueva pestaña">
                                     <i class="fas fa-file-pdf"></i> Ver / Descargar Documento
@@ -80,7 +84,8 @@ require_once 'mis_dictamenes_logic.php';
     </main>
 
     <?php include '../main_footer.php'; ?>
-    
+
 
 </body>
+
 </html>

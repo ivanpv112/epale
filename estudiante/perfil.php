@@ -21,20 +21,24 @@ require_once 'perfil_logic.php';
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Perfil | E-Pale</title>
+    <link rel="icon" type="image/png" href="../img/isotipo-pale.png">
+    <link rel="apple-touch-icon" href="../img/isotipo-pale.png">
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
     <?php include 'menu_estudiante.php'; ?>
 
     <main class="main-content">
-        
+
         <div class="profile-header-card">
             <div class="profile-photo-wrapper">
                 <img src="<?php echo $foto_perfil; ?>" alt="Foto de Perfil" class="profile-photo-img">
@@ -50,20 +54,20 @@ require_once 'perfil_logic.php';
             <p style="color:var(--text-muted); margin-top:5px; font-size:0.9rem;"><?php echo htmlspecialchars($user['correo']); ?></p>
         </div>
 
-        <?php if(!empty($mensaje_exito)): ?>
+        <?php if (!empty($mensaje_exito)): ?>
             <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($mensaje_exito); ?></div>
         <?php endif; ?>
-        <?php if(!empty($mensaje_error)): ?>
+        <?php if (!empty($mensaje_error)): ?>
             <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($mensaje_error); ?></div>
         <?php endif; ?>
 
-        <?php if(count($examenes_diagnosticos) > 0): ?>
+        <?php if (count($examenes_diagnosticos) > 0): ?>
             <div class="card card-examen-diag">
                 <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-clipboard-check" style="color: #00bfff;"></i> Examen Diagnóstico</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Resultados de tu evaluación inicial para la asignación de nivel.</p>
-                
+
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-                    <?php foreach($examenes_diagnosticos as $diag): ?>
+                    <?php foreach ($examenes_diagnosticos as $diag): ?>
                         <div class="diag-card-profile">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                                 <h4 style="margin: 0; color: var(--text-dark); font-size: 1.15rem;"><?php echo htmlspecialchars($diag['idioma']); ?></h4>
@@ -80,20 +84,20 @@ require_once 'perfil_logic.php';
             </div>
         <?php endif; ?>
 
-        <?php if(count($idiomas_nivel_4) > 0): ?>
+        <?php if (count($idiomas_nivel_4) > 0): ?>
             <div class="card card-certificaciones-oficiales">
                 <h3 style="margin-top: 0; color: var(--text-dark);"><i class="fas fa-award" style="color: var(--udg-blue);"></i> Mis Certificaciones Oficiales</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Niveles obtenidos en los idiomas en los que has cursado el Nivel 4 o superior.</p>
-                
+
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <?php foreach($idiomas_nivel_4 as $idioma): 
+                    <?php foreach ($idiomas_nivel_4 as $idioma):
                         $cert = $certificaciones_bd[$idioma] ?? null;
                         $nivel_obt = $cert['nivel_obtenido'] ?? null;
-                        
+
                         $clase_extra = $nivel_obt ? 'obtained' : '';
                         $onclick_event = '';
                         $titulo = '';
-                        
+
                         if ($nivel_obt) {
                             $json_data = htmlspecialchars(json_encode($cert), ENT_QUOTES, 'UTF-8');
                             $onclick_event = "onclick='abrirModalCertDetalle($json_data)'";
@@ -160,12 +164,12 @@ require_once 'perfil_logic.php';
                             <span class="info-label">Contraseña</span>
                         </div>
                         <span class="info-value">
-                            <?php 
-                                if (!empty($user['fecha_cambio_password'])) {
-                                    echo '<span class="pass-status-pill pass-updated"><i class="fas fa-shield-alt"></i> Modificada el ' . date('d/m/Y', strtotime($user['fecha_cambio_password'])) . '</span>';
-                                } else {
-                                    echo '<span class="pass-status-pill pass-default"><i class="fas fa-info-circle"></i> Original de acceso</span>';
-                                }
+                            <?php
+                            if (!empty($user['fecha_cambio_password'])) {
+                                echo '<span class="pass-status-pill pass-updated"><i class="fas fa-shield-alt"></i> Modificada el ' . date('d/m/Y', strtotime($user['fecha_cambio_password'])) . '</span>';
+                            } else {
+                                echo '<span class="pass-status-pill pass-default"><i class="fas fa-info-circle"></i> Original de acceso</span>';
+                            }
                             ?>
                         </span>
                     </div>
@@ -229,7 +233,7 @@ require_once 'perfil_logic.php';
                         <p class="profile-card-subtitle">Haz clic en cualquier materia para inspeccionar el desglose de tu evaluación final.</p>
                     </div>
                 </div>
-                <?php if(count($historial) > 0): ?>
+                <?php if (count($historial) > 0): ?>
                     <span class="kardex-count-badge">
                         <i class="fas fa-book"></i> <?php echo count($historial); ?> <?php echo count($historial) === 1 ? 'materia' : 'materias'; ?>
                     </span>
@@ -250,8 +254,8 @@ require_once 'perfil_logic.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if(count($historial) > 0): ?>
-                            <?php foreach($historial as $h): 
+                        <?php if (count($historial) > 0): ?>
+                            <?php foreach ($historial as $h):
                                 $calif = floatval($h['calificacion_final']);
                             ?>
                                 <tr class="clickable-row kardex-row" onclick="window.location.href='calificaciones?ins=<?php echo $h['inscripcion_id']; ?>'">
@@ -259,13 +263,13 @@ require_once 'perfil_logic.php';
                                         <div class="kardex-materia-wrap">
                                             <div class="kardex-materia-icon"><i class="fas fa-award"></i></div>
                                             <div class="kardex-materia-info">
-                                                <?php if(!empty($h['materia_codigo'])): ?>
+                                                <?php if (!empty($h['materia_codigo'])): ?>
                                                     <span class="kardex-codigo-materia"><?php echo htmlspecialchars($h['materia_codigo']); ?></span>
                                                 <?php endif; ?>
                                                 <?php
-                                                    $romanos = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
-                                                    $nivel_num = (int)$h['nivel'];
-                                                    $nivel_romano = $romanos[$nivel_num] ?? $h['nivel'];
+                                                $romanos = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V', 6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X'];
+                                                $nivel_num = (int)$h['nivel'];
+                                                $nivel_romano = $romanos[$nivel_num] ?? $h['nivel'];
                                                 ?>
                                                 <strong class="kardex-materia-name"><?php echo htmlspecialchars($h['materia'] . ' ' . $nivel_romano); ?></strong>
                                             </div>
@@ -282,7 +286,7 @@ require_once 'perfil_logic.php';
                                     <td class="th-center">
                                         <div class="kardex-status-wrap">
                                             <span class="kardex-pill-status kardex-pill-final"><i class="fas fa-archive"></i> Finalizada</span>
-                                            <?php if($calif >= 80): ?>
+                                            <?php if ($calif >= 80): ?>
                                                 <span class="kardex-pill-status kardex-pill-pass"><i class="fas fa-check-circle"></i> Aprobado</span>
                                             <?php else: ?>
                                                 <span class="kardex-pill-status kardex-pill-fail"><i class="fas fa-times-circle"></i> Reprobado</span>
@@ -380,7 +384,7 @@ require_once 'perfil_logic.php';
                 <i class="fas fa-award cert-icon-lg"></i>
                 <h3 id="certDetalleIdioma" class="cert-title-lg"></h3>
                 <div id="certDetalleNivel" class="cert-level-badge"></div>
-                
+
                 <div class="cert-detail-grid">
                     <div class="cert-detail-box">
                         <div class="cert-detail-label"><i class="fas fa-star"></i> Puntaje</div>
@@ -403,34 +407,49 @@ require_once 'perfil_logic.php';
         const modalEditar = document.getElementById('modalEditar');
         const modalFoto = document.getElementById('modalFoto');
         const modalCertDetalle = document.getElementById('modalCertDetalle');
-        
-        function abrirModalEditar() { modalEditar.style.display = 'flex'; }
-        function cerrarModalEditar() { modalEditar.style.display = 'none'; }
-        function abrirModalFoto() { modalFoto.style.display = 'flex'; }
-        function cerrarModalFoto() { modalFoto.style.display = 'none'; }
+
+        function abrirModalEditar() {
+            modalEditar.style.display = 'flex';
+        }
+
+        function cerrarModalEditar() {
+            modalEditar.style.display = 'none';
+        }
+
+        function abrirModalFoto() {
+            modalFoto.style.display = 'flex';
+        }
+
+        function cerrarModalFoto() {
+            modalFoto.style.display = 'none';
+        }
 
         function abrirModalCertDetalle(cert) {
             document.getElementById('certDetalleIdioma').innerText = cert.idioma;
             document.getElementById('certDetalleNivel').innerText = 'Nivel ' + cert.nivel_obtenido;
             document.getElementById('certDetallePuntaje').innerText = cert.puntaje ? cert.puntaje : '---';
             document.getElementById('certDetallePeriodo').innerText = cert.periodo ? cert.periodo : '---';
-            
+
             let fecha = 'No registrada';
             if (cert.fecha_aplicacion && cert.fecha_aplicacion !== '0000-00-00') {
                 let partes = cert.fecha_aplicacion.split('-');
-                fecha = partes[2] + '/' + partes[1] + '/' + partes[0]; 
+                fecha = partes[2] + '/' + partes[1] + '/' + partes[0];
             }
             document.getElementById('certDetalleFecha').innerText = fecha;
-            
+
             modalCertDetalle.style.display = 'flex';
         }
-        function cerrarModalCertDetalle() { modalCertDetalle.style.display = 'none'; }
 
-        window.onclick = function(e) { 
-            if(e.target == modalEditar) cerrarModalEditar(); 
-            if(e.target == modalFoto) cerrarModalFoto(); 
-            if(e.target == modalCertDetalle) cerrarModalCertDetalle();
+        function cerrarModalCertDetalle() {
+            modalCertDetalle.style.display = 'none';
+        }
+
+        window.onclick = function(e) {
+            if (e.target == modalEditar) cerrarModalEditar();
+            if (e.target == modalFoto) cerrarModalFoto();
+            if (e.target == modalCertDetalle) cerrarModalCertDetalle();
         }
     </script>
 </body>
+
 </html>

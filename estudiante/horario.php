@@ -19,6 +19,8 @@ require_once 'horario_logic.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Horario | e-PALE</title>
+    <link rel="icon" type="image/png" href="../img/isotipo-pale.png">
+    <link rel="apple-touch-icon" href="../img/isotipo-pale.png">
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/admin.css?v=<?php echo time(); ?>">
@@ -60,7 +62,7 @@ require_once 'horario_logic.php';
                     <?php endfor; ?>
                 <?php endfor; ?>
 
-                <?php foreach ($bloques_render as $b): 
+                <?php foreach ($bloques_render as $b):
                     $is_skeleton = ($b['estatus'] === 'SOLICITUD_ALTA');
                     $bg_color = $is_skeleton ? 'transparent' : $b['color']['bg'];
                     $border_color = $is_skeleton ? 'rgba(108, 117, 125, 0.4)' : $b['color']['border'];
@@ -76,9 +78,9 @@ require_once 'horario_logic.php';
                         border-left-style: <?php echo $border_style; ?>;
                         color: <?php echo $text_color; ?>;
                         opacity: <?php echo $opacity; ?>;
-                        <?php if($is_skeleton) echo 'border: 2px dashed ' . $border_color . '; border-left-width: 5px;'; ?>
+                        <?php if ($is_skeleton) echo 'border: 2px dashed ' . $border_color . '; border-left-width: 5px;'; ?>
                     ">
-                        <?php if($is_skeleton): ?>
+                        <?php if ($is_skeleton): ?>
                             <div style="font-size: 0.7rem; color: #ffc107; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
                                 <i class="fas fa-hourglass-half"></i> Pendiente
                             </div>

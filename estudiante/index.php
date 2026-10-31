@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'index_logic.php';
 /**
  * Declaración de variables importadas desde index_logic.php
@@ -27,6 +27,8 @@ require_once 'index_logic.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio | E-Pale</title>
+    <link rel="icon" type="image/png" href="../img/isotipo-pale.png">
+    <link rel="apple-touch-icon" href="../img/isotipo-pale.png">
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -112,7 +114,7 @@ require_once 'index_logic.php';
                             $bg_msg = '#cce5ff';
                             $col_msg = '#004085';
                         }
-                    ?>                        <div id="eval-<?php echo $insc_id; ?>" class="eval-container" style="display: <?php echo $display; ?>; margin: auto 0;">
+                    ?> <div id="eval-<?php echo $insc_id; ?>" class="eval-container" style="display: <?php echo $display; ?>; margin: auto 0;">
                             <div class="chart-wrapper">
 
                                 <?php if ($max_puntos == 0): ?>
@@ -166,26 +168,26 @@ require_once 'index_logic.php';
                 </div>
 
                 <div class="card-scrollable-body" style="padding-right: 4px;">
-                    <?php if (count($clases_hoy) > 0): 
+                    <?php if (count($clases_hoy) > 0):
                         $primer_eval_id = !empty($materias_inscritas[0]['inscripcion_id']) ? ('eval-' . $materias_inscritas[0]['inscripcion_id']) : '';
                     ?>
                         <div class="hoy-classes-list">
-                            <?php foreach ($clases_hoy as $h): 
+                            <?php foreach ($clases_hoy as $h):
                                 $es_virtual = ($h['modalidad'] === 'VIRTUAL');
                                 $mod_color = $es_virtual ? '#06b6d4' : '#10b981';
                                 $mod_icon = $es_virtual ? 'fa-laptop-house' : 'fa-building';
                                 $eval_id_h = !empty($h['inscripcion_id']) ? ('eval-' . $h['inscripcion_id']) : '';
                                 $is_active_h = ($eval_id_h !== '' && $eval_id_h === $primer_eval_id) ? ' hoy-class-active' : '';
                             ?>
-                                <div class="hoy-class-card<?php echo $is_active_h; ?>" 
-                                     <?php if ($eval_id_h): ?>
-                                         data-eval-id="<?php echo $eval_id_h; ?>"
-                                         onclick="cambiarMateriaDash('<?php echo $eval_id_h; ?>')"
-                                         title="Clic para ver el progreso de esta clase"
-                                         role="button"
-                                         tabindex="0"
-                                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id_h; ?>');}"
-                                     <?php endif; ?>>
+                                <div class="hoy-class-card<?php echo $is_active_h; ?>"
+                                    <?php if ($eval_id_h): ?>
+                                    data-eval-id="<?php echo $eval_id_h; ?>"
+                                    onclick="cambiarMateriaDash('<?php echo $eval_id_h; ?>')"
+                                    title="Clic para ver el progreso de esta clase"
+                                    role="button"
+                                    tabindex="0"
+                                    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id_h; ?>');}"
+                                    <?php endif; ?>>
                                     <div class="hoy-class-strip" style="background: <?php echo $mod_color; ?>;"></div>
                                     <div class="hoy-class-content">
                                         <div class="hoy-class-main">
@@ -230,7 +232,7 @@ require_once 'index_logic.php';
             <div class="card dashboard-card-top card-asistencias-widget">
                 <div style="flex-shrink: 0;">
                     <h3 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                        <span><i class="fas fa-user-check" style="color: #10b981;"></i> Asistencia</span>
+                        <span><i class="fas fa-user-check" style="color: #06b6d4;"></i> Asistencia</span>
                         <?php if (count($asistencias_resumen) > 0): ?>
                             <span class="dash-badge-pill"><?php echo count($asistencias_resumen); ?> materia(s)</span>
                         <?php endif; ?>
@@ -243,23 +245,23 @@ require_once 'index_logic.php';
                 <div class="card-scrollable-body" style="padding-right: 4px;">
                     <?php if (count($asistencias_resumen) > 0): ?>
                         <div class="asistencias-list">
-                            <?php foreach ($asistencias_resumen as $idx => $asist): 
+                            <?php foreach ($asistencias_resumen as $idx => $asist):
                                 $eval_id = 'eval-' . $asist['inscripcion_id'];
                                 $is_first = ($idx === 0) ? ' asist-item-active' : '';
                             ?>
-                                <div class="asist-item<?php echo $is_first; ?>" 
-                                     data-eval-id="<?php echo $eval_id; ?>"
-                                     onclick="cambiarMateriaDash('<?php echo $eval_id; ?>')"
-                                     title="Clic para ver el progreso general de esta materia"
-                                     role="button"
-                                     tabindex="0"
-                                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id; ?>');}">
+                                <div class="asist-item<?php echo $is_first; ?>"
+                                    data-eval-id="<?php echo $eval_id; ?>"
+                                    onclick="cambiarMateriaDash('<?php echo $eval_id; ?>')"
+                                    title="Clic para ver el progreso general de esta materia"
+                                    role="button"
+                                    tabindex="0"
+                                    onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); cambiarMateriaDash('<?php echo $eval_id; ?>');}">
                                     <div class="asist-header-row">
                                         <div class="asist-title-col">
                                             <span class="asist-materia-nombre">
                                                 <?php echo htmlspecialchars($asist['nombre'] . ' ' . nivel_a_romano((int)$asist['nivel'])); ?>
                                             </span>
-                                            <span class="asist-nrc-text">NRC: <?php echo htmlspecialchars($asist['nrc']); ?></span>
+                                            
                                         </div>
                                         <div class="asist-meta-col">
                                             <span class="asist-status-pill asist-pill-<?php echo $asist['categoria']; ?>">
@@ -273,20 +275,20 @@ require_once 'index_logic.php';
 
                                     <!-- Barra de Progreso Horizontal -->
                                     <div class="asist-progress-track" title="<?php echo $asist['asistidas']; ?> de <?php echo $asist['total']; ?> sesiones">
-                                        <div class="asist-progress-fill asist-fill-<?php echo $asist['categoria']; ?>" 
-                                             style="width: <?php echo $asist['porcentaje']; ?>%; background-color: <?php echo $asist['color']; ?>;">
+                                        <div class="asist-progress-fill asist-fill-<?php echo $asist['categoria']; ?>"
+                                            style="width: <?php echo $asist['porcentaje']; ?>%; background-color: <?php echo $asist['color']; ?>;">
                                         </div>
                                     </div>
 
                                     <div class="asist-footer-info">
                                         <?php if ($asist['total'] > 0): ?>
-                                             <span><i class="far fa-check-circle" style="color:#10b981;"></i> <?php echo $asist['asistidas']; ?> asistencias</span>
-                                             <?php if ($asist['retardos'] > 0): ?>
-                                                 <span><i class="far fa-clock" style="color:#f59e0b;"></i> <?php echo $asist['retardos']; ?> retardos</span>
-                                             <?php endif; ?>
-                                             <span><i class="far fa-times-circle" style="color:#ef4444;"></i> <?php echo $asist['faltas']; ?> faltas</span>
+                                            <span><i class="far fa-check-circle" style="color:#10b981;"></i> <?php echo $asist['asistidas']; ?> asistencias</span>
+                                            <?php if ($asist['retardos'] > 0): ?>
+                                                <span><i class="far fa-clock" style="color:#f59e0b;"></i> <?php echo $asist['retardos']; ?> retardos</span>
+                                            <?php endif; ?>
+                                            <span><i class="far fa-times-circle" style="color:#ef4444;"></i> <?php echo $asist['faltas']; ?> faltas</span>
                                         <?php else: ?>
-                                             <span style="font-style: italic; color: var(--text-muted);"><i class="fas fa-info-circle"></i> Sin sesiones pasadas de lista</span>
+                                            <span style="font-style: italic; color: var(--text-muted);"><i class="fas fa-info-circle"></i> Sin sesiones pasadas de lista</span>
                                         <?php endif; ?>
                                     </div>
                                 </div>

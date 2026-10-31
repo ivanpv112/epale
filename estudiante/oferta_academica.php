@@ -27,6 +27,8 @@ require_once 'oferta_academica_logic.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oferta Académica | E-Pale</title>
+    <link rel="icon" type="image/png" href="../img/isotipo-pale.png">
+    <link rel="apple-touch-icon" href="../img/isotipo-pale.png">
     <link rel="stylesheet" href="../css/estilos.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="../css/estudiante.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

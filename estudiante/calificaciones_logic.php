@@ -31,6 +31,43 @@ if (!$alumno || empty($alumno['alumno_id'])) {
     $alumno_id = (int)$alumno['alumno_id'];
 }
 
+if (!function_exists('formatear_dias_es')) {
+    function formatear_dias_es(?string $cadena): string {
+        if (!$cadena) return '';
+        $s = strtoupper(trim($cadena));
+
+        $nombres = [
+            'L' => 'Lunes',
+            'M' => 'Martes',
+            'I' => 'Miércoles',
+            'X' => 'Miércoles',
+            'J' => 'Jueves',
+            'V' => 'Viernes',
+            'S' => 'Sábado',
+            'D' => 'Domingo'
+        ];
+
+        if (preg_match('/^([A-Z])\s*-\s*([A-Z])$/', $s, $m)) {
+            $d1 = $nombres[$m[1]] ?? $m[1];
+            $d2 = $nombres[$m[2]] ?? $m[2];
+            return $d1 . ' - ' . $d2;
+        }
+
+        if (strpos($s, 'LUN') !== false || strpos($s, 'MAR') !== false || strpos($s, 'MIE') !== false || strpos($s, 'JUE') !== false || strpos($s, 'VIE') !== false) {
+            return $cadena;
+        }
+
+        $chars = preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY);
+        $res = [];
+        foreach ($chars as $ch) {
+            if (isset($nombres[$ch])) {
+                $res[] = $nombres[$ch];
+            }
+        }
+        return !empty($res) ? implode(' - ', $res) : $cadena;
+    }
+}
+
 if (!function_exists('nivel_a_romano')) {
     function nivel_a_romano(int $nivel) {
         $romanos = [1=>'I', 2=>'II', 3=>'III', 4=>'IV', 5=>'V', 6=>'VI', 7=>'VII', 8=>'VIII', 9=>'IX', 10=>'X'];
@@ -128,15 +165,31 @@ $ins_activa = isset($_GET['ins']) ? (int)$_GET['ins'] : (count($materias_activas
 
 $materia_actual = null;
 if ($ins_activa) {
-    // La consulta exige i.alumno_id = ?, previniendo visualización no autorizada
-    $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado, g.nrc,
-                                         u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap_pat
+    // La consulta exige i.alumno_id = ?, previniendo visualización no autorizada, e incorpora detalles de sesiones/horarios
+    $stmt_actual = $pdo->prepare("SELECT i.inscripcion_id, m.materia_id, m.clave AS materia_codigo, m.nombre AS materia, m.nivel, c.nombre AS ciclo, g.estado as grupo_estado, g.nrc, g.clave_grupo,
+                                         u.nombre AS prof_nombre, u.apellido_paterno AS prof_ap_pat, u.apellido_materno AS prof_ap_mat,
+                                         MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN g_all.nrc END) AS nrc_p,
+                                         MAX(CASE WHEN h.modalidad='VIRTUAL' THEN g_all.nrc END) AS nrc_v,
+                                         MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.aula END) AS aula_p,
+                                         MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.aula END) AS aula_v,
+                                         MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.dias_patron END) AS dias_p,
+                                         MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.dias_patron END) AS dias_v,
+                                         MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.hora_inicio END) AS inicio_p,
+                                         MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.hora_inicio END) AS inicio_v,
+                                         MAX(CASE WHEN h.modalidad='PRESENCIAL' THEN h.hora_fin END) AS fin_p,
+                                         MAX(CASE WHEN h.modalidad='VIRTUAL' THEN h.hora_fin END) AS fin_v
                                   FROM inscripciones i
                                   JOIN grupos g ON i.nrc = g.nrc
+                                  JOIN grupos g_all ON (
+                                      (g.clave_grupo IS NOT NULL AND g.clave_grupo != '' AND g_all.clave_grupo = g.clave_grupo AND g_all.materia_id = g.materia_id AND g_all.ciclo_id = g.ciclo_id)
+                                      OR (g_all.nrc = g.nrc)
+                                  )
                                   JOIN materias m ON g.materia_id = m.materia_id
                                   JOIN ciclos c ON g.ciclo_id = c.ciclo_id
                                   JOIN usuarios u ON g.profesor_id = u.usuario_id
-                                  WHERE i.inscripcion_id = ? AND i.alumno_id = ?");
+                                  LEFT JOIN horarios h ON g_all.nrc = h.nrc
+                                  WHERE i.inscripcion_id = ? AND i.alumno_id = ?
+                                  GROUP BY i.inscripcion_id, m.materia_id, m.clave, m.nombre, m.nivel, c.nombre, g.estado, g.nrc, g.clave_grupo, u.nombre, u.apellido_paterno, u.apellido_materno");
     $stmt_actual->execute([$ins_activa, $alumno_id]);
     $materia_actual = $stmt_actual->fetch(PDO::FETCH_ASSOC);
 }
