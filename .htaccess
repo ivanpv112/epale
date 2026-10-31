@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /e-pale/
+
+# Si la solicitud no es un directorio válido
+RewriteCond %{REQUEST_FILENAME} !-d
+# Y no es un archivo físico válido
+RewriteCond %{REQUEST_FILENAME} !-f
+# Pero existe el archivo equivalente agregando .php al final
+RewriteCond %{REQUEST_FILENAME}.php -f
+# Entonces, reescribe la URL internamente hacia el archivo .php
+RewriteRule ^(.*)$ $1.php [L,QSA]

@@ -267,3 +267,205 @@ function enviar_aviso_por_correo(array $destinatarios, string $titulo, string $c
         'error' => null
     ];
 }
+
+/**
+ * Envia el código de 6 caracteres para recuperación de contraseña.
+ */
+function enviar_codigo_recuperacion(string $destinatario, string $nombre, string $codigo): array {
+    $config = obtener_config_smtp();
+
+    if (empty($config['user']) || empty($config['pass'])) {
+        return ['exito' => false, 'error' => 'Faltan credenciales SMTP en el archivo .env.'];
+    }
+
+    if (!filter_var($destinatario, FILTER_VALIDATE_EMAIL)) {
+        return ['exito' => false, 'error' => 'Correo destinatario no válido.'];
+    }
+
+    $mail = new PHPMailer(true);
+
+    try {
+        $mail->isSMTP();
+        $mail->Host       = $config['host'];
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $config['user'];
+        $mail->Password   = $config['pass'];
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = $config['port'];
+        $mail->CharSet    = 'UTF-8';
+        $mail->Timeout    = 20;
+
+        $mail->setFrom($config['user'], $config['from_name']);
+        $mail->addAddress($destinatario, $nombre);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'E-PALE: Tu código de recuperación de contraseña';
+
+        $nombre_html = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
+        $codigo_html = htmlspecialchars($codigo, ENT_QUOTES, 'UTF-8');
+
+        $html = '<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Recuperación de Contraseña</title>
+        </head>
+        <body style="margin:0; padding:0; background-color:#f4f6f9; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; color:#333;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f6f9; padding:25px 8px;">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%; max-width:560px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.06); border:1px solid #e8ecf2; margin:0 auto;">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #001a57 0%, #002d80 100%); padding:28px 35px; text-align:center; border-bottom:4px solid #f29100;">
+                                    <h2 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">E-PALE</h2>
+                                    <p style="color:#cbd5e1; margin:4px 0 0; font-size:13px;">Universidad de Guadalajara - CUCEA</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 36px;">
+                                    <h1 style="color:#001a57; font-size:20px; font-weight:700; margin:0 0 16px 0;">Recuperación de Contraseña</h1>
+                                    <p style="color:#4b5563; font-size:15px; line-height:1.6; margin:0 0 15px 0;">
+                                        Hola <strong>' . $nombre_html . '</strong>,
+                                    </p>
+                                    <p style="color:#4b5563; font-size:15px; line-height:1.6; margin:0 0 20px 0;">
+                                        Recibimos una solicitud para restablecer la contraseña de tu cuenta en E-PALE. Ingresa el siguiente código de seguridad en la pantalla:
+                                    </p>
+                                    <div style="text-align:center; margin:26px 0;">
+                                        <div style="display:inline-block; background-color:#eef2ff; border:2px dashed #001a57; border-radius:10px; padding:16px 36px; font-family:\'Courier New\', Courier, monospace; font-size:32px; font-weight:800; letter-spacing:8px; color:#001a57;">
+                                            ' . $codigo_html . '
+                                        </div>
+                                        <p style="color:#64748b; font-size:13px; margin:12px 0 0 0;">
+                                            ⏱️ Este código expira en <strong>5 minutos</strong>.
+                                        </p>
+                                    </div>
+                                    <div style="background-color:#fff7ed; border-left:4px solid #f97316; padding:12px 16px; border-radius:6px; margin-top:22px; font-size:13px; color:#9a3412; line-height:1.5;">
+                                        <strong>¿No solicitaste este cambio?</strong> Puedes ignorar este mensaje; tu contraseña actual continuará siendo segura y no se modificará sin este código.
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color:#f8fafc; padding:18px 30px; text-align:center; border-top:1px solid #edf2f7; color:#94a3b8; font-size:12px;">
+                                    <p style="margin:0 0 4px 0;">Este es un mensaje automático de seguridad generado por E-PALE.</p>
+                                    <p style="margin:0;">© ' . date('Y') . ' Coordinación PALE - CUCEA.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>';
+
+        $mail->Body = $html;
+        $mail->AltBody = "E-PALE - Recuperación de contraseña\n\nHola {$nombre},\nTu código de verificación es: {$codigo}\nEste código expira en 5 minutos.\n\nSi no solicitaste este cambio, ignora este mensaje.";
+
+        $mail->send();
+        return ['exito' => true, 'error' => null];
+    } catch (Exception $e) {
+        error_log("Error al enviar código de recuperación: " . $mail->ErrorInfo);
+        return ['exito' => false, 'error' => 'No se pudo enviar el correo: ' . $mail->ErrorInfo];
+    }
+}
+
+/**
+ * Envia notificación de alerta confirmando que la contraseña ha sido restablecida.
+ */
+function enviar_alerta_password_cambiada(string $destinatario, string $nombre, string $fecha_hora): array {
+    $config = obtener_config_smtp();
+
+    if (empty($config['user']) || empty($config['pass'])) {
+        return ['exito' => false, 'error' => 'Faltan credenciales SMTP en el archivo .env.'];
+    }
+
+    if (!filter_var($destinatario, FILTER_VALIDATE_EMAIL)) {
+        return ['exito' => false, 'error' => 'Correo destinatario no válido.'];
+    }
+
+    $mail = new PHPMailer(true);
+
+    try {
+        $mail->isSMTP();
+        $mail->Host       = $config['host'];
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $config['user'];
+        $mail->Password   = $config['pass'];
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = $config['port'];
+        $mail->CharSet    = 'UTF-8';
+        $mail->Timeout    = 20;
+
+        $mail->setFrom($config['user'], $config['from_name']);
+        $mail->addAddress($destinatario, $nombre);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'E-PALE: Tu contraseña ha sido restablecida correctamente';
+
+        $nombre_html = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
+        $fecha_html  = htmlspecialchars($fecha_hora, ENT_QUOTES, 'UTF-8');
+
+        $html = '<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Contraseña Restablecida</title>
+        </head>
+        <body style="margin:0; padding:0; background-color:#f4f6f9; font-family:-apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif; color:#333;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f6f9; padding:25px 8px;">
+                <tr>
+                    <td align="center">
+                        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%; max-width:560px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.06); border:1px solid #e8ecf2; margin:0 auto;">
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #001a57 0%, #002d80 100%); padding:28px 35px; text-align:center; border-bottom:4px solid #10b981;">
+                                    <h2 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">E-PALE</h2>
+                                    <p style="color:#cbd5e1; margin:4px 0 0; font-size:13px;">Universidad de Guadalajara - CUCEA</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding:32px 36px;">
+                                    <div style="text-align:center; margin-bottom:20px;">
+                                        <div style="display:inline-block; width:52px; height:52px; line-height:52px; border-radius:50%; background-color:#ecfdf5; color:#10b981; font-size:26px;">
+                                            ✓
+                                        </div>
+                                    </div>
+                                    <h1 style="color:#001a57; font-size:20px; font-weight:700; margin:0 0 16px 0; text-align:center;">Contraseña Restablecida con Éxito</h1>
+                                    <p style="color:#4b5563; font-size:15px; line-height:1.6; margin:0 0 15px 0;">
+                                        Hola <strong>' . $nombre_html . '</strong>,
+                                    </p>
+                                    <p style="color:#4b5563; font-size:15px; line-height:1.6; margin:0 0 18px 0;">
+                                        Te confirmamos que la contraseña asociada a tu cuenta institucional en <strong>E-PALE</strong> ha sido modificada satisfactoriamente.
+                                    </p>
+                                    <div style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 18px; margin:18px 0; font-size:14px; color:#334155; line-height:1.6;">
+                                        <div><strong>Fecha y hora:</strong> ' . $fecha_html . '</div>
+                                        <div><strong>Plataforma:</strong> E-PALE (CUCEA)</div>
+                                    </div>
+                                    <div style="background-color:#fff1f2; border-left:4px solid #e11d48; padding:14px 16px; border-radius:6px; margin-top:22px; font-size:13px; color:#9f1239; line-height:1.5;">
+                                        <strong>¿Tú no realizaste este cambio?</strong><br>
+                                        Si no reconoces esta acción, es posible que alguien haya accedido a tu cuenta. Por favor <strong>comunícate de inmediato con la administración de E-PALE</strong> o el soporte técnico para proteger tu cuenta institucional.
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color:#f8fafc; padding:18px 30px; text-align:center; border-top:1px solid #edf2f7; color:#94a3b8; font-size:12px;">
+                                    <p style="margin:0 0 4px 0;">Notificación automática de seguridad generada por E-PALE.</p>
+                                    <p style="margin:0;">© ' . date('Y') . ' Coordinación PALE - CUCEA.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>';
+
+        $mail->Body = $html;
+        $mail->AltBody = "E-PALE - Contraseña Restablecida\n\nHola {$nombre},\nTu contraseña de E-PALE fue cambiada exitosamente el {$fecha_hora}.\n\nSi no fuiste tú, contacta inmediatamente a la administración.";
+
+        $mail->send();
+        return ['exito' => true, 'error' => null];
+    } catch (Exception $e) {
+        error_log("Error al enviar alerta de cambio de contraseña: " . $mail->ErrorInfo);
+        return ['exito' => false, 'error' => 'No se pudo enviar la alerta: ' . $mail->ErrorInfo];
+    }
+}

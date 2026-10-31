@@ -1,0 +1,17 @@
+{
+  "name": "E-PALE CUCEA",
+  "short_name": "E-PALE",
+  "description": "Sistema de Gestión y Registro de Idiomas E-PALE - Universidad de Guadalajara",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#001a57",
+  "theme_color": "#001a57",
+  "icons": [
+    {
+      "src": "img/isologo-pale.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
