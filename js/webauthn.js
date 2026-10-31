@@ -110,7 +110,7 @@ const WebAuthnClient = {
      */
     registerDevice: async function(nombreDispositivo = 'Este dispositivo') {
         const baseUrl = this.getBaseUrl();
-        const challengeUrl = baseUrl + 'api_webauthn_register_challenge.php';
+        const challengeUrl = baseUrl + 'api/webauthn/register_challenge.php';
 
         // 1. Solicitar el reto al servidor
         const challengeRes = await fetch(challengeUrl, {
@@ -164,7 +164,7 @@ const WebAuthnClient = {
             nombre_dispositivo: nombreDispositivo
         };
 
-        const verifyUrl = baseUrl + 'api_webauthn_register_verify.php';
+        const verifyUrl = baseUrl + 'api/webauthn/register_verify.php';
         const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -190,7 +190,7 @@ const WebAuthnClient = {
      */
     login: async function(usuarioOpcional = '') {
         const baseUrl = this.getBaseUrl();
-        const challengeUrl = baseUrl + 'api_webauthn_login_challenge.php';
+        const challengeUrl = baseUrl + 'api/webauthn/login_challenge.php';
 
         // 1. Solicitar el reto de inicio de sesión
         const challengeRes = await fetch(challengeUrl, {
@@ -244,7 +244,7 @@ const WebAuthnClient = {
             userHandle: assertion.response.userHandle ? this.bufferToBase64url(assertion.response.userHandle) : null
         };
 
-        const verifyUrl = baseUrl + 'api_webauthn_login_verify.php';
+        const verifyUrl = baseUrl + 'api/webauthn/login_verify.php';
         const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

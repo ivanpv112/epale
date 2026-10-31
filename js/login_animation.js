@@ -114,9 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (result.success) {
                     btnBiometric.classList.remove('is-loading');
-                    btnBiometric.style.background = '#28a745';
-                    btnBiometric.style.borderColor = '#28a745';
-                    btnBiometric.innerHTML = '<i class="fas fa-check-circle"></i> ¡Identidad Verificada!';
+                    btnBiometric.classList.add('is-verified');
+                    btnBiometric.innerHTML = '<i class="fas fa-check scale-bounce"></i>';
 
                     setTimeout(() => {
                         document.body.classList.add('blur-fade-out');
