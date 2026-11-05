@@ -65,6 +65,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         $pdo->commit();
+
+        // Enviar notificación automática por correo al estudiante
+        try {
+            require_once __DIR__ . '/../mailer.php';
+            $res_mail = enviar_notificacion_baja($pdo, (int)$solicitud_id, $_POST['action'], $respuesta);
+            if (!empty($res_mail['exito'])) {
+                $mensaje .= " Se notificó automáticamente al estudiante por correo institucional.";
+            } else {
+                error_log("Aviso correo bajas (solicitud #{$solicitud_id}): " . ($res_mail['error'] ?? 'desconocido'));
+            }
+        } catch (Throwable $t) {
+            error_log("Excepción al enviar correo de baja (solicitud #{$solicitud_id}): " . $t->getMessage());
+        }
     } catch (Exception $e) {
         $pdo->rollBack();
         $mensaje = "Error al procesar: " . mensaje_error_amigable($e);

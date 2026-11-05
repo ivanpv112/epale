@@ -76,6 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         $pdo->commit();
+
+        // Enviar notificación automática por correo al estudiante
+        try {
+            require_once __DIR__ . '/../mailer.php';
+            $res_mail = enviar_notificacion_alta($pdo, $solicitud_id, $_POST['action'], $respuesta);
+            if (!empty($res_mail['exito'])) {
+                $mensaje .= " Se notificó automáticamente al estudiante por correo institucional.";
+            } else {
+                error_log("Aviso correo altas (solicitud #{$solicitud_id}): " . ($res_mail['error'] ?? 'desconocido'));
+            }
+        } catch (Throwable $t) {
+            error_log("Excepción al enviar correo de alta (solicitud #{$solicitud_id}): " . $t->getMessage());
+        }
     } catch (Exception $e) {
         $pdo->rollBack();
         $mensaje = "Error al procesar: " . mensaje_error_amigable($e);
@@ -209,6 +222,12 @@ foreach($solicitudes as &$s) {
     ";
     
     $s['materia_html'] = $materia_html;
+    $s['hp'] = $hp;
+    $s['hv'] = $hv;
+    $prof_raw = trim(($s['prof_nombre'] ?? '') . ' ' . ($s['prof_ap'] ?? ''));
+    $prof_limpio = preg_replace('/^(Mtro\.|Mtra\.|Prof\.|Profr\.|Profra\.|Dr\.|Dra\.|Lic\.)\s+/i', '', $prof_raw);
+    $s['profesor_limpio'] = !empty($prof_limpio) ? $prof_limpio : 'Por asignar';
+    $s['materia_nombre_completo'] = $s['materia'] . ' ' . $romano;
     $s['nrc_presencial'] = $nrc_presencial;
     $s['nrc_virtual'] = $nrc_virtual;
     $s['nivel_romano'] = $romano;
@@ -357,7 +376,18 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
                                             "nombre" => $s["nombre"] . " " . $s["apellido_paterno"],
                                             "codigo" => $s["codigo"],
                                             "correo" => $s["correo"],
-                                            "materia" => $s["materia_html"],
+                                            "materia" => $s["materia_nombre_completo"],
+                                            "clave" => $s["clave_materia"] ?? $s["clave_grupo"] ?? "",
+                                            "ciclo" => $s["ciclo"],
+                                            "profesor" => $s["profesor_limpio"],
+                                            "nrc_presencial" => $s["nrc_presencial"],
+                                            "nrc_virtual" => $s["nrc_virtual"],
+                                            "hp_dias" => $s["hp"] ? $s["hp"]["dias"] : "NA",
+                                            "hp_horas" => $s["hp"] ? ($s["hp"]["inicio"] . " - " . $s["hp"]["fin"]) : "NA",
+                                            "hp_aula" => $s["hp"] ? $s["hp"]["aula"] : "NA",
+                                            "hv_dias" => $s["hv"] ? $s["hv"]["dias"] : "NA",
+                                            "hv_horas" => $s["hv"] ? ($s["hv"]["inicio"] . " - " . $s["hv"]["fin"]) : "NA",
+                                            "hv_aula" => $s["hv"] ? $s["hv"]["aula"] : "NA",
                                             "motivo" => $s["motivo"],
                                             "img" => "../img/horarios/" . $s["horario_externo"],
                                             "estatus" => $s["estatus"],
@@ -398,7 +428,7 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
         <div class="modal-content">
             <div class="modal-header">
                 <h3 style="margin:0; color:var(--udg-blue);" id="modalTitle"><i class="fas fa-clipboard-check"></i> Detalles de la Solicitud de Alta</h3>
-                <button style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="cerrarReview()">&times;</button>
+                <button type="button" class="modal-close-btn" onclick="cerrarReview()">&times;</button>
             </div>
 
             <form method="POST" id="formResolucion" style="margin:0;">
@@ -408,34 +438,108 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
                 <input type="hidden" name="inscripcion_id" id="mInscripcionId">
 
                 <div class="modal-body">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                        <div class="sol-box" style="border-left: 4px solid var(--udg-blue);">
-                            <h4>Estudiante</h4>
-                            <div style="font-size:1rem; color:var(--udg-blue); font-weight:bold;" id="mNombre"></div>
+                    <!-- 1. Tarjeta Estudiante (Superior) -->
+                    <div class="sol-card sol-card-student">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker"><i class="fas fa-user-graduate"></i> INFORMACIÓN DEL ESTUDIANTE</span>
                         </div>
-                        <div class="sol-box" style="border-left: 4px solid var(--udg-blue);">
-                            <h4>Materia Solicitada</h4>
-                            <div id="mMateria" style="color:#333; font-size: 0.95rem;"></div>
+                        <div class="sol-student-body">
+                            <div class="sol-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="sol-student-details">
+                                <h4 class="sol-student-name" id="mEstudianteNombre">-</h4>
+                                <div class="sol-chips-row">
+                                    <span class="sol-chip sol-chip-code">
+                                        <i class="fas fa-id-badge"></i> Código: <strong id="mEstudianteCodigo">-</strong>
+                                    </span>
+                                    <span class="sol-chip sol-chip-email">
+                                        <i class="fas fa-envelope"></i> <span id="mEstudianteCorreo">-</span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="sol-box" style="background: #f8f9fa; border-color: #ddd; border-left: 4px solid #6f42c1; margin-bottom: 15px;">
-                        <h4>Motivo expresado por el estudiante</h4>
-                        <div id="mMotivo" style="color:#555; font-size:0.9rem;"></div>
-                    </div>
-
-                    <div class="sol-box" style="background: #fff9e6; border-color: #ffeeba; border-left: 4px solid #ffc107; margin-bottom: 15px;">
-                        <h4>Horario Externo (Comprobante)</h4>
-                        <img id="mImg" onclick="ampliarImagen(this.src)" style="max-width: 100%; max-height: 200px; border-radius: 6px; border: 1px solid #ddd; display: block; margin-top: 5px; cursor: pointer; transition: 0.2s;" src="" alt="Horario externo" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">
-                        <p style="font-size:0.75rem; color:#888; margin-top: 5px;"><i class="fas fa-search-plus"></i> Clic en la imagen para abrir en tamaño completo.</p>
-                    </div>
-
-                    <div id="admin_input_area" class="sol-box" style="background: #e2f0d9; border-color: #c3e6cb; border-left: 4px solid #28a745; margin-bottom: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <h4 style="margin: 0;">Comentario (Opcional)</h4>
-                            <button type="button" onclick="togglePanelRespuestas()" style="background:#f3e8ff; color:#6f42c1; border:1px solid #6f42c1; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#e2d6f8'" onmouseout="this.style.background='#f3e8ff'"><i class="fas fa-bolt"></i> Automatizado</button>
+                    <!-- 2. Tarjeta Materia Solicitada (Inferior) -->
+                    <div class="sol-card sol-card-materia">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker sol-kicker-blue"><i class="fas fa-book-bookmark"></i> MATERIA SOLICITADA</span>
+                            <span class="sol-badge-ciclo" id="mBadgeCiclo"><i class="far fa-calendar-alt"></i> -</span>
                         </div>
-                        <textarea name="respuesta_admin" id="mComentarios" rows="2" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;" placeholder="Si no agregas un comentario, se usará uno predeterminado."></textarea>
+                        
+                        <div class="sol-materia-title-row">
+                            <h3 class="sol-materia-title" id="mMateriaTitulo">-</h3>
+                            <span class="sol-pill-clave">Clave: <strong id="mMateriaClave">-</strong></span>
+                        </div>
+
+                        <div class="sol-prof-row">
+                            <i class="fas fa-chalkboard-user"></i>
+                            <span>Profesor(a): <strong id="mMateriaProfesor">-</strong></span>
+                        </div>
+
+                        <!-- Desglose de Modalidades y Horarios (Presencial y Virtual) -->
+                        <div class="sol-modes-grid">
+                            <!-- Bloque Presencial -->
+                            <div class="sol-mode-card sol-mode-presencial">
+                                <div class="sol-mode-header">
+                                    <span class="sol-mode-pill sol-pill-presencial"><i class="fas fa-building"></i> Presencial</span>
+                                    <span class="sol-nrc-chip" id="mNrcPresencialChip">NRC: -</span>
+                                </div>
+                                <div class="sol-mode-body">
+                                    <div class="sol-mode-line" id="mPresencialDiasHoras">
+                                        <i class="far fa-clock"></i> <span>-</span>
+                                    </div>
+                                    <div class="sol-mode-line" id="mPresencialAulaRow">
+                                        <i class="fas fa-map-marker-alt"></i> <span>-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bloque Virtual -->
+                            <div class="sol-mode-card sol-mode-virtual">
+                                <div class="sol-mode-header">
+                                    <span class="sol-mode-pill sol-pill-virtual"><i class="fas fa-laptop"></i> Virtual</span>
+                                    <span class="sol-nrc-chip" id="mNrcVirtualChip">NRC: -</span>
+                                </div>
+                                <div class="sol-mode-body">
+                                    <div class="sol-mode-line" id="mVirtualDiasHoras">
+                                        <i class="far fa-clock"></i> <span>-</span>
+                                    </div>
+                                    <div class="sol-mode-line" id="mVirtualAulaRow">
+                                        <i class="fas fa-video"></i> <span>-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Tarjeta Motivo Expresado -->
+                    <div class="sol-card sol-card-motivo">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker sol-kicker-purple"><i class="fas fa-comment-dots"></i> MOTIVO EXPRESADO POR EL ESTUDIANTE</span>
+                        </div>
+                        <div class="sol-motivo-box" id="mMotivo">-</div>
+                    </div>
+
+                    <!-- 4. Tarjeta Horario Externo (Comprobante) -->
+                    <div class="sol-card sol-card-comprobante">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker sol-kicker-amber"><i class="fas fa-file-image"></i> HORARIO EXTERNO (COMPROBANTE)</span>
+                        </div>
+                        <div class="sol-img-container" onclick="ampliarImagen(document.getElementById('mImg').src)">
+                            <img id="mImg" src="" alt="Horario externo" class="sol-preview-img">
+                            <div class="sol-img-hover-badge"><i class="fas fa-search-plus"></i> Clic para ampliar imagen</div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Tarjeta Resolución / Comentario (Admin) -->
+                    <div id="admin_input_area" class="sol-card sol-card-admin">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker sol-kicker-green"><i class="fas fa-pen-to-square"></i> COMENTARIO (OPCIONAL)</span>
+                            <button type="button" class="btn-respuestas-rapid" onclick="togglePanelRespuestas()"><i class="fas fa-bolt"></i> Automatizado</button>
+                        </div>
+                        <textarea name="respuesta_admin" id="mComentarios" rows="2" class="sol-admin-textarea" placeholder="Si no agregas un comentario, se usará uno predeterminado."></textarea>
                         
                         <div id="panelAutomatizado" style="display: none; background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-top: 10px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -457,24 +561,27 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
                         </div>
                     </div>
 
-                    <div id="admin_response_area" style="display:none; border-top: 2px dashed #ddd; padding-top: 15px; margin-top: 15px;">
-                        <h4 id="resp_title" style="margin: 0 0 10px 0; color: #333; text-transform: uppercase; font-size: 0.9rem;">RESOLUCIÓN</h4>
-                        <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
-                            <div id="resp_estatus"></div>
-                            <div id="resp_fecha_solicitud" style="font-size:0.85rem; color:#888;"></div>
+                    <!-- 6. Tarjeta Archivo Histórico (Resolución previa) -->
+                    <div id="admin_response_area" class="sol-card sol-card-resolucion" style="display:none;">
+                        <div class="sol-card-header">
+                            <span class="sol-kicker" id="resp_title"><i class="fas fa-stamp"></i> RESOLUCIÓN</span>
                         </div>
-                        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 4px solid #ccc; color: #555; font-size: 0.95rem; margin-bottom: 10px;" id="mRespuesta"></div>
-                        <div id="resp_fecha_resolucion" style="font-size:0.85rem; color:#333; font-weight:bold;"></div>
+                        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+                            <div id="resp_estatus"></div>
+                            <div id="resp_fecha_solicitud" style="font-size:0.83rem; color:#64748b;"></div>
+                        </div>
+                        <div style="background: #ffffff; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; color: #334155; font-size: 0.92rem; margin-bottom: 10px; font-style: italic;" id="mRespuesta"></div>
+                        <div id="resp_fecha_resolucion" style="font-size:0.83rem; color:#0f172a; font-weight:600;"></div>
                     </div>
                 </div>
 
                 <div class="modal-footer" id="action_footer" style="justify-content: space-between;">
-                    <button type="button" style="padding:10px 15px; background:#fff; border:1px solid #dc3545; color:#dc3545; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="submitResolucion('rechazar')"><i class="fas fa-times"></i> Rechazar Petición</button>
-                    <button type="button" style="padding:10px 15px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold;" onclick="submitResolucion('aprobar')"><i class="fas fa-check"></i> Aprobar Alta</button>
+                    <button type="button" class="btn-sol-rechazar" onclick="submitResolucion('rechazar')"><i class="fas fa-times"></i> Rechazar Petición</button>
+                    <button type="button" class="btn-sol-aprobar" onclick="submitResolucion('aprobar')"><i class="fas fa-check"></i> Aprobar Alta</button>
                 </div>
 
                 <div class="modal-footer" id="close_footer" style="display:none; justify-content: flex-end;">
-                    <button type="button" style="padding:8px 15px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="cerrarReview()">Cerrar</button>
+                    <button type="button" class="btn-sol-cerrar" onclick="cerrarReview()">Cerrar</button>
                 </div>
             </form>
         </div>
@@ -497,11 +604,43 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
         function abrirModal(data) {
             document.getElementById('mSolicitudId').value = data.id;
             document.getElementById('mInscripcionId').value = data.insc;
-            document.getElementById('mNombre').innerHTML = data.nombre + '<br><span style="font-size:0.85rem; color:#666; font-family:monospace; font-weight:normal;">Código: ' + data.codigo + '</span><br><span style="font-size:0.85rem; color:#666; font-weight:normal;"><i class="fas fa-envelope"></i> ' + data.correo + '</span>';
-            document.getElementById('mMateria').innerHTML = data.materia;
-            document.getElementById('mMotivo').innerText = data.motivo;
-            document.getElementById('mImg').src = data.img;
 
+            // 1. Datos del Estudiante (Tarjeta Superior)
+            document.getElementById('mEstudianteNombre').textContent = data.nombre || '-';
+            document.getElementById('mEstudianteCodigo').textContent = data.codigo || '-';
+            document.getElementById('mEstudianteCorreo').textContent = data.correo || '-';
+
+            // 2. Datos de la Materia (Tarjeta Inferior)
+            document.getElementById('mMateriaTitulo').textContent = data.materia || '-';
+            document.getElementById('mMateriaClave').textContent = data.clave || '-';
+            document.getElementById('mBadgeCiclo').innerHTML = '<i class="far fa-calendar-alt"></i> Ciclo: ' + (data.ciclo || '-');
+            document.getElementById('mMateriaProfesor').textContent = data.profesor || 'Por asignar';
+
+            // Desglose Presencial
+            document.getElementById('mNrcPresencialChip').textContent = 'NRC: ' + (data.nrc_presencial || 'NA');
+            if (data.hp_dias && data.hp_dias !== 'NA') {
+                document.getElementById('mPresencialDiasHoras').innerHTML = '<i class="far fa-clock"></i> <span>' + data.hp_dias + ' • ' + data.hp_horas + '</span>';
+                document.getElementById('mPresencialAulaRow').innerHTML = '<i class="fas fa-map-marker-alt"></i> <span>' + (data.hp_aula && data.hp_aula !== 'NA' ? 'Aula ' + data.hp_aula : 'Aula sin asignar') + '</span>';
+            } else {
+                document.getElementById('mPresencialDiasHoras').innerHTML = '<i class="far fa-clock"></i> <span>NA</span>';
+                document.getElementById('mPresencialAulaRow').innerHTML = '<i class="fas fa-map-marker-alt"></i> <span>NA</span>';
+            }
+
+            // Desglose Virtual
+            document.getElementById('mNrcVirtualChip').textContent = 'NRC: ' + (data.nrc_virtual || 'NA');
+            if (data.hv_dias && data.hv_dias !== 'NA') {
+                document.getElementById('mVirtualDiasHoras').innerHTML = '<i class="far fa-clock"></i> <span>' + data.hv_dias + ' • ' + data.hv_horas + '</span>';
+                document.getElementById('mVirtualAulaRow').innerHTML = '<i class="fas fa-video"></i> <span>' + (data.hv_aula && data.hv_aula !== 'NA' ? data.hv_aula : 'En línea') + '</span>';
+            } else {
+                document.getElementById('mVirtualDiasHoras').innerHTML = '<i class="far fa-clock"></i> <span>NA</span>';
+                document.getElementById('mVirtualAulaRow').innerHTML = '<i class="fas fa-video"></i> <span>NA</span>';
+            }
+
+            // 3. Motivo y Comprobante
+            document.getElementById('mMotivo').textContent = data.motivo ? ('"' + data.motivo + '"') : 'Sin motivo especificado.';
+            document.getElementById('mImg').src = data.img || '';
+
+            // 4. Panel de Resolución
             if (data.estatus !== 'PENDIENTE') {
                 document.getElementById('admin_input_area').style.display = 'none';
                 document.getElementById('action_footer').style.display = 'none';
@@ -511,15 +650,15 @@ $total_pendientes = $pdo->query("SELECT COUNT(*) FROM solicitudes_altas WHERE es
                 let badge = '';
                 if(data.estatus === 'APROBADA') {
                     badge = '<span style="background:#d4edda; color:#155724; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.8rem;"><i class="fas fa-check-circle"></i> Aprobada</span>';
-                    document.getElementById('resp_title').innerText = 'RESOLUCIÓN DEL ADMINISTRADOR';
+                    document.getElementById('resp_title').innerHTML = '<i class="fas fa-stamp"></i> RESOLUCIÓN DEL ADMINISTRADOR';
                     document.getElementById('mRespuesta').innerText = data.respuesta || 'Sin comentarios adicionales.';
                 } else if(data.estatus === 'RECHAZADA') {
                     badge = '<span style="background:#f8d7da; color:#721c24; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.8rem;"><i class="fas fa-times-circle"></i> Rechazada</span>';
-                    document.getElementById('resp_title').innerText = 'RESOLUCIÓN DEL ADMINISTRADOR';
+                    document.getElementById('resp_title').innerHTML = '<i class="fas fa-stamp"></i> RESOLUCIÓN DEL ADMINISTRADOR';
                     document.getElementById('mRespuesta').innerText = data.respuesta || 'Sin comentarios adicionales.';
                 } else {
                     badge = '<span style="background:#e2e3e5; color:#383d41; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.8rem;"><i class="fas fa-ban"></i> Cancelada</span>';
-                    document.getElementById('resp_title').innerText = 'RESOLUCIÓN DEL ESTUDIANTE';
+                    document.getElementById('resp_title').innerHTML = '<i class="fas fa-ban"></i> RESOLUCIÓN DEL ESTUDIANTE';
                     document.getElementById('mRespuesta').innerText = 'El estudiante canceló la solicitud.';
                 }
                 
