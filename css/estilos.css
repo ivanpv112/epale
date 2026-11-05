@@ -1557,7 +1557,7 @@ body.menu-open {
 
 .main-footer {
     background-color: var(--udg-blue);
-    padding: 40px 20px 20px;
+    padding: 35px 20px 20px;
     margin-top: auto;
     transition: background-color 0.4s ease;
 }
@@ -1567,7 +1567,7 @@ body.menu-open {
     justify-content: space-between;
     align-items: center;
     max-width: 1200px;
-    margin: 0 auto 30px;
+    margin: 0 auto 25px;
     flex-wrap: wrap;
     gap: 20px;
     text-align: center;
@@ -1575,19 +1575,97 @@ body.menu-open {
 
 .footer-section {
     flex: 1;
-    min-width: 250px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.footer-social-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-social-img {
+    height: 42px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.footer-social-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #ffffff;
+    letter-spacing: 0.5px;
 }
 
 .footer-logo-img {
-    height: 100px;
+    height: 90px;
     width: auto;
-    margin-bottom: 10px;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.footer-pale-img {
+    height: 75px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 4px;
+}
+
+.footer-contact-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.footer-contact-heading {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.footer-contact-link {
+    color: #e2e8f0;
+    text-decoration: none;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.footer-contact-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+.footer-contact-phone {
+    font-size: 0.9rem;
+}
+
+.footer-contact-email {
+    font-size: 0.85rem;
+    opacity: 0.9;
 }
 
 .address-bar {
     text-align: center;
     font-size: 0.8rem;
-    padding-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e2e8f0;
+}
+
+.address-bar p {
+    margin: 3px 0;
 }
 
 .logo-link {
@@ -4376,13 +4454,9 @@ body.menu-open {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
-
-    .footer-content {
-        flex-direction: column;
-    }
 }
 
-/* ========================================================================== RESPONSIVIDAD MÓVIL OPTIMIZADA: BARRA SUPERIOR Y MODAL DE NOTIFICACIONES ========================================================================== */
+/* ========================================================================== RESPONSIVIDAD MÓVIL OPTIMIZADA: BARRA SUPERIOR, NOTIFICACIONES Y FOOTER ========================================================================== */
 @media (max-width: 768px) {
     .main-header {
         height: 62px !important;
@@ -4427,6 +4501,75 @@ body.menu-open {
     .menu-toggle-btn {
         font-size: 1.4rem;
         padding: 2px;
+    }
+
+    /* Responsividad Compacta para Main Footer */
+    .main-footer {
+        padding: 22px 14px 14px !important;
+    }
+
+    .footer-content {
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin: 0 auto 12px !important;
+    }
+
+    .footer-section {
+        min-width: unset !important;
+        width: 100% !important;
+    }
+
+    .footer-social-wrapper {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .footer-social-img {
+        height: 26px !important;
+        margin: 0 !important;
+    }
+
+    .footer-social-title {
+        font-size: 0.95rem !important;
+        margin: 0 !important;
+    }
+
+    .footer-logo-img {
+        height: 48px !important;
+        margin: 0 auto !important;
+    }
+
+    .footer-pale-img {
+        height: 42px !important;
+        margin: 0 auto 2px !important;
+    }
+
+    .footer-contact-details {
+        gap: 1px !important;
+    }
+
+    .footer-contact-heading {
+        font-size: 0.85rem !important;
+    }
+
+    .footer-contact-phone {
+        font-size: 0.82rem !important;
+    }
+
+    .footer-contact-email {
+        font-size: 0.78rem !important;
+    }
+
+    .address-bar {
+        padding-top: 10px !important;
+        font-size: 0.72rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .address-bar p {
+        margin: 1px 0 !important;
     }
 }
 
@@ -4503,6 +4646,49 @@ body.menu-open {
     .menu-toggle-btn {
         font-size: 1.3rem;
     }
+
+    /* Footer Ultra Compacto para Móvil */
+    .main-footer {
+        padding: 16px 10px 12px !important;
+    }
+
+    .footer-content {
+        gap: 10px !important;
+        margin: 0 auto 10px !important;
+    }
+
+    .footer-social-img {
+        height: 24px !important;
+    }
+
+    .footer-social-title {
+        font-size: 0.88rem !important;
+    }
+
+    .footer-logo-img {
+        height: 44px !important;
+    }
+
+    .footer-pale-img {
+        height: 38px !important;
+    }
+
+    .footer-contact-heading {
+        font-size: 0.82rem !important;
+    }
+
+    .footer-contact-phone {
+        font-size: 0.78rem !important;
+    }
+
+    .footer-contact-email {
+        font-size: 0.75rem !important;
+    }
+
+    .address-bar {
+        padding-top: 8px !important;
+        font-size: 0.68rem !important;
+    }
 }
 
 @media (max-width: 390px) {
@@ -4542,6 +4728,27 @@ body.menu-open {
 
     .menu-toggle-btn {
         font-size: 1.25rem !important;
+    }
+
+    .main-footer {
+        padding: 14px 8px 10px !important;
+    }
+
+    .footer-content {
+        gap: 8px !important;
+        margin: 0 auto 8px !important;
+    }
+
+    .footer-logo-img {
+        height: 38px !important;
+    }
+
+    .footer-pale-img {
+        height: 34px !important;
+    }
+
+    .address-bar {
+        font-size: 0.65rem !important;
     }
 }
 
