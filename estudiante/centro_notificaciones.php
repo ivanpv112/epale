@@ -634,7 +634,7 @@ async function cargarCiclosHistorialEst() {
     bar.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);"><i class="fas fa-circle-notch fa-spin"></i> Cargando ciclos...</span>';
 
     try {
-        const res = await fetch('../api_historial_avisos.php?action=ciclos');
+        const res = await fetch('../api/api_historial_avisos.php?action=ciclos');
         const json = await res.json();
 
         if (json.status === 'success' && json.data.ciclos) {
@@ -704,7 +704,7 @@ async function seleccionarCicloHistorialEst(cicloId, btnElem = null) {
     `;
 
     try {
-        const res = await fetch(`../api_historial_avisos.php?action=avisos&ciclo_id=${cicloId}`);
+        const res = await fetch(`../api/api_historial_avisos.php?action=avisos&ciclo_id=${cicloId}`);
         if (!res.ok) {
             const errTxt = await res.text();
             throw new Error(`Servidor respondió con código ${res.status}: ${errTxt}`);

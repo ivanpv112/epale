@@ -308,7 +308,7 @@ require_once 'perfil_logic.php';
             </div>
         </div>
 
-        <?php include '../componente_biometrico.php'; ?>
+        <?php include '../components/componente_biometrico.php'; ?>
 
     </main>
 
